@@ -1,0 +1,22 @@
+name: linux
+
+on:
+  - push
+
+jobs:
+  perl:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        perl-version:
+          - '5.12'
+          - '5.38'
+    container:
+      image: perl:${{ matrix.perl-version }}
+    steps:
+      - uses: actions/checkout@v1
+      - name: Install Dependencies
+        run: |
+          curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
+      - name: Run Tests
+        run: prove -lr t
