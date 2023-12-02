@@ -4,15 +4,17 @@ use warnings;
 use integer;
 use bytes;
 
+use version; our $VERSION = version->declare('v0.0.1');
+
 use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
-
 
 my $CONSENT_STRING_TCF2_SEPARATOR = '.';
 my $CONSENT_STRING_TCF2_PREFIX    = 'C';
 my $DECIS_PER_ONE                 = 10;
 my $MIN_BIT_SIZE                  = 29 * 8;
 
+# ABSTRACT: gdpr iab tcf v2 consent string parser
 
 sub Parse {
     my ( $klass, $gdpr_consent_string ) = @_;
