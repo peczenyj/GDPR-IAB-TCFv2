@@ -11,5 +11,15 @@ WriteMakefile(
         'Test::Exception' => 0,
         'Test::More'      => 0,
     },
-    VERSION => '0.001',
+    (eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (META_MERGE => {
+      'meta-spec' => { version => 2 },
+      resources => {
+          repository => {
+              type => 'git',
+              url  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2.git',
+              web  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
+          },
+      }})
+   : ()
+  ),
 );
