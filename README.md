@@ -1,12 +1,12 @@
-=head1 NAME
+# NAME
 
 GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
-=head1 VERSION
+# VERSION
 
-Version v0.0.1
+Version v0.0.2
 
-=head1 SYNOPSIS
+# SYNOPSIS
 
 The purpose of this package is to parse Transparency & Consent String (TC String) as defined by IAB version 2.
 
@@ -34,9 +34,9 @@ The purpose of this package is to parse Transparency & Consent String (TC String
         $consent->is_purpose_consent_allowed($_)
     } (1, 3, 9, 10);
 
-=head1 CONSTRUCTOR
+# CONSTRUCTOR
 
-=head2 Parse
+## Parse
 
 The Parse method will decode and validate a base64 encoded version of the tcf v2 string.
 
@@ -48,67 +48,66 @@ Will die if can't decode the string.
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
     );
 
-=head1 METHODS
+# METHODS
 
-=head2 version
-
+## version
 
 Version number of the encoding format. The value is 2 for this format.
 
-=head2 created
+## created
 
-Epoch time format when TC String was created in numeric format. You can easily parse with L<DateTime> if needed.
+Epoch time format when TC String was created in numeric format. You can easily parse with [DateTime](https://metacpan.org/pod/DateTime) if needed.
 
-=head2 last_updated
+## last\_updated
 
-Epoch time format when TC String was last updated in numeric format. You can easily parse with L<DateTime> if needed.
+Epoch time format when TC String was last updated in numeric format. You can easily parse with [DateTime](https://metacpan.org/pod/DateTime) if needed.
 
-=head2 cmp_id
+## cmp\_id
 
 Consent Management Platform ID that last updated the TC String. Is a unique ID will be assigned to each Consent Management Platform.
 
-=head2 cmp_version
+## cmp\_version
 
 Consent Management Platform version of the CMP that last updated this TC String.
 Each change to a CMP should increment their internally assigned version number as a record of which version the user gave consent and transparency was established.
 
-=head2 consent_screen
+## consent\_screen
 
 CMP Screen number at which consent was given for a user with the CMP that last updated this TC String.
 The number is a CMP internal designation and is CmpVersion specific. The number is used for identifying on which screen a user gave consent as a record.
 
-=head2 consent_language
+## consent\_language
 
-Two-letter L<ISO 639-1|https://en.wikipedia.org/wiki/ISO_639-1> language code in which the CMP UI was presented.
+Two-letter [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) language code in which the CMP UI was presented.
 
-=head2 vendor_list_version
+## vendor\_list\_version
 
-Number corresponds to L<GVL|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list> vendorListVersion.
+Number corresponds to [GVL](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list) vendorListVersion.
 Version of the GVL used to create this TC String.
 
-=head2 is_purpose_consent_allowed
+## is\_purpose\_consent\_allowed
 
 The user's consent value for each Purpose established on the legal basis of consent.
 
-=head1 FUNCTIONS
+# FUNCTIONS
 
-=head2 looksLikeIsConsentVersion2
+## looksLikeIsConsentVersion2
 
 Will check if a given tc string starts with a literal "C".
 
-=head1 SEE ALSO
+# SEE ALSO
 
-You can find the original documentation of the TCF v2 from IAB documentation L<here|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md>.
+You can find the original documentation of the TCF v2 from IAB documentation [here](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md).
 
-=head1 AUTHOR
+# AUTHOR
 
 Tiago Peczenyj (tiago dot peczentj at gmail dot com)
 
-=head1 BUGS
+# BUGS
 
-Please report any bugs or feature requests to L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues>.
+Please report any bugs or feature requests to [https://github.com/peczenyj/GDPR-IAB-TCFv2/issues](https://github.com/peczenyj/GDPR-IAB-TCFv2/issues).
 
-=head1 LICENSE AND COPYRIGHT
+# LICENSE AND COPYRIGHT
 
 Copyright 2023 Tiago Peczenyj
 
@@ -116,9 +115,9 @@ This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
-See L<http://dev.perl.org/licenses/> for more information.
+See [http://dev.perl.org/licenses/](http://dev.perl.org/licenses/) for more information.
 
-=head1 DISCLAIMER
+# DISCLAIMER
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -130,4 +129,3 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
