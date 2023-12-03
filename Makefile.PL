@@ -11,7 +11,7 @@ WriteMakefile(
         'Test::Exception' => 0,
         'Test::More'      => 0,
     },
-    SKIP => [ qw<.github *.bak> ],
+    SKIP => [ qw<.github> ],
     (eval { ExtUtils::MakeMaker->VERSION(6.46) } ? (META_MERGE => {
       'meta-spec' => { version => 2 },
       resources => {
