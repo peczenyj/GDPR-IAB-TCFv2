@@ -4,7 +4,7 @@ use Test::Exception;
 use GDPR::IAB::TCFv2;
 
 subtest "valid tcf v2 consent string" => sub {
-    plan tests => 11;
+    plan tests => 20;
 
     my $consent;
 
@@ -37,20 +37,60 @@ subtest "valid tcf v2 consent string" => sub {
     is $consent->vendor_list_version, 23,
       'should return the vendor list version 23';
 
+    is $consent->policy_version, 2,
+      'should return the policy version 2';
+
+    ok $consent->is_service_specific,
+      'should return true for service specific';
+
+    ok !$consent->use_non_standard_stacks,
+      'should return false for use non standard stacks';
+
+    ok !$consent->purpose_one_treatment,
+      'should return false for use purpose one treatment';
+
+    is $consent->publisher_country_code, "KM",
+      'should return the publisher country code "KM"';
+
+    is $consent->max_vendor_id, 115, "max vendor id is 115";
+
+    ok !$consent->is_range_encoding, "is not range encoding";
+
     subtest "check purpose consent ids" => sub {
         plan tests => 24;
 
-        my %allowed_purposes = (
-            1  => 1,
-            3  => 1,
-            9  => 1,
-            10 => 1,
-        );
+        my %allowed_purposes = map { $_ => 1 } ( 1, 3, 9, 10 );
 
         foreach my $id ( 1 .. 24 ) {
             is !!$consent->is_purpose_consent_allowed($id),
               !!$allowed_purposes{$id},
-              "checking purpose id $id";
+              "checking purpose id $id for consent";
+        }
+    };
+
+    subtest "check purpose legitimate interest ids" => sub {
+        plan tests => 24;
+
+        my %allowed_purposes = map { $_ => 1 } ( 3, 4, 5, 8, 9, 10 );
+
+        foreach my $id ( 1 .. 24 ) {
+            is !!$consent->is_purpose_legitimate_interest_allowed($id),
+              !!$allowed_purposes{$id},
+              "checking purpose id $id for legitimate interest";
+        }
+    };
+
+    subtest "check special feature opt in" => sub {
+        plan tests => 12;
+
+        my %special_feature_opt_in = (
+            2 => 1,
+        );
+
+        foreach my $id ( 1 .. 12 ) {
+            is !!$consent->is_special_feature_opt_in($id),
+              !!$special_feature_opt_in{$id},
+              "checking special feature id $id opt in";
         }
     };
 };

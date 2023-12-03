@@ -103,7 +103,34 @@ sub consent_language {
 sub vendor_list_version {
     my $self = shift;
 
-    $self->_get_uint16( 120, 12 );
+    return $self->_get_uint16( 120, 12 );
+}
+
+sub policy_version {
+    my $self = shift;
+
+    return $self->_get_uint8( 132, 6 );
+}
+
+sub is_service_specific {
+    my $self = shift;
+
+    return $self->_is_set(138);
+}
+
+sub use_non_standard_stacks {
+    my $self = shift;
+
+    return $self->_is_set(139);
+}
+
+sub is_special_feature_opt_in {
+    my ( $self, $id ) = @_;
+
+    croak "invalid special feature id $id: must be between 1 and 12"
+      if $id < 1 || $id > 12;
+
+    return $self->_is_set( 140 + $id - 1 );
 }
 
 sub is_purpose_consent_allowed {
@@ -115,6 +142,42 @@ sub is_purpose_consent_allowed {
     return $self->_is_set( 152 + $id - 1 );
 }
 
+sub is_purpose_legitimate_interest_allowed {
+    my ( $self, $id ) = @_;
+
+    croak "invalid purpose id $id: must be between 1 and 24"
+      if $id < 1 || $id > 24;
+
+    return $self->_is_set( 176 + $id - 1 );
+}
+
+sub purpose_one_treatment {
+    my $self = shift;
+
+    return $self->_is_set(200);
+}
+
+sub publisher_country_code {
+    my $self = shift;
+
+    return join "", map { chr( $_ + 65 ) } (
+        $self->_get_uint8( 201, 6 ),
+        $self->_get_uint8( 207, 6 ),
+    );
+}
+
+sub max_vendor_id {
+    my $self = shift;
+
+    return $self->_get_uint16( 213, 16 );
+}
+
+sub is_range_encoding {
+    my $self = shift;
+
+    return $self->_is_set(229);
+}
+
 sub _is_set {
     my ( $self, $offset ) = @_;
 
@@ -124,34 +187,37 @@ sub _is_set {
 sub _get_uint8 {
     my ( $self, $offset, $nbits ) = @_;
 
-    my $padding = "0" x ( 8 - $nbits );
-
     return unpack(
         "C",
-        pack( "B8", $padding . substr( $self->{data}, $offset, $nbits ) )
+        $self->_get_bits_with_padding( 8, $offset, $nbits )
     );
 }
 
 sub _get_uint16 {
     my ( $self, $offset, $nbits ) = @_;
 
-    my $padding = "0" x ( 16 - $nbits );
-
     return unpack(
         "S>",
-        pack( "B16", $padding . substr( $self->{data}, $offset, $nbits ) )
+        $self->_get_bits_with_padding( 16, $offset, $nbits )
     );
 }
 
 sub _get_uint64 {
     my ( $self, $offset, $nbits ) = @_;
 
-    my $padding = "0" x ( 64 - $nbits );
-
     return unpack(
         "Q>",
-        pack( "B64", $padding . substr( $self->{data}, $offset, $nbits ) )
+        $self->_get_bits_with_padding( 64, $offset, $nbits )
     );
+}
+
+sub _get_bits_with_padding {
+    my ( $self, $bits, $offset, $nbits ) = @_;
+
+    my $padding = "0" x ( $bits - $nbits );
+
+    return
+      pack( "B${bits}", $padding . substr( $self->{data}, $offset, $nbits ) );
 }
 
 sub looksLikeIsConsentVersion2 {

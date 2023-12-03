@@ -54,7 +54,7 @@
 \bcovered\b
  
 # Avoid MYMETA files
-^MYMETA\.
+# ^MYMETA\.
 #!end included /usr/share/perl/5.8/ExtUtils/MANIFEST.SKIP
 
 # Avoid configuration metadata file
@@ -71,3 +71,8 @@
 
 # Avoid .github actions
 \B\.github\b
+
+# Avoid other files
+\b.perlcriticrc\b
+\b.perltidyrc\b
+\b.proverc\b
