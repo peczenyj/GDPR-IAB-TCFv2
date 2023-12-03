@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use integer;
 use bytes;
-use version; our $VERSION = version->declare('v0.0.1');
+use version; our $VERSION = version->declare('v0.0.2');
 
 use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
@@ -169,7 +169,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version v0.0.1
+Version v0.0.2
 
 =head1 SYNOPSIS
 
