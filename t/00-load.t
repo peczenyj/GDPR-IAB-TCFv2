@@ -16,7 +16,7 @@ require_ok 'GDPR::IAB::TCFv2';
 
 isa_ok 'GDPR::IAB::TCFv2::BitUtils', 'Exporter';
 
-my @methods = qw<new max_vendor_id vendor_consent>;
+my @methods = qw<new max_vendor_id contains>;
 
 can_ok 'GDPR::IAB::TCFv2::BitField',     @methods;
 can_ok 'GDPR::IAB::TCFv2::RangeSection', @methods;

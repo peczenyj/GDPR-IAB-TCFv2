@@ -4,7 +4,7 @@ use Test::Exception;
 use GDPR::IAB::TCFv2;
 
 subtest "valid tcf v2 consent string using bitfield" => sub {
-    plan tests => 21;
+    plan tests => 22;
 
     my $consent;
 
@@ -52,7 +52,10 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
     is $consent->publisher_country_code, "KM",
       'should return the publisher country code "KM"';
 
-    is $consent->max_vendor_id, 115, "max vendor id is 115";
+    is $consent->max_vendor_id_consent, 115, "max vendor id consent is 115";
+
+    is $consent->max_vendor_id_legitimate_interest, 113,
+      "max vendor id legitimate interest is 113";
 
     subtest "check purpose consent ids" => sub {
         plan tests => 24;
@@ -125,7 +128,7 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
 };
 
 subtest "valid tcf v2 consent string using range" => sub {
-    plan tests => 21;
+    plan tests => 22;
 
     my $consent;
 
@@ -173,7 +176,10 @@ subtest "valid tcf v2 consent string using range" => sub {
     is $consent->publisher_country_code, "AA",
       'should return the publisher country code "AA"';
 
-    is $consent->max_vendor_id, 626, "max vendor id is 626";
+    is $consent->max_vendor_id_consent, 626, "max vendor id consent is 626";
+
+    is $consent->max_vendor_id_legitimate_interest, 628,
+      "max vendor id legitimate interest is 628";
 
     subtest "check purpose consent ids" => sub {
         plan tests => 24;

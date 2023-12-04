@@ -15,6 +15,15 @@ sub new {
     my $vendor_bits_required = $args{vendor_bits_required}
       or croak "missing 'vendor_bits_required'";
 
+    my $data_size = length($data);
+
+    # add 7 to force rounding to next integer value
+    my $bytes_required = ( $vendor_bits_required + $start_bit + 7 ) / 8;
+
+    croak
+      "a BitField for $vendor_bits_required requires a consent string of $bytes_required bytes. This consent string had $data_size"
+      if $data_size < $bytes_required;
+
     my $self = {
         data                 => substr( $data, $start_bit ),
         vendor_bits_required => $vendor_bits_required,
@@ -31,7 +40,7 @@ sub max_vendor_id {
     return $self->{vendor_bits_required};
 }
 
-sub vendor_consent {
+sub contains {
     my ( $self, $id ) = @_;
 
     croak "invalid vendor id $id: must be positive integer bigger than 0"
@@ -43,3 +52,43 @@ sub vendor_consent {
 }
 
 1;
+__END__
+
+=head1 NAME
+
+GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield parser
+
+=head1 SYNOPSIS
+
+    my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
+    
+    my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
+
+    my $bit_field = GDPR::IAB::TCFv2::BitField->new(
+        data                 => $data,
+        start_bit            => 230, # offset for vendor consents
+        vendor_bits_required => $max_vendor_id_consent
+    );
+
+    if $bit_field->contains(284) { ... }
+
+=head1 CONSTRUCTOR
+
+Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+
+Will die if any parameter is missing.
+
+Will die if data does not contain all bits required.
+
+=head1 METHODS
+
+=head2 contains
+
+Return the vendor id bit status (if enable or not) from the bit field.
+Will return false if id is bigger than max vendor id.
+
+    my $ok = $bit_field->contains(284);
+
+=head2 max_vendor_id
+
+Returns the max vendor id.

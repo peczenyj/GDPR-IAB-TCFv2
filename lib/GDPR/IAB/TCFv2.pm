@@ -49,11 +49,11 @@ sub Parse {
 
     if ( $self->_is_vendor_consent_range_encoding ) {
         ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseRangeSection( $self->max_vendor_id, 230 );
+          $self->_parseRangeSection( $self->max_vendor_id_consent, 230 );
     }
     else {
         ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseBitField( $self->max_vendor_id, 230 );
+          $self->_parseBitField( $self->max_vendor_id_consent, 230 );
     }
 
     $self->{vendor_consents} = $vendor_consents;
@@ -61,29 +61,30 @@ sub Parse {
     my $legitimate_interest_max_vendor =
       get_uint16( $self->{data}, $legitimate_interest_start );
 
+    $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
+
     croak
       "invalid consent data: no legitimate interest start position (got $legitimate_interest_start +16 but @{[ length( $self->{data} ) ]})"
       if $legitimate_interest_start + 16 > length( $self->{data} );
 
-    my $is_vendor_legitimate_interest_range = is_set( $data, $legitimate_interest_start + 16 );
-
-    $self->{legitimate_interest_start} = $legitimate_interest_start + 17;
+    my $is_vendor_legitimate_interest_range =
+      is_set( $data, $legitimate_interest_start + 16 );
 
     my $vendor_legitimate_interests;
     my $pub_restrict_start;
 
-    if ( $is_vendor_legitimate_interest_range ) {
+    if ($is_vendor_legitimate_interest_range) {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
           $self->_parseRangeSection(
-            $legitimate_interest_max_vendor,
-            $self->{legitimate_interest_start}
+            $self->max_vendor_id_legitimate_interest,
+            $legitimate_interest_start + 17
           );
     }
     else {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
           $self->_parseBitField(
-            $legitimate_interest_max_vendor,
-            $self->{legitimate_interest_start}
+            $self->max_vendor_id_legitimate_interest,
+            $legitimate_interest_start + 17
           );
     }
 
@@ -218,22 +219,28 @@ sub publisher_country_code {
     return get_char6_sequence( $self->{data}, 201, 2 );
 }
 
-sub max_vendor_id {
+sub max_vendor_id_consent {
     my $self = shift;
 
     return get_uint16( $self->{data}, 213 );
 }
 
+sub max_vendor_id_legitimate_interest {
+    my $self = shift;
+
+    return $self->{legitimate_interest_max_vendor};
+}
+
 sub vendor_consent {
     my ( $self, $id ) = @_;
 
-    return $self->{vendor_consents}->vendor_consent($id);
+    return $self->{vendor_consents}->contains($id);
 }
 
 sub vendor_legitimate_interest {
     my ( $self, $id ) = @_;
 
-    return $self->{vendor_legitimate_interests}->vendor_consent($id);
+    return $self->{vendor_legitimate_interests}->contains($id);
 }
 
 sub _is_vendor_consent_range_encoding {
@@ -244,12 +251,6 @@ sub _is_vendor_consent_range_encoding {
 
 sub _parseRangeSection {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
-
-    my $data_size = length( $self->{data} );
-
-    croak
-      "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
-      if $data_size < 32;
 
     my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
         data                 => $self->{data},
@@ -262,15 +263,6 @@ sub _parseRangeSection {
 
 sub _parseBitField {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
-
-    my $data_size = length( $self->{data} );
-
-    # add 7 to force rounding to next integer value
-    my $bytes_required = ( $vendor_bits_required + $start_bit + 7 ) / 8;
-
-    croak
-      "a BitField for $vendor_bits_required requires a consent string of $bytes_required bytes. This consent string had $data_size"
-      if $data_size < $bytes_required;
 
     my $bitfield = GDPR::IAB::TCFv2::BitField->new(
         data                 => $self->{data},
@@ -381,6 +373,47 @@ Version of the GVL used to create this TC String.
 =head2 is_purpose_consent_allowed
 
 The user's consent value for each Purpose established on the legal basis of consent.
+
+    my $ok = $instance->is_purpose_consent_allowed(1);
+
+=head2 is_purpose_legitimate_interest_allowed
+
+The user's consent value for each Purpose established on the legal basis of legitimate interest.
+
+    my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+
+=head2 purpose_one_treatment
+
+CMPs can use the PublisherCC field to indicate the legal jurisdiction the publisher is under to help vendors determine whether the vendor needs consent for Purpose 1.
+
+Returns true if Purpose 1 was NOT disclosed at all.
+
+Returns false if Purpose 1 was disclosed commonly as consent as expected by the L<Policies|https://iabeurope.eu/iab-europe-transparency-consent-framework-policies/>.
+
+=head2 publisher_country_code
+
+Two-letter L<ISO 639-1|https://en.wikipedia.org/wiki/ISO_639-1> language code of the country that determines legislation of reference. 
+Commonly, this corresponds to the country in which the publisher’s business entity is established.
+
+=head2 max_vendor_id_consent
+
+The maximum Vendor ID that is represented in the following bit field or range encoding.
+
+Because this section can be a variable length, this indicates the last ID of the section so that a decoder will know when it has reached the end.
+
+=head2 vendor_consent
+
+The consent value for each Vendor ID 
+
+=head2 max_vendor_id_legitimate_interest
+
+The maximum Vendor ID that is represented in the following bit field or range encoding.
+
+Because this section can be a variable length, this indicates the last ID of the section so that a decoder will know when it has reached the end.
+
+=head2 vendor_legitimate_interest
+	
+The legitimate interest value for each Vendor ID
 
 =head1 FUNCTIONS
 

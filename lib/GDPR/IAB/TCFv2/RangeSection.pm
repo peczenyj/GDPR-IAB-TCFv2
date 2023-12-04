@@ -17,7 +17,12 @@ sub new {
     my $vendor_bits_required = $args{vendor_bits_required}
       or croak "missing 'vendor_bits_required'";
 
-    # TODO add parse range consent
+    my $data_size = length($data);
+
+    croak
+      "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
+      if $data_size < 32;
+
     my $num_entries = get_uint12( $data, $start_bit );
 
     my $current_offset = $start_bit + 12;
@@ -25,9 +30,10 @@ sub new {
     my @consents;
 
     foreach my $i ( 1 .. $num_entries ) {
-        my ( $consent, $bits_consumed ) =
-          _parse_range_consent( $data, $current_offset,
-            $vendor_bits_required );
+        my ( $consent, $bits_consumed ) = _parse_range_consent(
+            $data, $current_offset,
+            $vendor_bits_required
+        );
 
         push @consents, $consent;
 
@@ -63,8 +69,11 @@ sub _parse_range_consent {
           "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_vendor_id"
           if $end > $max_vendor_id;
 
-        return GDPR::IAB::TCFv2::RangeConsent->new( start => $start,
-            end => $end ), 33;
+        return GDPR::IAB::TCFv2::RangeConsent->new(
+            start => $start,
+            end   => $end
+          ),
+          33;
     }
 
     my $vendor_id = get_uint16( $data, $initial_bit + 1 );
@@ -73,8 +82,11 @@ sub _parse_range_consent {
       "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_vendor_id] are valid"
       if $vendor_id > $max_vendor_id;
 
-    return GDPR::IAB::TCFv2::RangeConsent->new( start => $vendor_id,
-        end => $vendor_id ), 17;
+    return GDPR::IAB::TCFv2::RangeConsent->new(
+        start => $vendor_id,
+        end   => $vendor_id
+      ),
+      17;
 }
 
 sub current_offset {
@@ -89,7 +101,7 @@ sub max_vendor_id {
     return $self->{vendor_bits_required};
 }
 
-sub vendor_consent {
+sub contains {
     my ( $self, $id ) = @_;
 
     croak "invalid vendor id $id: must be positive integer bigger than 0"
@@ -101,3 +113,46 @@ sub vendor_consent {
 }
 
 1;
+__END__
+
+=head1 NAME
+
+GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range section parser
+
+=head1 SYNOPSIS
+
+    my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
+    
+    my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
+
+    my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
+        data                 => $data,
+        start_bit            => 230, # offset for vendor consents
+        vendor_bits_required => $max_vendor_id_consent
+    );
+
+    if $range_section->contains(284) { ... }
+
+=head1 CONSTRUCTOR
+
+Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+
+Will die if any parameter is missing.
+
+Will die if data does not contain all bits required.
+
+Will die if the range sections are malformed.
+
+=head1 METHODS
+
+=head2 contains
+
+Return the vendor id bit status (if enable or not) from one of the range sections.
+
+Will return false if id is bigger than max vendor id.
+
+    my $ok = $range_section->contains(284);
+
+=head2 max_vendor_id
+
+Returns the max vendor id.
