@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use integer;
 use bytes;
-use version; our $VERSION = version->declare('v0.0.3');
+use version; our $VERSION = version->declare('v0.0.4');
 
 use feature 'state';
 
@@ -288,7 +288,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version v0.0.3
+Version v0.0.4
 
 =head1 SYNOPSIS
 
