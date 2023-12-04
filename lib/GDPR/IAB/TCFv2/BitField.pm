@@ -4,7 +4,8 @@ use warnings;
 use integer;
 use bytes;
 
-use Carp qw<croak>;
+use GDPR::IAB::TCFv2::BitUtils qw<is_set>;
+use Carp                       qw<croak>;
 
 sub new {
     my ( $klass, %args ) = @_;
@@ -38,13 +39,7 @@ sub vendor_consent {
 
     return if $id > $self->{vendor_bits_required};
 
-    return _is_set( $self->{data}, $id - 1 );
-}
-
-sub _is_set {
-    my ( $data, $offset ) = @_;
-
-    return substr( $data, $offset, 1 ) == 1;
+    return is_set( $self->{data}, $id - 1 );
 }
 
 1;

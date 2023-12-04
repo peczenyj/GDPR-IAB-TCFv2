@@ -8,7 +8,9 @@ use version; our $VERSION = version->declare('v0.0.2');
 
 use feature 'state';
 
+use GDPR::IAB::TCFv2::BitUtils qw(:all);
 use GDPR::IAB::TCFv2::BitField;
+use GDPR::IAB::TCFv2::RangeSection;
 use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
 
@@ -57,25 +59,32 @@ sub Parse {
     $self->{vendor_consents} = $vendor_consents;
 
     my $legitimate_interest_max_vendor =
-      _get_uint16( $self->{data}, $legitimate_interest_start, 16 );
+      get_uint16( $self->{data}, $legitimate_interest_start );
 
-    croak "invalid consent data: no legitimate interest start position"
+    croak
+      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start +16 but @{[ length( $self->{data} ) ]})"
       if $legitimate_interest_start + 16 > length( $self->{data} );
+
+    my $is_vendor_legitimate_interest_range = is_set( $data, $legitimate_interest_start + 16 );
 
     $self->{legitimate_interest_start} = $legitimate_interest_start + 17;
 
     my $vendor_legitimate_interests;
     my $pub_restrict_start;
 
-    if ( $self->_is_vendor_legitimate_interest_range_encoding ) {
+    if ( $is_vendor_legitimate_interest_range ) {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseRangeSection( $legitimate_interest_max_vendor,
-            $self->{legitimate_interest_start} );
+          $self->_parseRangeSection(
+            $legitimate_interest_max_vendor,
+            $self->{legitimate_interest_start}
+          );
     }
     else {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseBitField( $legitimate_interest_max_vendor,
-            $self->{legitimate_interest_start} );
+          $self->_parseBitField(
+            $legitimate_interest_max_vendor,
+            $self->{legitimate_interest_start}
+          );
     }
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
@@ -103,13 +112,13 @@ sub _decode_base64url {
 sub version {
     my $self = shift;
 
-    return _get_uint8( $self->{data}, 0, 6 );
+    return get_uint6( $self->{data}, 0 );
 }
 
 sub created {
     my $self = shift;
 
-    my $deciseconds = _get_uint64( $self->{data}, 6, 36 );
+    my $deciseconds = get_uint36( $self->{data}, 6 );
 
     return $deciseconds / 10;
 }
@@ -117,7 +126,7 @@ sub created {
 sub last_updated {
     my $self = shift;
 
-    my $deciseconds = _get_uint64( $self->{data}, 42, 36 );
+    my $deciseconds = get_uint36( $self->{data}, 42 );
 
     return $deciseconds / 10;
 }
@@ -125,49 +134,49 @@ sub last_updated {
 sub cmp_id {
     my $self = shift;
 
-    return _get_uint16( $self->{data}, 78, 12 );
+    return get_uint12( $self->{data}, 78 );
 }
 
 sub cmp_version {
     my $self = shift;
 
-    return _get_uint16( $self->{data}, 90, 12 );
+    return get_uint12( $self->{data}, 90 );
 }
 
 sub consent_screen {
     my $self = shift;
 
-    return _get_uint8( $self->{data}, 102, 6 );
+    return get_uint6( $self->{data}, 102 );
 }
 
 sub consent_language {
     my $self = shift;
 
-    return _get_ascii_sequence( $self->{data}, 2, 108, 6 );
+    return get_char6_sequence( $self->{data}, 108, 2 );
 }
 
 sub vendor_list_version {
     my $self = shift;
 
-    return _get_uint16( $self->{data}, 120, 12 );
+    return get_uint12( $self->{data}, 120 );
 }
 
 sub policy_version {
     my $self = shift;
 
-    return _get_uint8( $self->{data}, 132, 6 );
+    return get_uint6( $self->{data}, 132 );
 }
 
 sub is_service_specific {
     my $self = shift;
 
-    return _is_set( $self->{data}, 138 );
+    return is_set( $self->{data}, 138 );
 }
 
 sub use_non_standard_stacks {
     my $self = shift;
 
-    return _is_set( $self->{data}, 139 );
+    return is_set( $self->{data}, 139 );
 }
 
 sub is_special_feature_opt_in {
@@ -176,7 +185,7 @@ sub is_special_feature_opt_in {
     croak "invalid special feature id $id: must be between 1 and 12"
       if $id < 1 || $id > 12;
 
-    return _is_set( $self->{data}, 140 + $id - 1 );
+    return is_set( $self->{data}, 140 + $id - 1 );
 }
 
 sub is_purpose_consent_allowed {
@@ -185,7 +194,7 @@ sub is_purpose_consent_allowed {
     croak "invalid purpose id $id: must be between 1 and 24"
       if $id < 1 || $id > 24;
 
-    return _is_set( $self->{data}, 152 + $id - 1 );
+    return is_set( $self->{data}, 152 + $id - 1 );
 }
 
 sub is_purpose_legitimate_interest_allowed {
@@ -194,25 +203,25 @@ sub is_purpose_legitimate_interest_allowed {
     croak "invalid purpose id $id: must be between 1 and 24"
       if $id < 1 || $id > 24;
 
-    return _is_set( $self->{data}, 176 + $id - 1 );
+    return is_set( $self->{data}, 176 + $id - 1 );
 }
 
 sub purpose_one_treatment {
     my $self = shift;
 
-    return _is_set( $self->{data}, 200 );
+    return is_set( $self->{data}, 200 );
 }
 
 sub publisher_country_code {
     my $self = shift;
 
-    return _get_ascii_sequence( $self->{data}, 2, 201, 6 );
+    return get_char6_sequence( $self->{data}, 201, 2 );
 }
 
 sub max_vendor_id {
     my $self = shift;
 
-    return _get_uint16( $self->{data}, 213, 16 );
+    return get_uint16( $self->{data}, 213 );
 }
 
 sub vendor_consent {
@@ -230,19 +239,25 @@ sub vendor_legitimate_interest {
 sub _is_vendor_consent_range_encoding {
     my $self = shift;
 
-    return _is_set( $self->{data}, 229 );
-}
-
-sub _is_vendor_legitimate_interest_range_encoding {
-    my $self = shift;
-
-    return _is_set( $self->{data}, $self->{legitimate_interest_start} + 16 );
+    return is_set( $self->{data}, 229 );
 }
 
 sub _parseRangeSection {
-    my ( $self, $vendor_bits_required, $startbit ) = @_;
+    my ( $self, $vendor_bits_required, $start_bit ) = @_;
 
-    return ( undef, 0 );    # do this later...
+    my $data_size = length( $self->{data} );
+
+    croak
+      "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
+      if $data_size < 32;
+
+    my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
+        data                 => $self->{data},
+        start_bit            => $start_bit,
+        vendor_bits_required => $vendor_bits_required,
+    );
+
+    return ( $range_section, $range_section->current_offset );
 }
 
 sub _parseBitField {
@@ -264,65 +279,6 @@ sub _parseBitField {
     );
 
     return ( $bitfield, $start_bit + $vendor_bits_required );
-}
-
-sub _is_set {
-    my ( $data, $offset ) = @_;
-
-    return substr( $data, $offset, 1 ) == 1;
-}
-
-sub _get_uint8 {
-    my ( $data, $offset, $nbits ) = @_;
-
-    return unpack(
-        "C",
-        _get_bits_with_padding( $data, 8, $offset, $nbits )
-    );
-}
-
-sub _get_ascii {
-    my ( $data, $offset, $nbits ) = @_;
-
-    state $ascii_offset = ord("A");
-
-    return chr( $ascii_offset + _get_uint8( $data, $offset, $nbits ) );
-}
-
-sub _get_ascii_sequence {
-    my ( $data, $n, $offset, $nbits ) = @_;
-
-    state $ascii_offset = ord("A");
-
-    return join "",
-      map { _get_ascii( $data, $offset + ( $_ * $nbits ), $nbits ) }
-      ( 0 .. $n - 1 );
-}
-
-sub _get_uint16 {
-    my ( $data, $offset, $nbits ) = @_;
-
-    return unpack(
-        "S>",
-        _get_bits_with_padding( $data, 16, $offset, $nbits )
-    );
-}
-
-sub _get_uint64 {
-    my ( $data, $offset, $nbits ) = @_;
-
-    return unpack(
-        "Q>",
-        _get_bits_with_padding( $data, 64, $offset, $nbits )
-    );
-}
-
-sub _get_bits_with_padding {
-    my ( $data, $bits, $offset, $nbits ) = @_;
-
-    my $padding = "0" x ( $bits - $nbits );
-
-    return pack( "B${bits}", $padding . substr( $data, $offset, $nbits ) );
 }
 
 sub looksLikeIsConsentVersion2 {
