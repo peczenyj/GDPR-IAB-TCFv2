@@ -105,9 +105,15 @@ sub _get_core_tc_string {
 
 sub _decode_base64url {
     my $s = shift;
-    $s =~ tr[-_][+/];
-    $s .= '=' while length($s) % 4;
-    return decode_base64($s);
+
+    state $decode_base64url = MIME::Base64->can("decode_base64url") || sub {
+        my $s = shift;
+        $s =~ tr[-_][+/];
+        $s .= '=' while length($s) % 4;
+        return decode_base64($s);
+    };
+
+    return $decode_base64url->($s);
 }
 
 sub version {
