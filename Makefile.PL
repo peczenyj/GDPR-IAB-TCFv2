@@ -7,6 +7,9 @@ WriteMakefile(
     VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
     MIN_PERL_VERSION => 5.012,
     LICENSE          => "perl_5",
+    PREREQ_PM => {
+        'List::MoreUtils' => 0,
+    },
     TEST_REQUIRES => {
         'Test::Exception' => 0,
         'Test::More'      => 0,
@@ -19,6 +22,9 @@ WriteMakefile(
               type => 'git',
               url  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2.git',
               web  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
+          },
+          bugtracker => {
+             web => 'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'
           },
       }})
    : ()
