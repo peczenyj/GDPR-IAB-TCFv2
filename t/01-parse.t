@@ -4,7 +4,7 @@ use Test::Exception;
 use GDPR::IAB::TCFv2;
 
 subtest "valid tcf v2 consent string" => sub {
-    plan tests => 20;
+    plan tests => 21;
 
     my $consent;
 
@@ -54,8 +54,6 @@ subtest "valid tcf v2 consent string" => sub {
 
     is $consent->max_vendor_id, 115, "max vendor id is 115";
 
-    ok !$consent->is_range_encoding, "is not range encoding";
-
     subtest "check purpose consent ids" => sub {
         plan tests => 24;
 
@@ -91,6 +89,37 @@ subtest "valid tcf v2 consent string" => sub {
             is !!$consent->is_special_feature_opt_in($id),
               !!$special_feature_opt_in{$id},
               "checking special feature id $id opt in";
+        }
+    };
+
+    subtest "check vendor consent ids" => sub {
+        plan tests => 120;
+
+        my %allowed_vendors =
+          map { $_ => 1 } (
+            2,  3, 6, 7, 8, 10, 12, 13, 14, 15, 16, 21, 25, 27, 30, 31, 34, 35,
+            37, 38,   39,  42,  43, 49, 52, 54, 55, 56, 57, 59, 60, 63, 64, 65,
+            66, 67,   68,  69,  73, 74, 76, 78, 83, 86, 87, 89, 90, 92, 96, 99,
+            100, 106, 109, 110, 114, 115
+          );
+
+        foreach my $id ( 1 .. 120 ) {
+            is !!$consent->vendor_consent($id),
+              !!$allowed_vendors{$id},
+              "checking vendor id $id for consent";
+        }
+    };
+
+    subtest "check vendor legitimate interest ids" => sub {
+        plan tests => 120;
+
+        my %allowed_vendors =
+          map { $_ => 1 } ( 1, 9, 26, 27, 30, 36, 37, 43, 86, 97, 110, 113 );
+
+        foreach my $id ( 1 .. 120 ) {
+            is !!$consent->vendor_legitimate_interest($id),
+              !!$allowed_vendors{$id},
+              "checking vendor id $id for legitimate interest";
         }
     };
 };
