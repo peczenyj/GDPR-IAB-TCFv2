@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use integer;
 use bytes;
-use version; our $VERSION = version->declare('v0.0.2');
+use version; our $VERSION = version->declare('v0.0.3');
 
 use feature 'state';
 
@@ -288,7 +288,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version v0.0.2
+Version v0.0.3
 
 =head1 SYNOPSIS
 
@@ -317,6 +317,14 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say "consent ok for purpose ids 1, 3, 9 and 10" if all {
         $consent->is_purpose_consent_allowed($_)
     } (1, 3, 9, 10);
+
+    say "weborama (vendor id 284) has consent" if $consent->vendor_consent(284);
+
+=head1 ACRONYMS
+
+GDPR: General Data Protection Regulation L<https://iabeurope.eu/about-us/>
+IAB: Interactive Advertising Bureau L<About IAB|https://iabeurope.eu/about-us/>
+TCF: The Transparency & Consent Framework L<TCF v2.2|https://iabeurope.eu/transparency-consent-framework/>
 
 =head1 CONSTRUCTOR
 
@@ -393,7 +401,7 @@ Returns false if Purpose 1 was disclosed commonly as consent as expected by the 
 =head2 publisher_country_code
 
 Two-letter L<ISO 639-1|https://en.wikipedia.org/wiki/ISO_639-1> language code of the country that determines legislation of reference. 
-Commonly, this corresponds to the country in which the publisher’s business entity is established.
+Commonly, this corresponds to the country in which the publisher's business entity is established.
 
 =head2 max_vendor_id_consent
 

@@ -4,7 +4,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 # VERSION
 
-Version v0.0.2
+Version v0.0.3
 
 # SYNOPSIS
 
@@ -33,6 +33,14 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say "consent ok for purpose ids 1, 3, 9 and 10" if all {
         $consent->is_purpose_consent_allowed($_)
     } (1, 3, 9, 10);
+
+    say "weborama (vendor id 284) has consent" if $consent->vendor_consent(284);
+
+# ACRONYMS
+
+GDPR: General Data Protection Regulation [https://iabeurope.eu/about-us/](https://iabeurope.eu/about-us/)
+IAB: Interactive Advertising Bureau [About IAB](https://iabeurope.eu/about-us/)
+TCF: The Transparency & Consent Framework [TCF v2.2](https://iabeurope.eu/transparency-consent-framework/)
 
 # CONSTRUCTOR
 
@@ -88,6 +96,47 @@ Version of the GVL used to create this TC String.
 ## is\_purpose\_consent\_allowed
 
 The user's consent value for each Purpose established on the legal basis of consent.
+
+    my $ok = $instance->is_purpose_consent_allowed(1);
+
+## is\_purpose\_legitimate\_interest\_allowed
+
+The user's consent value for each Purpose established on the legal basis of legitimate interest.
+
+    my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+
+## purpose\_one\_treatment
+
+CMPs can use the PublisherCC field to indicate the legal jurisdiction the publisher is under to help vendors determine whether the vendor needs consent for Purpose 1.
+
+Returns true if Purpose 1 was NOT disclosed at all.
+
+Returns false if Purpose 1 was disclosed commonly as consent as expected by the [Policies](https://iabeurope.eu/iab-europe-transparency-consent-framework-policies/).
+
+## publisher\_country\_code
+
+Two-letter [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) language code of the country that determines legislation of reference. 
+Commonly, this corresponds to the country in which the publisher's business entity is established.
+
+## max\_vendor\_id\_consent
+
+The maximum Vendor ID that is represented in the following bit field or range encoding.
+
+Because this section can be a variable length, this indicates the last ID of the section so that a decoder will know when it has reached the end.
+
+## vendor\_consent
+
+The consent value for each Vendor ID 
+
+## max\_vendor\_id\_legitimate\_interest
+
+The maximum Vendor ID that is represented in the following bit field or range encoding.
+
+Because this section can be a variable length, this indicates the last ID of the section so that a decoder will know when it has reached the end.
+
+## vendor\_legitimate\_interest
+
+The legitimate interest value for each Vendor ID
 
 # FUNCTIONS
 
