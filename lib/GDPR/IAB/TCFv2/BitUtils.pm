@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use integer;
 use bytes;
+use Math::BigInt;
 
 use feature 'state';
 
@@ -82,10 +83,11 @@ sub get_uint16 {
 sub get_uint36 {
     my ( $data, $offset ) = @_;
 
-    return unpack(
-        "Q>",
-        _get_bits_with_padding( $data, 64, $offset, 36 )
-    );
+    state $can_pack_quads = !!eval { my $f = pack 'q'; 1 };
+
+    return $can_pack_quads
+      ? unpack( "Q>", _get_bits_with_padding( $data, 64, $offset, 36 ) )
+      : Math::BigInt->new( "0b" . _add_padding( $data, 64, $offset, 36 ) );
 }
 
 sub _get_bits_with_padding {
@@ -93,9 +95,15 @@ sub _get_bits_with_padding {
 
     # TODO check if offset is in range of $data ?
 
+    return pack( "B${bits}", _add_padding( $data, $bits, $offset, $nbits ) );
+}
+
+sub _add_padding {
+    my ( $data, $bits, $offset, $nbits ) = @_;
+
     my $padding = "0" x ( $bits - $nbits );
 
-    return pack( "B${bits}", $padding . substr( $data, $offset, $nbits ) );
+    return $padding . substr( $data, $offset, $nbits );
 }
 
 1;
