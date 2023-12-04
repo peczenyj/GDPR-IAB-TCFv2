@@ -1,9 +1,5 @@
-.perlcriticrc
-.perltidyrc
-.proverc
 Changes
 CONTRIBUTING.md
-GDPR-IAB-TCFv2-v0.0.4.tar.gz
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
