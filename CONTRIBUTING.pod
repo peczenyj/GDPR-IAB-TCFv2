@@ -81,7 +81,7 @@ Redo from step 3.
     $EDITOR lib/GDPR/IAB/TCFv2.pm
     # Update changelog
     $EDITOR Changes
-    # update readme
+    # update readme
     pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md
     git add .
     git commit
@@ -94,6 +94,7 @@ Redo from step 3.
     make test
     make dist
     ...
+
 =back
 
 =cut
