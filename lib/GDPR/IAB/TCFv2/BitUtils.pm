@@ -11,9 +11,11 @@ use base qw<Exporter>;
 use constant ASCII_OFFSET => ord('A');
 
 my $CAN_PACK_QUADS;
+my $CAN_FORCE_BIG_ENDIAN;
 
 BEGIN {
     $CAN_PACK_QUADS = !!eval { my $f = pack 'Q>'; 1 };
+    $CAN_FORCE_BIG_ENDIAN = !!eval { my $f = pack 'S>'; 1 };
 }
 
 our @EXPORT_OK = qw<is_set
@@ -53,19 +55,24 @@ sub get_char6_pair {
 sub get_uint12 {
     my ( $data, $offset ) = @_;
 
-    return unpack(
-        "S>",
-        _get_bits_with_padding( $data, 16, $offset, 12 )
-    );
+    return _get_big_endian_short_16bits($data, $offset, 12);
 }
 
 sub get_uint16 {
     my ( $data, $offset ) = @_;
 
+    return _get_big_endian_short_16bits($data, $offset, 16);
+}
+
+sub _get_big_endian_short_16bits {
+    my ( $data, $offset, $nbits) = @_;
+
     return unpack(
         "S>",
-        _get_bits_with_padding( $data, 16, $offset, 16 )
-    );
+        _get_bits_with_padding( $data, 16, $offset, $nbits )
+    ) if $CAN_FORCE_BIG_ENDIAN;
+
+    return Math::BigInt->new( "0b" . _add_padding( $data, 16, $offset, $nbits ) );
 }
 
 sub get_uint36 {
