@@ -4,7 +4,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 # VERSION
 
-Version 0.4
+Version 0.05
 
 # SYNOPSIS
 

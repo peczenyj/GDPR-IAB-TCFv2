@@ -5,7 +5,7 @@ use warnings;
 use integer;
 use bytes;
 
-our $VERSION = "0.04";
+our $VERSION = "0.05";
 
 use GDPR::IAB::TCFv2::BitUtils
   qw<get_char6_pair get_uint6 get_uint12 get_uint16 get_uint36 is_set>;
@@ -299,7 +299,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.4
+Version 0.05
 
 =head1 SYNOPSIS
 
