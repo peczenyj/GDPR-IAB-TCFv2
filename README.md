@@ -4,7 +4,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 # VERSION
 
-Version 0.05
+Version 0.051
 
 # SYNOPSIS
 
@@ -12,35 +12,39 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     use strict;
     use warnings;
-    use feature 'say';
+    
     use GDPR::IAB::TCFv2;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
     );
 
+    use feature qw<say>;
+
     say $consent->version;             # 2
-    say $consent->created;             # epoch 1228644257
-    say $consent->last_updated;        # epoch 1326215413
-    say $consent->cmp_id;              # 21
+    say $consent->created;             # epoch 1228644257 or 07/12/2008
+    say $consent->last_updated;        # epoch 1326215413 or 10/01/2012
+    say $consent->cmp_id;              # 21 - Traffective GmbH 
     say $consent->cmp_version;         # 7
     say $consent->consent_screen;      # 2
     say $consent->consent_language;    # "EN"
     say $consent->vendor_list_version; # 23
 
-    use List::Util qw(all);
+    use List::MoreUtils qw<all>;
 
-    say "consent ok for purpose ids 1, 3, 9 and 10" if all {
+    say "find consent for purpose ids 1, 3, 9 and 10" if all {
         $consent->is_purpose_consent_allowed($_)
     } (1, 3, 9, 10);
 
-    say "weborama (vendor id 284) has consent" if $consent->vendor_consent(284);
+    say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
 
 # ACRONYMS
 
-GDPR: General Data Protection Regulation [https://iabeurope.eu/about-us/](https://iabeurope.eu/about-us/)
-IAB: Interactive Advertising Bureau [About IAB](https://iabeurope.eu/about-us/)
-TCF: The Transparency & Consent Framework [TCF v2.2](https://iabeurope.eu/transparency-consent-framework/)
+[GDPR](https://gdpr-info.eu/): General Data Protection Regulation
+
+[IAB](https://iabeurope.eu/about-us/): Interactive Advertising Bureau 
+
+[TCF](https://iabeurope.eu/transparency-consent-framework/): The Transparency & Consent Framework
 
 # CONSTRUCTOR
 
@@ -142,15 +146,15 @@ The legitimate interest value for each Vendor ID
 
 ## looksLikeIsConsentVersion2
 
-Will check if a given tc string starts with a literal "C".
+Will check if a given tc string starts with a literal [C](https://metacpan.org/pod/C).
 
 # SEE ALSO
 
-You can find the original documentation of the TCF v2 from IAB documentation [here](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md).
+The original documentation of the [TCF v2 from IAB documentation](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md).
 
 # AUTHOR
 
-Tiago Peczenyj (tiago dot peczentj at gmail dot com)
+Tiago Peczenyj [mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com](mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com)
 
 # BUGS
 
