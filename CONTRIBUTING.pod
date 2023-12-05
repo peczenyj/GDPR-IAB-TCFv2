@@ -10,7 +10,7 @@ How to contribute to C<GDPR-IAB-TCFv2>?
 Patches are welcome!
 
 They must be built against the
-C<L<master|https://github.com/peczenyj/GDPR-IAB-TCFv2/tree/master>> branch,
+C<L<main|https://github.com/peczenyj/GDPR-IAB-TCFv2/tree/main>> branch,
 then submitted as pull requests at GitHub.
 
 The documentation is written using the
@@ -27,7 +27,7 @@ to render it in a terminal:
 
     git clone --origin upstream git://github.com/peczenyj/GDPR-IAB-TCFv2.git
     cd GDPR-IAB-TCFv2
-    git checkout master
+    git checkout main
 
 =item 2. Install build dependencies
 
@@ -37,7 +37,7 @@ Not required for doc patches.
 
 =item 3. Make your fix/feature
 
-    git checkout -b <my-patch> master
+    git checkout -b <my-patch> main
 
     # edit files and add modification
 
@@ -76,7 +76,7 @@ Redo from step 3.
 
 =item * Bump C<$VERSION>
 
-    git checkout master
+    git checkout main
     # Bump version number
     $EDITOR lib/GDPR/IAB/TCFv2.pm
     # Update changelog
@@ -88,7 +88,7 @@ Redo from step 3.
 
 =item * Release
 
-    git checkout master
+    git checkout main
     perl Makefile.PL
     make
     make test
