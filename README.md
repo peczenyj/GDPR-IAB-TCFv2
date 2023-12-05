@@ -52,6 +52,8 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
 The Parse method will decode and validate a base64 encoded version of the tcf v2 string.
 
+Will return a `GDPR::IAB::TCFv2` immutable object that allow easy access to different properties.
+
 Will die if can't decode the string.
 
     use GDPR::IAB::TCFv2;
@@ -146,7 +148,7 @@ The legitimate interest value for each Vendor ID
 
 ## looksLikeIsConsentVersion2
 
-Will check if a given tc string starts with a literal [C](https://metacpan.org/pod/C).
+Will check if a given tc string starts with a literal `C`.
 
 # SEE ALSO
 
