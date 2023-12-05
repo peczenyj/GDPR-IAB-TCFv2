@@ -1,3 +1,11 @@
+v0.05
+  - remove dependency List::MoreUtils
+  - make sure the code will work on perl 5.8
+  - make sure the code will work on 32 bits
+  - make sure the code will work on newer versions of perl where MIME::Base64 supports base64 url format
+  - change version schema
+  - some small refactors
+
 v0.0.4
   - fix issue with pack Q on 32 bits environment 
   - fix issue with missing dependency
