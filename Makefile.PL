@@ -1,14 +1,13 @@
 use ExtUtils::MakeMaker;
 
 WriteMakefile(
-    NAME          => 'GDPR::IAB::TCFv2',
-    AUTHOR        => 'Tiago Peczenyj <tiago.peczenyj@gmail.com>',
-    LICENSE       => "perl_5",
-    ABSTRACT_FROM => 'lib/GDPR/IAB/TCFv2.pm',
-    VERSION_FROM  => 'lib/GDPR/IAB/TCFv2.pm',
-
-    #    MIN_PERL_VERSION => 5.012,
-    TEST_REQUIRES => {
+    NAME             => 'GDPR::IAB::TCFv2',
+    AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj@gmail.com>',
+    LICENSE          => "perl_5",
+    ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
+    VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
+    MIN_PERL_VERSION => 5.008,
+    TEST_REQUIRES    => {
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,
     },
