@@ -6,17 +6,27 @@ use integer;
 use bytes;
 use version; our $VERSION = version->declare('v0.0.4');
 
-use feature 'state';
-
-use GDPR::IAB::TCFv2::BitUtils qw(:all);
+use GDPR::IAB::TCFv2::BitUtils
+  qw<get_char6_pair get_uint6 get_uint12 get_uint16 get_uint36 is_set>;
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::RangeSection;
 use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
 
-sub CONSENT_STRING_TCF2_SEPARATOR {'.'}
-sub CONSENT_STRING_TCF2_PREFIX    {'C'}
-sub MIN_BYTE_SIZE                 {29}
+use constant {
+    CONSENT_STRING_TCF2_SEPARATOR => '.',
+    CONSENT_STRING_TCF2_PREFIX    => 'C',
+    MIN_BYTE_SIZE                 => 29,
+};
+
+INIT {
+    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
+    {
+        no warnings q<redefine>;
+
+        *decode_base64url = $native_decode_base64url;
+    }
+}
 
 # ABSTRACT: gdpr iab tcf v2 consent string parser
 
@@ -27,7 +37,7 @@ sub Parse {
 
     my $core_tc_string = _get_core_tc_string($tc_string);
 
-    my $data = unpack 'B*', _decode_base64url($core_tc_string);
+    my $data = unpack 'B*', decode_base64url($core_tc_string);
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
       if length($data) / 8 < MIN_BYTE_SIZE;
@@ -103,17 +113,11 @@ sub _get_core_tc_string {
     return substr( $tc_string, 0, $pos );
 }
 
-sub _decode_base64url {
+sub decode_base64url {
     my $s = shift;
-
-    state $decode_base64url = MIME::Base64->can("decode_base64url") || sub {
-        my $s = shift;
-        $s =~ tr[-_][+/];
-        $s .= '=' while length($s) % 4;
-        return decode_base64($s);
-    };
-
-    return $decode_base64url->($s);
+    $s =~ tr[-_][+/];
+    $s .= '=' while length($s) % 4;
+    return decode_base64($s);
 }
 
 sub version {
@@ -159,7 +163,7 @@ sub consent_screen {
 sub consent_language {
     my $self = shift;
 
-    return get_char6_sequence( $self->{data}, 108, 2 );
+    return get_char6_pair( $self->{data}, 108 );
 }
 
 sub vendor_list_version {
@@ -222,7 +226,7 @@ sub purpose_one_treatment {
 sub publisher_country_code {
     my $self = shift;
 
-    return get_char6_sequence( $self->{data}, 201, 2 );
+    return get_char6_pair( $self->{data}, 201 );
 }
 
 sub max_vendor_id_consent {

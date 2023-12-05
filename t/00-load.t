@@ -1,4 +1,6 @@
-use Test::More tests => 14;
+use strict;
+use warnings;
+use Test::More tests => 11;
 
 BEGIN {
     use_ok('GDPR::IAB::TCFv2::BitUtils');
@@ -14,11 +16,17 @@ require_ok 'GDPR::IAB::TCFv2::RangeSection';
 require_ok 'GDPR::IAB::TCFv2::RangeConsent';
 require_ok 'GDPR::IAB::TCFv2';
 
-isa_ok 'GDPR::IAB::TCFv2::BitUtils', 'Exporter';
+subtest "check interfaces" => sub {
+    plan tests => 4;
 
-my @methods = qw<new max_vendor_id contains>;
+    isa_ok 'GDPR::IAB::TCFv2::BitUtils', 'Exporter';
 
-can_ok 'GDPR::IAB::TCFv2::BitField',     @methods;
-can_ok 'GDPR::IAB::TCFv2::RangeSection', @methods;
+    my @methods = qw<new max_vendor_id contains>;
 
-can_ok 'GDPR::IAB::TCFv2::RangeConsent', 'new', 'contains';
+    can_ok 'GDPR::IAB::TCFv2::BitField',     @methods;
+    can_ok 'GDPR::IAB::TCFv2::RangeSection', @methods;
+
+    can_ok 'GDPR::IAB::TCFv2::RangeConsent', 'new', 'contains';
+};
+
+diag("GDPR::IAB::TCFv2/$GDPR::IAB::TCFv2::VERSION");

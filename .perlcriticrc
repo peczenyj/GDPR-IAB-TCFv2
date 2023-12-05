@@ -135,3 +135,6 @@ equivalent_modules = Weborama::Standard Test::Most Test::Class::Most Dancer stri
 # allow backtick if capture result
 [InputOutput::ProhibitBacktickOperators]
 only_in_void_context = 1
+
+# allow constant pragma
+[-ValuesAndExpressions::ProhibitConstantPragma]

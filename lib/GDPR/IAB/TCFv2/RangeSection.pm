@@ -6,8 +6,7 @@ use bytes;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
 use GDPR::IAB::TCFv2::RangeConsent;
-use Carp            qw<croak>;
-use List::MoreUtils qw<any>;
+use Carp qw<croak>;
 
 sub new {
     my ( $klass, %args ) = @_;
@@ -109,7 +108,11 @@ sub contains {
 
     return if $id > $self->{vendor_bits_required};
 
-    return any { $_->contains($id) } @{ $self->{consents} };
+    foreach my $c ( @{ $self->{consents} } ) {
+        return 1 if $c->contains($id);
+    }
+
+    return 0;
 }
 
 1;

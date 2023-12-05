@@ -5,30 +5,24 @@ use integer;
 use bytes;
 use Math::BigInt;
 
-use feature 'state';
-
 require Exporter;
 use base qw<Exporter>;
 
+use constant ASCII_OFFSET => ord('A');
+
+my $CAN_PACK_QUADS;
+
+BEGIN {
+    $CAN_PACK_QUADS = !!eval { my $f = pack 'Q>'; 1 };
+}
+
 our @EXPORT_OK = qw<is_set
   get_uint6
-  get_char6
-  get_char6_sequence
   get_uint12
   get_uint16
-  get_uint36>;
-
-our %EXPORT_TAGS = (
-    all => [
-        qw<is_set
-          get_uint6
-          get_char6
-          get_char6_sequence
-          get_uint12
-          get_uint16
-          get_uint36>
-    ]
-);
+  get_uint36
+  get_char6_pair
+>;
 
 sub is_set {
     my ( $data, $offset ) = @_;
@@ -47,19 +41,13 @@ sub get_uint6 {
     );
 }
 
-sub get_char6 {
+sub get_char6_pair {
     my ( $data, $offset ) = @_;
 
-    state $char_offset = ord("A");
+    my $first_letter  = chr( ASCII_OFFSET + get_uint6( $data, $offset ) );
+    my $second_letter = chr( ASCII_OFFSET + get_uint6( $data, $offset + 6 ) );
 
-    return chr( $char_offset + get_uint6( $data, $offset ) );
-}
-
-sub get_char6_sequence {
-    my ( $data, $offset, $n ) = @_;
-
-    return join "",
-      map { get_char6( $data, $offset + ( $_ * 6 ) ) } ( 0 .. $n - 1 );
+    return $first_letter . $second_letter;
 }
 
 sub get_uint12 {
@@ -83,11 +71,10 @@ sub get_uint16 {
 sub get_uint36 {
     my ( $data, $offset ) = @_;
 
-    state $can_pack_quads = !!eval { my $f = pack 'q'; 1 };
+    return unpack( "Q>", _get_bits_with_padding( $data, 64, $offset, 36 ) )
+      if $CAN_PACK_QUADS;
 
-    return $can_pack_quads
-      ? unpack( "Q>", _get_bits_with_padding( $data, 64, $offset, 36 ) )
-      : Math::BigInt->new( "0b" . _add_padding( $data, 64, $offset, 36 ) );
+    return Math::BigInt->new( "0b" . _add_padding( $data, 64, $offset, 36 ) );
 }
 
 sub _get_bits_with_padding {
@@ -142,13 +129,13 @@ Will fetch 6 bits from data since bit offset and convert it an unsigned int.
 
 Similar to L<GDPR::IAB::TCFv2::BitUtils::get_uint6> but perform increment the value with the ascii value of "A" letter and convert to a character.
 
-=head2 get_char6_sequence
+=head2 get_char6_pair
 
 Receives the data, bit offset and sequence size n.
 
 Returns a string of size n by concantenating L<GDPR::IAB::TCFv2::BitUtils::get_char6> calls.
 
-    my $consent_language = get_char6_sequence($data, 108, 2) # returns two letter country encoded as ISO_639-1 
+    my $consent_language = get_char6_pair($data, 108, 2) # returns two letter country encoded as ISO_639-1 
 
 =head2 get_uint12
 
