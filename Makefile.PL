@@ -2,7 +2,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
     NAME             => 'GDPR::IAB::TCFv2',
-    AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj@gmail.com>',
+    AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj+gdpr-iab-tcfv2@gmail.com>',
     LICENSE          => "perl_5",
     ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
     VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
@@ -11,7 +11,6 @@ WriteMakefile(
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,
     },
-    SKIP => [qw<.github>],
     (   eval { ExtUtils::MakeMaker->VERSION(6.46) }
         ? ( META_MERGE => {
                 'meta-spec'    => { version => 2 },

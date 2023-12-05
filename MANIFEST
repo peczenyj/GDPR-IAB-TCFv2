@@ -1,5 +1,5 @@
 Changes
-CONTRIBUTING.md
+CONTRIBUTING.pod
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
