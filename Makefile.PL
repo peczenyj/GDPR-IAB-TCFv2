@@ -5,7 +5,7 @@ WriteMakefile(
     AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj@gmail.com>',
     NAME             => 'GDPR::IAB::TCFv2',
     VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
-    MIN_PERL_VERSION => 5.012,
+    #    MIN_PERL_VERSION => 5.012,
     LICENSE          => "perl_5",
     TEST_REQUIRES => {
         'Test::Exception' => 0,
