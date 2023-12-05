@@ -8,8 +8,8 @@ WriteMakefile(
     #    MIN_PERL_VERSION => 5.012,
     LICENSE          => "perl_5",
     TEST_REQUIRES => {
-        'Test::Exception' => 0,
-        'Test::More'      => 0,
+        'Test::Exception' => 0.43,
+        'Test::More'      => 0.94,
     },
     SKIP => [qw<.github>],
     (   eval { ExtUtils::MakeMaker->VERSION(6.46) }
