@@ -1,6 +1,7 @@
   - add special features as constants
   - add purpose ids as constants
   - add missing methods on pod documentation
+  - on list context methods created and last_updated should return epoch in seconds + nanoseconds
 
 v0.051
   - remove dependency List::MoreUtils
