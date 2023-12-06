@@ -1,3 +1,5 @@
+  - validate if string is a valid base64 url encoded string
+
 0.06
   - add special features as constants
   - add purpose ids as constants

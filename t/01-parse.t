@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Exception;
 
 use GDPR::IAB::TCFv2;
@@ -272,7 +272,7 @@ subtest "valid tcf v2 consent string using range" => sub {
 };
 
 subtest "invalid tcf consent string candidates" => sub {
-    plan tests => 5;
+    plan tests => 6;
 
     throws_ok {
         GDPR::IAB::TCFv2->Parse();
@@ -304,4 +304,36 @@ subtest "invalid tcf consent string candidates" => sub {
     }
     qr/consent string is not tcf version 2/,
       'possible tcf v3 consent string should throw error';
+
+    throws_ok {
+        GDPR::IAB::TCFv2->Parse(
+            "COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgA!A"
+        );
+    }
+    qr/invalid base64 format/,
+      'string is not a base64 url encoded string';
+};
+
+subtest "check if looks like tcf v2 consent string" => sub {
+    plan tests => 5;
+
+    ok GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(
+        "COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgAA"
+      ),
+      "this valid consent string starts with literal 'C' so it looks like a tcf v2 consent string";
+
+    ok GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(
+        "COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgA!A"
+      ),
+      "this invalid consent string starts with literal 'C' so it looks like a tcf v2 consent string";
+
+    ok !GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(
+        "BOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA"),
+      "this tcf v1 consent string starts with literal 'B' so it does not looks like a tcf v2";
+
+    ok !GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(""),
+      "empty consent string does not looks like a tcf v2";
+
+    ok !GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(),
+      "no consent string does not looks like a tcf v2";
 };

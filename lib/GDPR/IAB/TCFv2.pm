@@ -40,7 +40,7 @@ sub Parse {
 
     my $core_tc_string = _get_core_tc_string($tc_string);
 
-    my $data      = unpack 'B*', _decode_base64url($core_tc_string);
+    my $data      = unpack 'B*', _validate_and_decode_base64($core_tc_string);
     my $data_size = length($data);
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
@@ -292,6 +292,24 @@ sub _get_core_tc_string {
     return substr( $tc_string, 0, $pos );
 }
 
+sub _validate_and_decode_base64 {
+    my $s = shift;
+
+    # see: https://www.perlmonks.org/?node_id=775820
+    croak "invalid base64 format" unless $s =~ m{
+        ^
+        (?: [A-Za-z0-9-_]{4} )*
+        (?:
+            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048] =?
+        |
+            [A-Za-z0-9-_] [AQgw] (?:==)?
+        )?
+        \z
+    }x;
+
+    return _decode_base64url($s);
+}
+
 sub _decode_base64url {
     my $s = shift;
     $s =~ tr[-_][+/];
@@ -331,6 +349,8 @@ sub _parseBitField {
 
 sub looksLikeIsConsentVersion2 {
     my ($gdpr_consent_string) = @_;
+
+    return unless defined $gdpr_consent_string;
 
     return rindex( $gdpr_consent_string, CONSENT_STRING_TCF2_PREFIX, 0 ) == 0;
 }
