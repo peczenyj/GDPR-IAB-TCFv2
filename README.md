@@ -1,6 +1,10 @@
 # NAME
 
-GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
+GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
+
+<div>
+    <p><img src="https://cpants.cpanauthors.org/release/PACMAN/GDPR-IAB-TCFv2-0.051.svg">
+</div>
 
 # VERSION
 
@@ -14,6 +18,8 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     use warnings;
     
     use GDPR::IAB::TCFv2;
+    use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
+    use GDPR::IAB::TCFv2::Constants::SpecialFeature qw<:all>;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
@@ -34,9 +40,18 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     say "find consent for purpose ids 1, 3, 9 and 10" if all {
         $consent->is_purpose_consent_allowed($_)
-    } (1, 3, 9, 10);
+    } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
+        InfoStorageAccess,       #  1
+        PersonalizationProfile,  #  3
+        MarketResearch,          #  9
+        DevelopImprove,          # 10
+    );
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
+
+    # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
+    say "user is opt in for special feature 'Geolocation (id 1)'" 
+        if $consent->is_special_feature_opt_in(Geolocation); 
 
 # ACRONYMS
 
@@ -99,17 +114,47 @@ Two-letter [ISO 639-1](https://en.wikipedia.org/wiki/ISO_639-1) language code in
 Number corresponds to [GVL](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list) vendorListVersion.
 Version of the GVL used to create this TC String.
 
+## policy\_version
+
+Version of policy used within [GVL](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list).
+
+From the corresponding field in the GVL that was used for obtaining consent.
+
+## is\_service\_specific
+
+This field must always have the value of 1. When a Vendor encounters a TC String with `is_service_specific=0` then it is considered invalid.
+
+## use\_non\_standard\_stacks
+
+If true, CMP used non-IAB standard texts during consent gathering.
+
+Setting this to 1 signals to Vendors that a private CMP has modified standard Stack descriptions and/or their translations and/or that a CMP has modified or supplemented standard Illustrations and/or their translations as allowed by the policy..
+
+## is\_special\_feature\_opt\_in
+
+If true means Opt in.
+
+The TCF [Policies](https://iabeurope.eu/iab-europe-transparency-consent-framework-policies/) designates certain Features as "special" which means a CMP must afford the user a means to opt in to their use. These "Special Features" are published and numerically identified in the [Global Vendor List separately](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list) from normal Features.
+
+See also: [GDPR::IAB::TCFv2::Constants::SpecialFeature](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AConstants%3A%3ASpecialFeature).
+
 ## is\_purpose\_consent\_allowed
+
+If true means Consent.
 
 The user's consent value for each Purpose established on the legal basis of consent.
 
     my $ok = $instance->is_purpose_consent_allowed(1);
+
+See also: [GDPR::IAB::TCFv2::Constants::Purpose](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AConstants%3A%3APurpose).
 
 ## is\_purpose\_legitimate\_interest\_allowed
 
 The user's consent value for each Purpose established on the legal basis of legitimate interest.
 
     my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+
+See also: [GDPR::IAB::TCFv2::Constants::Purpose](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AConstants%3A%3APurpose).
 
 ## purpose\_one\_treatment
 
@@ -132,7 +177,11 @@ Because this section can be a variable length, this indicates the last ID of the
 
 ## vendor\_consent
 
-The consent value for each Vendor ID 
+If true, vendor has consent.
+
+The consent value for each Vendor ID.
+
+    my $ok = $instance->vendor_consent(284); # if true, consent ok for Weborama (vendor id 284).
 
 ## max\_vendor\_id\_legitimate\_interest
 
@@ -142,7 +191,11 @@ Because this section can be a variable length, this indicates the last ID of the
 
 ## vendor\_legitimate\_interest
 
+If true, legitimate interest established.
+
 The legitimate interest value for each Vendor ID
+
+    my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
 
 # FUNCTIONS
 
