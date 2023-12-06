@@ -343,6 +343,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     use warnings;
     
     use GDPR::IAB::TCFv2;
+    use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
@@ -363,7 +364,12 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     say "find consent for purpose ids 1, 3, 9 and 10" if all {
         $consent->is_purpose_consent_allowed($_)
-    } (1, 3, 9, 10);
+    } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
+        InfoStorageAccess,       #  1
+        PersonalizationProfile,  #  3
+        MarketResearch,          #  9
+        DevelopImprove,          # 10
+    );
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
 
