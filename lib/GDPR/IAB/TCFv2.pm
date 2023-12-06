@@ -13,7 +13,7 @@ use GDPR::IAB::TCFv2::BitUtils
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.051";
+our $VERSION = "0.06";
 
 use constant CONSENT_STRING_TCF2_SEPARATOR => '.';
 use constant CONSENT_STRING_TCF2_PREFIX    => 'C';
@@ -360,7 +360,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.051
+Version 0.06
 
 =head1 SYNOPSIS
 

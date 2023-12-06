@@ -1,9 +1,10 @@
+0.06
   - add special features as constants
   - add purpose ids as constants
   - add missing methods on pod documentation
   - on list context methods created and last_updated should return epoch in seconds + nanoseconds
 
-v0.051
+0.051
   - remove dependency List::MoreUtils
   - make sure the code will work on perl 5.8
   - make sure the code will work on 32 bits
@@ -12,7 +13,7 @@ v0.051
   - some small refactors
   - doc fixes
 
-v0.05
+0.05
   - almost the same as v0.051
 
 v0.0.4
