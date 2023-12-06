@@ -13,14 +13,14 @@ use GDPR::IAB::TCFv2::BitUtils
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::RangeSection;
 
-
 our $VERSION = "0.051";
 
-use constant {
-    CONSENT_STRING_TCF2_SEPARATOR => '.',
-    CONSENT_STRING_TCF2_PREFIX    => 'C',
-    MIN_BYTE_SIZE                 => 29,
-};
+use constant CONSENT_STRING_TCF2_SEPARATOR => '.';
+use constant CONSENT_STRING_TCF2_PREFIX    => 'C';
+use constant MIN_BYTE_SIZE                 => 29;
+use constant MIN_BIT_SIZE                  => 8 * MIN_BYTE_SIZE;
+use constant TCF_VERSION                   => 2;
+
 
 INIT {
     if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
@@ -44,7 +44,7 @@ sub Parse {
     my $data_size = length($data);
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
-      if $data_size / 8 < MIN_BYTE_SIZE;
+      if $data_size < MIN_BIT_SIZE;
 
     my $self = {
         data                           => $data,
@@ -56,11 +56,32 @@ sub Parse {
 
     bless $self, $klass;
 
-    croak 'consent string is not tcf version 2' unless $self->version == 2;
+    croak 'consent string is not tcf version 2'
+      unless $self->version == TCF_VERSION;
 
-    croak 'invalid vendor list version' if $self->vendor_list_version == 0;
+    croak 'invalid vendor list version' unless $self->vendor_list_version;
 
     # parse consent
+
+    my $legitimate_interest_start = $self->_parse_vendor_consents();
+
+    # parse legitimate interest
+
+    my $pub_restrict_start =
+      $self->_parse_vendor_legitimate_interests($legitimate_interest_start);
+
+    # parse publisher restrictions from section core string
+
+    # parse section disclosed vendors if available
+
+    # parse section publisher_tc if available
+
+    return $self;
+}
+
+sub _parse_vendor_consents {
+    my $self = shift;
+
     my $vendor_consents;
     my $legitimate_interest_start;
 
@@ -75,18 +96,24 @@ sub Parse {
 
     $self->{vendor_consents} = $vendor_consents;
 
-    # parse legitimate interest
+    return $legitimate_interest_start;
+}
+
+sub _parse_vendor_legitimate_interests {
+    my ( $self, $legitimate_interest_start ) = @_;
+
     my $legitimate_interest_max_vendor =
-      get_uint16( $data, $legitimate_interest_start );
+      get_uint16( $self->{data}, $legitimate_interest_start );
 
     $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
 
+    my $data_size = length( $self->{data} );
     croak
       "invalid consent data: no legitimate interest start position (got $legitimate_interest_start + 16 but $data_size)"
       if $legitimate_interest_start + 16 > $data_size;
 
     my $is_vendor_legitimate_interest_range =
-      is_set( $data, $legitimate_interest_start + 16 );
+      is_set( $self->{data}, $legitimate_interest_start + 16 );
 
     my $vendor_legitimate_interests;
     my $pub_restrict_start;
@@ -106,15 +133,9 @@ sub Parse {
           );
     }
 
-    # parse publisher restrictions from section core string
-
-    # parse section disclosed vendors
-
-    # parse section publisher_tc as Publisher Purposes Transparency and Consent
-
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
-    return $self;
+    return $pub_restrict_start;
 }
 
 sub _get_core_tc_string {
