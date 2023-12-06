@@ -1,3 +1,7 @@
+  - add special features as constants
+  - add purpose ids as constants
+  - add missing methods on pod documentation
+
 v0.051
   - remove dependency List::MoreUtils
   - make sure the code will work on perl 5.8

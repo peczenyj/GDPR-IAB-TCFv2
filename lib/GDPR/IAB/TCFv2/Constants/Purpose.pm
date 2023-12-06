@@ -1,22 +1,30 @@
 package GDPR::IAB::TCFv2::Constants::Purpose;
 use strict;
 use warnings;
+use Scalar::Util qw<dualvar>;
 
 require Exporter;
 use base qw<Exporter>;
 
 use constant {
-    InfoStorageAccess        => 1,
-    BasicAdserving           => 2,
-    PersonalizationProfile   => 3,
-    PersonalizationSelection => 4,
-    ContentProfile           => 5,
-    ContentSelection         => 6,
-    AdPerformance            => 7,
-    ContentPerformance       => 8,
-    MarketResearch           => 9,
-    DevelopImprove           => 10,
-    SelectContent            => 11,
+    InfoStorageAccess =>
+      dualvar( 1, "Store and/or access information on a device" ),
+    BasicAdserving => dualvar( 2, "Use limited data to select advertising" ),
+    PersonalizationProfile =>
+      dualvar( 3, "Create profiles for personalised advertising" ),
+    PersonalizationSelection =>
+      dualvar( 4, "Use profiles to select personalised advertising" ),
+    ContentProfile   => dualvar( 5, "Create profiles to personalise content" ),
+    ContentSelection =>
+      dualvar( 6, "Use profiles to select personalised content" ),
+    AdPerformance      => dualvar( 7, "Measure advertising performance" ),
+    ContentPerformance => dualvar( 8, "Measure content performance" ),
+    MarketResearch     => dualvar(
+        9,
+        "Understand audiences through statistics or combinations of data from different sources"
+    ),
+    DevelopImprove => dualvar( 10, "Develop and improve services" ),
+    SelectContent  => dualvar( 11, "Use limited data to select content" ),
 };
 
 our @EXPORT_OK = qw<
@@ -50,11 +58,15 @@ GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.2 purposes
 
     use feature 'say';
     
-    say "InfoStorageAccess id is ". InfoStorageAccess;
+    say "Purpose id is ". (0+InfoStorageAccess), ", and it means " . InfoStorageAccess;
     # Output:
-    # InfoStorageAccess id is 1
+    # Purpose id is 1, and it means Store and/or access information on a device
 
 =head1 CONSTANTS
+
+All constants are C<dualvar> (see L<Scalar::Util>).
+
+Returns a scalar that has the C<id> in a numeric context and the C<description> in a string context.
 
 =head2  InfoStorageAccess
 

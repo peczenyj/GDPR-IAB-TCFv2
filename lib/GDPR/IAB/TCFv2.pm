@@ -27,7 +27,7 @@ INIT {
     {
         no warnings q<redefine>;
 
-        *decode_base64url = $native_decode_base64url;
+        *_decode_base64url = $native_decode_base64url;
     }
 }
 
@@ -40,7 +40,7 @@ sub Parse {
 
     my $core_tc_string = _get_core_tc_string($tc_string);
 
-    my $data      = unpack 'B*', decode_base64url($core_tc_string);
+    my $data      = unpack 'B*', _decode_base64url($core_tc_string);
     my $data_size = length($data);
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
@@ -77,82 +77,6 @@ sub Parse {
     # parse section publisher_tc if available
 
     return $self;
-}
-
-sub _parse_vendor_consents {
-    my $self = shift;
-
-    my $vendor_consents;
-    my $legitimate_interest_start;
-
-    if ( $self->_is_vendor_consent_range_encoding ) {
-        ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseRangeSection( $self->max_vendor_id_consent, 230 );
-    }
-    else {
-        ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseBitField( $self->max_vendor_id_consent, 230 );
-    }
-
-    $self->{vendor_consents} = $vendor_consents;
-
-    return $legitimate_interest_start;
-}
-
-sub _parse_vendor_legitimate_interests {
-    my ( $self, $legitimate_interest_start ) = @_;
-
-    my $legitimate_interest_max_vendor =
-      get_uint16( $self->{data}, $legitimate_interest_start );
-
-    $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
-
-    my $data_size = length( $self->{data} );
-    croak
-      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start + 16 but $data_size)"
-      if $legitimate_interest_start + 16 > $data_size;
-
-    my $is_vendor_legitimate_interest_range =
-      is_set( $self->{data}, $legitimate_interest_start + 16 );
-
-    my $vendor_legitimate_interests;
-    my $pub_restrict_start;
-
-    if ($is_vendor_legitimate_interest_range) {
-        ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseRangeSection(
-            $self->max_vendor_id_legitimate_interest,
-            $legitimate_interest_start + 17
-          );
-    }
-    else {
-        ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseBitField(
-            $self->max_vendor_id_legitimate_interest,
-            $legitimate_interest_start + 17
-          );
-    }
-
-    $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
-
-    return $pub_restrict_start;
-}
-
-sub _get_core_tc_string {
-    my $tc_string = shift;
-
-    my $pos = index( $tc_string, CONSENT_STRING_TCF2_SEPARATOR );
-
-    return $tc_string if $pos < 0;
-
-    return substr( $tc_string, 0, $pos );
-}
-
-sub decode_base64url {
-    my $s = shift;
-    $s =~ tr[-_][+/];
-    $s .= '=' while length($s) % 4;
-    return decode_base64($s);
 }
 
 sub version {
@@ -288,6 +212,82 @@ sub vendor_legitimate_interest {
     return $self->{vendor_legitimate_interests}->contains($id);
 }
 
+sub _parse_vendor_consents {
+    my $self = shift;
+
+    my $vendor_consents;
+    my $legitimate_interest_start;
+
+    if ( $self->_is_vendor_consent_range_encoding ) {
+        ( $vendor_consents, $legitimate_interest_start ) =
+          $self->_parseRangeSection( $self->max_vendor_id_consent, 230 );
+    }
+    else {
+        ( $vendor_consents, $legitimate_interest_start ) =
+          $self->_parseBitField( $self->max_vendor_id_consent, 230 );
+    }
+
+    $self->{vendor_consents} = $vendor_consents;
+
+    return $legitimate_interest_start;
+}
+
+sub _parse_vendor_legitimate_interests {
+    my ( $self, $legitimate_interest_start ) = @_;
+
+    my $legitimate_interest_max_vendor =
+      get_uint16( $self->{data}, $legitimate_interest_start );
+
+    $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
+
+    my $data_size = length( $self->{data} );
+    croak
+      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start + 16 but $data_size)"
+      if $legitimate_interest_start + 16 > $data_size;
+
+    my $is_vendor_legitimate_interest_range =
+      is_set( $self->{data}, $legitimate_interest_start + 16 );
+
+    my $vendor_legitimate_interests;
+    my $pub_restrict_start;
+
+    if ($is_vendor_legitimate_interest_range) {
+        ( $vendor_legitimate_interests, $pub_restrict_start ) =
+          $self->_parseRangeSection(
+            $self->max_vendor_id_legitimate_interest,
+            $legitimate_interest_start + 17
+          );
+    }
+    else {
+        ( $vendor_legitimate_interests, $pub_restrict_start ) =
+          $self->_parseBitField(
+            $self->max_vendor_id_legitimate_interest,
+            $legitimate_interest_start + 17
+          );
+    }
+
+    $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
+
+    return $pub_restrict_start;
+}
+
+sub _get_core_tc_string {
+    my $tc_string = shift;
+
+    my $pos = index( $tc_string, CONSENT_STRING_TCF2_SEPARATOR );
+
+    return $tc_string if $pos < 0;
+
+    return substr( $tc_string, 0, $pos );
+}
+
+sub _decode_base64url {
+    my $s = shift;
+    $s =~ tr[-_][+/];
+    $s .= '=' while length($s) % 4;
+    return decode_base64($s);
+}
+
 sub _is_vendor_consent_range_encoding {
     my $self = shift;
 
@@ -327,9 +327,21 @@ sub looksLikeIsConsentVersion2 {
 1;
 __END__
 
+=pod
+
+=encoding utf8
+
+=for html <a href="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2"><img src="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2.svg"/></a>
+
+=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml/badge.svg"/></a>
+
+=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/blob/master/LICENSE"><img src="https://img.shields.io/cpan/l/GDPR-IAB-TCFv2.svg" /></a>
+
+=for html <a href="https://metacpan.org/pod/GDPR-IAB-TCFv2"><img src="https://img.shields.io/cpan/v/GDPR-IAB-TCFv2.svg" /></A>
+
 =head1 NAME
 
-GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
+GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
 
 =head1 VERSION
 
@@ -374,7 +386,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
 
-    # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
+    # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
     say "user is opt in for special feature 'Geolocation (id 1)'" 
         if $consent->is_special_feature_opt_in(Geolocation); 
 
@@ -405,7 +417,6 @@ Will die if can't decode the string.
 =head1 METHODS
 
 =head2 version
-
 
 Version number of the encoding format. The value is 2 for this format.
 
@@ -440,17 +451,47 @@ Two-letter L<ISO 639-1|https://en.wikipedia.org/wiki/ISO_639-1> language code in
 Number corresponds to L<GVL|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list> vendorListVersion.
 Version of the GVL used to create this TC String.
 
+=head2 policy_version
+
+Version of policy used within L<GVL|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list>.
+
+From the corresponding field in the GVL that was used for obtaining consent.
+
+=head2 is_service_specific
+
+This field must always have the value of 1. When a Vendor encounters a TC String with C<is_service_specific=0> then it is considered invalid.
+
+=head2 use_non_standard_stacks
+
+If true, CMP used non-IAB standard texts during consent gathering.
+
+Setting this to 1 signals to Vendors that a private CMP has modified standard Stack descriptions and/or their translations and/or that a CMP has modified or supplemented standard Illustrations and/or their translations as allowed by the policy..
+
+=head2 is_special_feature_opt_in
+
+If true means Opt in.
+
+The TCF L<Policies|https://iabeurope.eu/iab-europe-transparency-consent-framework-policies/> designates certain Features as "special" which means a CMP must afford the user a means to opt in to their use. These "Special Features" are published and numerically identified in the L<Global Vendor List separately|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list> from normal Features.
+
+See also: L<GDPR::IAB::TCFv2::Constants::SpecialFeature>.
+
 =head2 is_purpose_consent_allowed
+
+If true means Consent.
 
 The user's consent value for each Purpose established on the legal basis of consent.
 
     my $ok = $instance->is_purpose_consent_allowed(1);
+
+See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
 =head2 is_purpose_legitimate_interest_allowed
 
 The user's consent value for each Purpose established on the legal basis of legitimate interest.
 
     my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+
+See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
 =head2 purpose_one_treatment
 
@@ -473,7 +514,11 @@ Because this section can be a variable length, this indicates the last ID of the
 
 =head2 vendor_consent
 
-The consent value for each Vendor ID 
+If true, vendor has consent.
+
+The consent value for each Vendor ID.
+
+    my $ok = $instance->vendor_consent(284); # if true, consent ok for Weborama (vendor id 284).
 
 =head2 max_vendor_id_legitimate_interest
 
@@ -482,8 +527,12 @@ The maximum Vendor ID that is represented in the following bit field or range en
 Because this section can be a variable length, this indicates the last ID of the section so that a decoder will know when it has reached the end.
 
 =head2 vendor_legitimate_interest
-	
+
+If true, legitimate interest established.
+
 The legitimate interest value for each Vendor ID
+
+    my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
 
 =head1 FUNCTIONS
 
