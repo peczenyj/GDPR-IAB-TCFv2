@@ -60,6 +60,7 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
+    # parse consent
     my $vendor_consents;
     my $legitimate_interest_start;
 
@@ -74,6 +75,7 @@ sub Parse {
 
     $self->{vendor_consents} = $vendor_consents;
 
+    # parse legitimate interest
     my $legitimate_interest_max_vendor =
       get_uint16( $data, $legitimate_interest_start );
 
@@ -103,6 +105,12 @@ sub Parse {
             $legitimate_interest_start + 17
           );
     }
+
+    # parse publisher restrictions from section core string
+
+    # parse section disclosed vendors
+
+    # parse section publisher_tc as Publisher Purposes Transparency and Consent
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
