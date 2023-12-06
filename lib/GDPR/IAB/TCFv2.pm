@@ -344,6 +344,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     
     use GDPR::IAB::TCFv2;
     use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
+    use GDPR::IAB::TCFv2::Constants::SpecialFeature qw<:all>;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
@@ -372,6 +373,10 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     );
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
+
+    # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
+    say "user is opt in for special feature 'Geolocation (id 1)'" 
+        if $consent->is_special_feature_opt_in(Geolocation); 
 
 =head1 ACRONYMS
 

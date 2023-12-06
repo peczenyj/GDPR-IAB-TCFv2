@@ -1,8 +1,10 @@
 use strict;
 use warnings;
-use Test::More tests => 11;
+use Test::More tests => 15;
 
 BEGIN {
+    use_ok('GDPR::IAB::TCFv2::Constants::Purpose');
+    use_ok('GDPR::IAB::TCFv2::Constants::SpecialFeature');
     use_ok('GDPR::IAB::TCFv2::BitUtils');
     use_ok('GDPR::IAB::TCFv2::BitField');
     use_ok('GDPR::IAB::TCFv2::RangeSection');
@@ -10,6 +12,8 @@ BEGIN {
     use_ok('GDPR::IAB::TCFv2');
 }
 
+require_ok('GDPR::IAB::TCFv2::Constants::Purpose');
+require_ok('GDPR::IAB::TCFv2::Constants::SpecialFeature');
 require_ok 'GDPR::IAB::TCFv2::BitUtils';
 require_ok 'GDPR::IAB::TCFv2::BitField';
 require_ok 'GDPR::IAB::TCFv2::RangeSection';
