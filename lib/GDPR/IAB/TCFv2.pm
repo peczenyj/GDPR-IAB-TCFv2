@@ -5,14 +5,16 @@ use warnings;
 use integer;
 use bytes;
 
-our $VERSION = "0.051";
+use MIME::Base64 qw<decode_base64>;
+use Carp         qw<croak>;
 
 use GDPR::IAB::TCFv2::BitUtils
   qw<get_char6_pair get_uint6 get_uint12 get_uint16 get_uint36 is_set>;
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::RangeSection;
-use MIME::Base64 qw<decode_base64>;
-use Carp         qw<croak>;
+
+
+our $VERSION = "0.051";
 
 use constant {
     CONSENT_STRING_TCF2_SEPARATOR => '.',
@@ -38,15 +40,18 @@ sub Parse {
 
     my $core_tc_string = _get_core_tc_string($tc_string);
 
-    my $data = unpack 'B*', decode_base64url($core_tc_string);
+    my $data      = unpack 'B*', decode_base64url($core_tc_string);
+    my $data_size = length($data);
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
-      if length($data) / 8 < MIN_BYTE_SIZE;
+      if $data_size / 8 < MIN_BYTE_SIZE;
 
     my $self = {
-        data           => $data,
-        tc_string      => $tc_string,
-        core_tc_string => $core_tc_string,
+        data                           => $data,
+        tc_string                      => $tc_string,
+        vendor_consents                => undef,
+        legitimate_interest_max_vendor => undef,
+        vendor_legitimate_interests    => undef,
     };
 
     bless $self, $klass;
@@ -70,13 +75,13 @@ sub Parse {
     $self->{vendor_consents} = $vendor_consents;
 
     my $legitimate_interest_max_vendor =
-      get_uint16( $self->{data}, $legitimate_interest_start );
+      get_uint16( $data, $legitimate_interest_start );
 
     $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
 
     croak
-      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start +16 but @{[ length( $self->{data} ) ]})"
-      if $legitimate_interest_start + 16 > length( $self->{data} );
+      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start + 16 but $data_size)"
+      if $legitimate_interest_start + 16 > $data_size;
 
     my $is_vendor_legitimate_interest_range =
       is_set( $data, $legitimate_interest_start + 16 );
