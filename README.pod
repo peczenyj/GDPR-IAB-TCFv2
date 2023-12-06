@@ -99,9 +99,29 @@ Version number of the encoding format. The value is 2 for this format.
 
 Epoch time format when TC String was created in numeric format. You can easily parse with L<DateTime> if needed.
 
+On scalar context it returns epoch in seconds. On list context it returns epoch in seconds and nanoseconds.
+
+    use GDPR::IAB::TCFv2;
+    use Test::More tests => 3;
+
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
+    );
+
+    is $consent->created, 1228644257,
+      'should return the creation epoch 07/12/2008';
+
+    my ( $seconds, $nanoseconds ) = $consent->created;
+    is $seconds, 1228644257,
+        'should return the creation epoch 07/12/2008 on list context';
+    is $nanoseconds, 700000000,
+        'should return the 700000000 nanoseconds of epoch on list context';
+    
 =head2 last_updated
 
 Epoch time format when TC String was last updated in numeric format. You can easily parse with L<DateTime> if needed.
+
+On scalar context it returns epoch in seconds. On list context it returns epoch in seconds and nanoseconds, like the C<created>
 
 =head2 cmp_id
 

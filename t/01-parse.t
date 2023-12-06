@@ -7,7 +7,7 @@ use Test::Exception;
 use GDPR::IAB::TCFv2;
 
 subtest "valid tcf v2 consent string using bitfield" => sub {
-    plan tests => 22;
+    plan tests => 26;
 
     my $consent;
 
@@ -25,8 +25,24 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
     is $consent->created, 1228644257,
       'should return the creation epoch 07/12/2008';
 
+    {
+        my ( $seconds, $nanoseconds ) = $consent->created;
+        is $seconds, 1228644257,
+          'should return the creation epoch 07/12/2008 on list context';
+        is $nanoseconds, 700000000,
+          'should return the 700000000 nanoseconds of epoch on list context';
+    }
+
     is $consent->last_updated, 1326215413,
       'should return the last update epoch 10/01/2012';
+
+    {
+        my ( $seconds, $nanoseconds ) = $consent->last_updated;
+        is $seconds, 1326215413,
+          'should return the last updated epoch 07/12/2008 on list context';
+        is $nanoseconds, 400000000,
+          'should return the 400000000 nanoseconds of epoch on list context';
+    }
 
     is $consent->cmp_id, 21, 'should return the cmp id 21';
 
@@ -131,7 +147,7 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
 };
 
 subtest "valid tcf v2 consent string using range" => sub {
-    plan tests => 22;
+    plan tests => 26;
 
     my $consent;
 
@@ -147,10 +163,26 @@ subtest "valid tcf v2 consent string using range" => sub {
     is $consent->version, 2, 'should return version 2';
 
     is $consent->created, 1587946020,
-      'should return the creation epoch 27/04/2020';
+      'should return the creation epoch 27/04/2020 on scalar context';
+
+    {
+        my ( $seconds, $nanoseconds ) = $consent->created;
+        is $seconds, 1587946020,
+          'should return the creation epoch 27/04/2020 on list context';
+        is $nanoseconds, 0,
+          'should return the 0 nanoseconds of epoch on list context';
+    }
 
     is $consent->last_updated, 1587946020,
       'should return the last update epoch 27/04/2020';
+
+    {
+        my ( $seconds, $nanoseconds ) = $consent->last_updated;
+        is $seconds, 1587946020,
+          'should return the last update epoch 27/04/2020 on list context';
+        is $nanoseconds, 0,
+          'should return the 0 nanoseconds of epoch on list context';
+    }
 
     is $consent->cmp_id, 3, 'should return the cmp id 3';
 

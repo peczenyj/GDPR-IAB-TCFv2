@@ -88,17 +88,28 @@ sub version {
 sub created {
     my $self = shift;
 
-    my $deciseconds = get_uint36( $self->{data}, 6 );
+    my ( $seconds, $nanoseconds ) = $self->_get_epoch(6);
 
-    return $deciseconds / 10;
+    return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
 }
 
 sub last_updated {
     my $self = shift;
 
-    my $deciseconds = get_uint36( $self->{data}, 42 );
+    my ( $seconds, $nanoseconds ) = $self->_get_epoch(42);
 
-    return $deciseconds / 10;
+    return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
+}
+
+sub _get_epoch {
+    my ( $self, $offset ) = @_;
+
+    my $deciseconds = get_uint36( $self->{data}, $offset );
+
+    return (
+        ( $deciseconds / 10 ),
+        ( ( $deciseconds % 10 ) * 100_000_000 ),
+    );
 }
 
 sub cmp_id {
@@ -428,9 +439,29 @@ Version number of the encoding format. The value is 2 for this format.
 
 Epoch time format when TC String was created in numeric format. You can easily parse with L<DateTime> if needed.
 
+On scalar context it returns epoch in seconds. On list context it returns epoch in seconds and nanoseconds.
+
+    use GDPR::IAB::TCFv2;
+    use Test::More tests => 3;
+
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
+    );
+
+    is $consent->created, 1228644257,
+      'should return the creation epoch 07/12/2008';
+
+    my ( $seconds, $nanoseconds ) = $consent->created;
+    is $seconds, 1228644257,
+        'should return the creation epoch 07/12/2008 on list context';
+    is $nanoseconds, 700000000,
+        'should return the 700000000 nanoseconds of epoch on list context';
+    
 =head2 last_updated
 
 Epoch time format when TC String was last updated in numeric format. You can easily parse with L<DateTime> if needed.
+
+On scalar context it returns epoch in seconds. On list context it returns epoch in seconds and nanoseconds, like the C<created>
 
 =head2 cmp_id
 
