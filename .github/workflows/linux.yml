@@ -7,17 +7,28 @@ jobs:
   perl:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
+        os: [ubuntu-latest]
         perl-version:
           - '5.8'
           - '5.12'
-          - '5.38'
-    container:
+        include:
+          - perl-version: '5.38'
+            coverage: true
+    container: 
       image: perl:${{ matrix.perl-version }}
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v2
       - name: Install Dependencies
         run: |
           curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
       - name: Run Tests
         run: prove -lr t
+      - name: Run tests (with coverage)
+        if: ${{ matrix.coverage }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cpanm -n Devel::Cover::Report::Coveralls
+          cover -test -report Coveralls
