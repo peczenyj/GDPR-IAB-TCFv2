@@ -10,10 +10,14 @@ use Carp                       qw<croak>;
 sub new {
     my ( $klass, %args ) = @_;
 
-    my $data                 = $args{data}      // croak "missing 'data'";
-    my $start_bit            = $args{start_bit} // croak "missing 'start_bit'";
-    my $vendor_bits_required = $args{vendor_bits_required}
-      // croak "missing 'vendor_bits_required'";
+    croak "missing 'data'"      unless defined $args{data};
+    croak "missing 'start_bit'" unless defined $args{start_bit};
+    croak "missing 'vendor_bits_required'"
+      unless defined $args{vendor_bits_required};
+
+    my $data                 = $args{data};
+    my $start_bit            = $args{start_bit};
+    my $vendor_bits_required = $args{vendor_bits_required};
 
     my $data_size = length($data);
 
