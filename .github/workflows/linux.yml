@@ -27,7 +27,6 @@ jobs:
       - name: Install Dependencies
         run: |
           curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
-          cpanm -n TAP::Formatter::GitHubActions
       - name: Fix ExtUtils::MakeMaker (for Perl 5.16 and 5.18)
         run: cpanm -n App::cpanminus ExtUtils::MakeMaker
       - name: Run Tests
