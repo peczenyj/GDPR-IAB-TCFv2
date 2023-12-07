@@ -1,3 +1,5 @@
+  - fix typos in pod documentation
+
 0.07
   - add check for publisher restrictions
   - validate if string is a valid base64 url encoded string
