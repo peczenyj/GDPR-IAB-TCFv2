@@ -15,3 +15,4 @@ MANIFEST			This list of files
 README.pod
 t/00-load.t
 t/01-parse.t
+t/99-pod.t

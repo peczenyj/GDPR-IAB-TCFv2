@@ -10,6 +10,7 @@ WriteMakefile(
     TEST_REQUIRES    => {
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,
+        'Test::Pod'       => 0,
     },
     (   eval { ExtUtils::MakeMaker->VERSION(6.46) }
         ? ( META_MERGE => {

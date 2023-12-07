@@ -151,7 +151,7 @@ Similar to L<GDPR::IAB::TCFv2::BitUtils::get_uint6> but perform increment the va
 
 Receives the data, bit offset and sequence size n.
 
-Returns a string of size n by concantenating L<GDPR::IAB::TCFv2::BitUtils::get_char6> calls.
+Returns a string of size n by concatenate L<GDPR::IAB::TCFv2::BitUtils::get_char6> calls.
 
     my $consent_language = get_char6_pair($data, 108, 2) # returns two letter country encoded as ISO_639-1 
 
