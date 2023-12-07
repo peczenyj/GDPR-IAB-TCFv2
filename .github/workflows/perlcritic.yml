@@ -8,4 +8,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: gugod/action-perlcritic@v1
+      - uses: gugod/action-perlcritic@fun
