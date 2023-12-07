@@ -364,6 +364,7 @@ subtest "check publisher restriction" => sub {
         done_testing;
     };
 
+  done_testing;
 };
 
 subtest "invalid tcf consent string candidates" => sub {
