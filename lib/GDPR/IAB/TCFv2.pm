@@ -318,7 +318,7 @@ sub _parse_publisher_restrictions {
             $current_offset
           );
 
-        $restrictions{$purpose_id} = {} if !defined $restrictions{$purpose_id};
+        $restrictions{$purpose_id} ||= {};
 
         $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
 
