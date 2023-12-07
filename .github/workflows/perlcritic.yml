@@ -1,0 +1,11 @@
+name: perlcritic
+
+on: 
+  - push
+
+jobs:
+  perlcritic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: gugod/action-perlcritic@v1
