@@ -135,6 +135,14 @@ Will return true if the bit present on bit offset is 1.
 
     my $is_service_specific = is_set( $data, 138 );
 
+=head2 get_uint2
+
+Receive two parameters: data and bit offset.
+
+Will fetch 2 bits from data since bit offset and convert it an unsigned int.
+
+    my $value = get_uint2( $data, $offset );
+
 =head2 get_uint6
 
 Receive two parameters: data and bit offset.
