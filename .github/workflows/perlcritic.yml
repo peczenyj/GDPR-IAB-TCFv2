@@ -4,7 +4,7 @@ on:
   - push
 
 jobs:
-  perltidy:
+  perlcritic:
     runs-on: ubuntu-latest
     container:
       image: perl:latest
@@ -16,7 +16,7 @@ jobs:
       - name: perl -V
         run: perl -V
       - name: Install dependencies
-        run: cpanm -n Perl::Critic
+        run: cpanm -n Perl::Critic Perl::Critic::Policy::Documentation::RequirePodLinksIncludeText Perl::Critic::Policy::Miscellanea::RequireRcsKeywords
       - name: perlcritic --version
         run: perlcritic --version
       - name: Run perlcritic
