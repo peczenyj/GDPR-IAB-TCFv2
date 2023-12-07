@@ -4,8 +4,21 @@ on:
   - push
 
 jobs:
-  perlcritic:
+  perltidy:
     runs-on: ubuntu-latest
+    container:
+      image: perl:latest
     steps:
       - uses: actions/checkout@v3
-      - uses: gugod/action-perlcritic@fun
+      - name: Fix git permissions
+        # work around https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: perl -V
+        run: perl -V
+      - name: Install dependencies
+        run: cpanm -n Perl::Critic
+      - name: perlcritic --version
+        run: perlcritic --version
+      - name: Run perlcritic
+        shell: bash
+        run: perlcritic lib
