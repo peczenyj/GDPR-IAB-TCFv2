@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-use Test::More tests => 19;
+use Test::More;
 
 BEGIN {
     use_ok('GDPR::IAB::TCFv2::Constants::Purpose');
@@ -17,16 +17,14 @@ BEGIN {
 require_ok('GDPR::IAB::TCFv2::Constants::Purpose');
 require_ok('GDPR::IAB::TCFv2::Constants::SpecialFeature');
 require_ok('GDPR::IAB::TCFv2::Constants::RestrictionType');
-require_ok('GDPR::IAB::TCFv2::BitUtils');
-require_ok('GDPR::IAB::TCFv2::BitField');
+require_ok 'GDPR::IAB::TCFv2::BitUtils';
+require_ok 'GDPR::IAB::TCFv2::BitField';
 require_ok('GDPR::IAB::TCFv2::PublisherRestrictions');
-require_ok('GDPR::IAB::TCFv2::RangeSection');
-require_ok('GDPR::IAB::TCFv2::RangeConsent');
-require_ok('GDPR::IAB::TCFv2');
+require_ok 'GDPR::IAB::TCFv2::RangeSection';
+require_ok 'GDPR::IAB::TCFv2::RangeConsent';
+require_ok 'GDPR::IAB::TCFv2';
 
 subtest "check interfaces" => sub {
-    plan tests => 8;
-
     isa_ok 'GDPR::IAB::TCFv2::BitUtils',                   'Exporter';
     isa_ok 'GDPR::IAB::TCFv2::Constants::Purpose',         'Exporter';
     isa_ok 'GDPR::IAB::TCFv2::Constants::SpecialFeature',  'Exporter';
@@ -41,7 +39,10 @@ subtest "check interfaces" => sub {
 
     can_ok 'GDPR::IAB::TCFv2::PublisherRestrictions', 'new',
       'check_publisher_restriction';
+
+    done_testing;
 };
 
 diag("GDPR::IAB::TCFv2/$GDPR::IAB::TCFv2::VERSION");
 
+done_testing;
