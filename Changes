@@ -1,3 +1,4 @@
+  - add check for publisher restrictions
   - validate if string is a valid base64 url encoded string
 
 0.06
