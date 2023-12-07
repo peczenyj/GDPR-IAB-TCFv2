@@ -4,7 +4,7 @@
 
 =for html <a href="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2"><img src="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2.svg" alt='Kwalitee'/></a>
 
-=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml/badge.svg" alt='tests"/></a>
+=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml/badge.svg" alt='tests'/></a>
 
 =for html <a href='https://ci.appveyor.com/project/peczenyj/gdpr-iab-tcfv2'><img src='https://ci.appveyor.com/api/projects/status/p2e2478cufcdqanl?svg=true' alt='appveyor'/></a>
 
