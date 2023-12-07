@@ -19,6 +19,7 @@ BEGIN {
 }
 
 our @EXPORT_OK = qw<is_set
+  get_uint2
   get_uint6
   get_uint12
   get_uint16
@@ -32,6 +33,15 @@ sub is_set {
     # TODO check if offset is in range of $data
 
     return substr( $data, $offset, 1 ) == 1;
+}
+
+sub get_uint2 {
+    my ( $data, $offset ) = @_;
+
+    return unpack(
+        "C",
+        _get_bits_with_padding( $data, 8, $offset, 2 )
+    );
 }
 
 sub get_uint6 {

@@ -1,14 +1,12 @@
 use strict;
 use warnings;
 
-use Test::More tests => 4;
+use Test::More;
 use Test::Exception;
 
 use GDPR::IAB::TCFv2;
 
 subtest "valid tcf v2 consent string using bitfield" => sub {
-    plan tests => 26;
-
     my $consent;
 
     lives_ok {
@@ -144,11 +142,14 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
               "checking vendor id $id for legitimate interest";
         }
     };
+
+    ok !$consent->check_publisher_restriction( 1, 0, 284 ),
+      "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+    done_testing;
 };
 
 subtest "valid tcf v2 consent string using range" => sub {
-    plan tests => 26;
-
     my $consent;
 
     lives_ok {
@@ -269,11 +270,103 @@ subtest "valid tcf v2 consent string using range" => sub {
         }
     };
 
+    ok !$consent->check_publisher_restriction( 1, 0, 284 ),
+      "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+    done_testing;
+};
+
+subtest "check publisher restriction" => sub {
+    subtest "check publisher restriction #1" => sub {
+        my $consent;
+
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse(
+                'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA');
+        }
+        'should not throw exception';
+
+        isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+        is $consent->version, 2, 'should return version 2';
+
+        ok !$consent->check_publisher_restriction( 1, 0, 284 ),
+          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+        ok $consent->check_publisher_restriction( 7, 1, 32 ),
+          "must have publisher restriction to vendor 32 regarding purpose id 7 of type 1 'Require Consent'";
+
+        ok !$consent->check_publisher_restriction( 7, 1, 7 ),
+          "must have publisher restriction to vendor 7 regarding purpose id 7 of type 1 'Require Consent'";
+
+        ok !$consent->check_publisher_restriction( 5, 1, 32 ),
+          "must have publisher restriction to vendor 32 regarding purpose id 5 of type 1 'Require Consent'";
+
+        done_testing;
+    };
+
+    subtest "check publisher restriction #2" => sub {
+        my $consent;
+
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse(
+                'COxPe2TOxPe2TALABAENAPCgAAAAAAAAAAAAAFAAAAoAAA4IACACAIABgACAFA4ADACAAIygAGADwAQBIAIAIB0AEAEBSACACAA'
+            );
+        }
+        'should not throw exception';
+
+        isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+        is $consent->version, 2, 'should return version 2';
+
+        ok !$consent->purpose_one_treatment,
+          'should have no purpose 1 treatment';
+
+        ok !$consent->is_special_feature_opt_in(3),
+          'should have no feature id 3 opt in';
+
+        ok !$consent->check_publisher_restriction( 1, 0, 284 ),
+          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+        ok $consent->check_publisher_restriction( 1, 0, 32 ),
+          "must have publisher restriction to vendor 32 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+        ok !$consent->check_publisher_restriction( 1, 1, 32 ),
+          "should have no publisher restriction to vendor 32 regarding purpose id 1 of type 1 'Require Consent'";
+
+        ok $consent->check_publisher_restriction( 2,  0, 32 );
+        ok $consent->check_publisher_restriction( 2,  0, 5 );
+        ok $consent->check_publisher_restriction( 2,  0, 11 );
+        ok !$consent->check_publisher_restriction( 2, 0, 44 );
+        ok !$consent->check_publisher_restriction( 2, 0, 500 );
+        ok $consent->check_publisher_restriction( 2,  1, 32 );
+        ok !$consent->check_publisher_restriction( 2, 1, 42 );
+
+        done_testing;
+    };
+
+    subtest "check publisher restriction #3 " => sub {
+        my $consent;
+
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse(
+                'COzSDo9OzSDo9B9AAAENAiCAALAAAAAAAAAACOQAQCOAAAAA');
+        }
+        'should not throw exception';
+
+        isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+        is $consent->version, 2, 'should return version 2';
+
+        ok !$consent->check_publisher_restriction( 1, 0, 284 ),
+          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+        done_testing;
+    };
+
 };
 
 subtest "invalid tcf consent string candidates" => sub {
-    plan tests => 6;
-
     throws_ok {
         GDPR::IAB::TCFv2->Parse();
     }
@@ -312,11 +405,11 @@ subtest "invalid tcf consent string candidates" => sub {
     }
     qr/invalid base64 format/,
       'string is not a base64 url encoded string';
+
+    done_testing;
 };
 
 subtest "check if looks like tcf v2 consent string" => sub {
-    plan tests => 5;
-
     ok GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(
         "COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgAA"
       ),
@@ -336,4 +429,8 @@ subtest "check if looks like tcf v2 consent string" => sub {
 
     ok !GDPR::IAB::TCFv2::looksLikeIsConsentVersion2(),
       "no consent string does not looks like a tcf v2";
+
+    done_testing;
 };
+
+done_testing;

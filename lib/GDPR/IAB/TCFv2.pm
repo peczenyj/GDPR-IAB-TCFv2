@@ -8,9 +8,16 @@ use bytes;
 use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
 
-use GDPR::IAB::TCFv2::BitUtils
-  qw<get_char6_pair get_uint6 get_uint12 get_uint16 get_uint36 is_set>;
 use GDPR::IAB::TCFv2::BitField;
+use GDPR::IAB::TCFv2::BitUtils qw<is_set
+  get_uint2
+  get_uint6
+  get_uint12
+  get_uint16
+  get_uint36
+  get_char6_pair
+>;
+use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::RangeSection;
 
 our $VERSION = "0.06";
@@ -20,7 +27,7 @@ use constant CONSENT_STRING_TCF2_PREFIX    => 'C';
 use constant MIN_BYTE_SIZE                 => 29;
 use constant MIN_BIT_SIZE                  => 8 * MIN_BYTE_SIZE;
 use constant TCF_VERSION                   => 2;
-
+use constant ASSUMED_MAX_VENDOR_ID         => 0x7FFF;   # 32767 or (1 << 15) -1
 
 INIT {
     if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
@@ -52,6 +59,7 @@ sub Parse {
         vendor_consents                => undef,
         legitimate_interest_max_vendor => undef,
         vendor_legitimate_interests    => undef,
+        publisher_restrictions         => undef,
     };
 
     bless $self, $klass;
@@ -71,6 +79,8 @@ sub Parse {
       $self->_parse_vendor_legitimate_interests($legitimate_interest_start);
 
     # parse publisher restrictions from section core string
+
+    $self->_parse_publisher_restrictions($pub_restrict_start);
 
     # parse section disclosed vendors if available
 
@@ -223,19 +233,25 @@ sub vendor_legitimate_interest {
     return $self->{vendor_legitimate_interests}->contains($id);
 }
 
+sub check_publisher_restriction {
+    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+
+    return $self->{publisher_restrictions}
+      ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
+}
+
 sub _parse_vendor_consents {
     my $self = shift;
 
-    my $vendor_consents;
-    my $legitimate_interest_start;
+    my ( $vendor_consents, $legitimate_interest_start );
 
     if ( $self->_is_vendor_consent_range_encoding ) {
         ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseRangeSection( $self->max_vendor_id_consent, 230 );
+          $self->_parse_range_section( $self->max_vendor_id_consent, 230 );
     }
     else {
         ( $vendor_consents, $legitimate_interest_start ) =
-          $self->_parseBitField( $self->max_vendor_id_consent, 230 );
+          $self->_parse_bitfield( $self->max_vendor_id_consent, 230 );
     }
 
     $self->{vendor_consents} = $vendor_consents;
@@ -259,19 +275,18 @@ sub _parse_vendor_legitimate_interests {
     my $is_vendor_legitimate_interest_range =
       is_set( $self->{data}, $legitimate_interest_start + 16 );
 
-    my $vendor_legitimate_interests;
-    my $pub_restrict_start;
+    my ( $vendor_legitimate_interests, $pub_restrict_start );
 
     if ($is_vendor_legitimate_interest_range) {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseRangeSection(
+          $self->_parse_range_section(
             $self->max_vendor_id_legitimate_interest,
             $legitimate_interest_start + 17
           );
     }
     else {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
-          $self->_parseBitField(
+          $self->_parse_bitfield(
             $self->max_vendor_id_legitimate_interest,
             $legitimate_interest_start + 17
           );
@@ -280,6 +295,43 @@ sub _parse_vendor_legitimate_interests {
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
     return $pub_restrict_start;
+}
+
+sub _parse_publisher_restrictions {
+    my ( $self, $pub_restrict_start ) = @_;
+
+    my $num_restrictions = get_uint12( $self->{data}, $pub_restrict_start );
+
+    my %restrictions;
+
+    my $current_offset = $pub_restrict_start + 12;
+
+    for ( 1 .. $num_restrictions ) {
+        my $purpose_id = get_uint6( $self->{data}, $current_offset );
+        $current_offset += 6;
+        my $restriction_type = get_uint2( $self->{data}, $current_offset );
+        $current_offset += 2;
+
+        my ( $vendor_restrictions, $next_offset ) =
+          $self->_parse_range_section(
+            ASSUMED_MAX_VENDOR_ID,
+            $current_offset
+          );
+
+        $restrictions{$purpose_id} //= {};
+        $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
+
+        $current_offset = $next_offset;
+    }
+
+
+    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->new(
+        restrictions => \%restrictions,
+    );
+
+    $self->{publisher_restrictions} = $publisher_restrictions;
+
+    return $current_offset;
 }
 
 sub _get_core_tc_string {
@@ -323,7 +375,7 @@ sub _is_vendor_consent_range_encoding {
     return is_set( $self->{data}, 229 );
 }
 
-sub _parseRangeSection {
+sub _parse_range_section {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
 
     my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
@@ -335,7 +387,7 @@ sub _parseRangeSection {
     return ( $range_section, $range_section->current_offset );
 }
 
-sub _parseBitField {
+sub _parse_bitfield {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
 
     my $bitfield = GDPR::IAB::TCFv2::BitField->new(
@@ -392,6 +444,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     use GDPR::IAB::TCFv2;
     use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
     use GDPR::IAB::TCFv2::Constants::SpecialFeature qw<:all>;
+    use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
@@ -423,7 +476,11 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
     say "user is opt in for special feature 'Geolocation (id 1)'" 
-        if $consent->is_special_feature_opt_in(Geolocation); 
+        if $consent->is_special_feature_opt_in(Geolocation);
+
+    # NotAllowed exported by GDPR::IAB::TCFv2::Constants::RestrictionType
+    say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)" 
+        if $consent->check_publisher_restriction(InfoStorageAccess, NotAllowed, 284);
 
 =head1 ACRONYMS
 
@@ -588,6 +645,44 @@ If true, legitimate interest established.
 The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
+
+=head2 check_publisher_restriction
+
+It true, there is a publisher restriction of certain type, for a given purpose id, for a given vendor id:
+
+    # return true if there is publisher restriction to vendor 284 regarding purpose id 1 
+    # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
+    my $ok = $instance->check_publisher_restriction(1, 0, 204);
+
+Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
+
+=over
+
+=item *
+
+Purposes. Restrict the purposes for which personal data is processed by a vendor.
+
+=item *
+
+Legal basis. Specify the legal basis upon which a publisher requires a vendor to operate where a vendor has signaled flexibility on legal basis in the GVL.
+
+=back
+
+Publisher restrictions are custom requirements specified by a publisher. In order for vendors to determine if processing is permissible at all for a specific purpose or which legal basis is applicable (in case they signaled flexibility in the GVL) restrictions must be respected.
+
+=over
+
+=item 1
+Vendors must always respect a restriction signal that disallows them the processing for a specific purpose regardless of whether or not they have declared that purpose to be “flexible”.
+=item 2
+
+Vendors that declared a purpose with a default legal basis (consent or legitimate interest respectively) but also declared this purpose as flexible must respect a legal basis restriction if present. That means for example in case they declared a purpose as legitimate interest but also declared that purpose as flexible and there is a legal basis restriction to require consent, they must then check for the consent signal and must not apply the legitimate interest signal.
+
+=back
+
+For the avoidance of doubt:
+
+In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
 
 =head1 FUNCTIONS
 

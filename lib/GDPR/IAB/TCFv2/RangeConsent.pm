@@ -9,8 +9,8 @@ use Carp qw<croak>;
 sub new {
     my ( $klass, %args ) = @_;
 
-    my $start = $args{start} or croak "missing field 'start'";
-    my $end   = $args{end}   or croak "missing field 'end'";
+    my $start = $args{start} or croak "missing field 'start' or it is zero";
+    my $end   = $args{end} // croak "missing field 'end'";
 
     croak "ops start should not be bigger than end" if $start > $end;
 
