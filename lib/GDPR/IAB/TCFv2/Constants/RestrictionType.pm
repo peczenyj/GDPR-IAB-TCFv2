@@ -61,7 +61,7 @@ Restriction type id 2: Require Legitimate Interest (if Vendor has declared the P
 
 =head1 NOTE
 
-Vendors must always respect a 0 (Not Allowed) regardless of whether or not they have not declared that Purpose to be “flexible”. Values 1 and 2 are in accordance with a vendor's declared flexibility. Eg. if a vendor has Purpose 2 declared as Legitimate Interest but also declares that Purpose as flexible and this field is set to 1, they must then check for the “consent” signal in the VendorConsents section to make a determination on whether they have the legal basis for processing user personal data under that Purpose.
+Vendors must always respect a 0 (Not Allowed) regardless of whether or not they have not declared that Purpose to be "flexible". Values 1 and 2 are in accordance with a vendor's declared flexibility. Eg. if a vendor has Purpose 2 declared as Legitimate Interest but also declares that Purpose as flexible and this field is set to 1, they must then check for the "consent" signal in the VendorConsents section to make a determination on whether they have the legal basis for processing user personal data under that Purpose.
 
 When a vendor's Purpose registration is not flexible they should interpret this value in the following ways:
 
