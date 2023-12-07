@@ -4,7 +4,9 @@ lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
 lib/GDPR/IAB/TCFv2/Constants/Purpose.pm
+lib/GDPR/IAB/TCFv2/Constants/RestrictionType.pm
 lib/GDPR/IAB/TCFv2/Constants/SpecialFeature.pm
+lib/GDPR/IAB/TCFv2/PublisherRestrictions.pm
 lib/GDPR/IAB/TCFv2/RangeConsent.pm
 lib/GDPR/IAB/TCFv2/RangeSection.pm
 LICENSE
