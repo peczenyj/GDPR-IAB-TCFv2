@@ -20,6 +20,10 @@ jobs:
       image: perl:${{ matrix.perl-version }}
     steps:
       - uses: actions/checkout@v3
+      - name: Configure git
+        run: git config --system --add safe.directory '*'
+      - name: perl -V
+        run: perl -V
       - name: Install Dependencies
         run: |
           curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
