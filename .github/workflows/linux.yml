@@ -28,6 +28,7 @@ jobs:
       - name: Run tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
+          GITHUB_ACTIONS: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cpanm -n Devel::Cover::Report::Coveralls
