@@ -24,11 +24,14 @@ jobs:
         run: git config --system --add safe.directory '*'
       - name: perl -V
         run: perl -V
+      - name: Fix ExtUtils::MakeMaker (for Perl 5.16 and 5.18)
+        run: cpanm -n App::cpanminus ExtUtils::MakeMaker
       - name: Install Dependencies
         run: |
           curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
+          cpanm -n Test::Pod Test::Pod::Coverage TAP::Formatter::GitHubActions
       - name: Run Tests
-        run: prove -lr t
+        run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
       - name: Run tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
