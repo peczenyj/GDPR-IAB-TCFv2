@@ -416,15 +416,15 @@ __END__
 
 =for html <a href="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2"><img src="https://cpants.cpanauthors.org/dist/GDPR-IAB-TCFv2.svg" alt='Kwalitee'/></a>
 
-=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml/badge.svg" alt='tests"/></a>
+=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/linux.yml/badge.svg" alt='tests'/></a>
 
-=for html <a href='https://ci.appveyor.com/project/peczenyj/gdpr-iab-tcfv2'><img src='https://ci.appveyor.com/api/projects/status/p2e2478cufcdqanl?svg=true' alt='appveyor'/></a>
+=for html <a href="https://ci.appveyor.com/project/peczenyj/gdpr-iab-tcfv2"><img src="https://ci.appveyor.com/api/projects/status/p2e2478cufcdqanl?svg=true" alt='appveyor'/></a>
 
-=for html <a href='https://coveralls.io/github/peczenyj/GDPR-IAB-TCFv2?branch=main'><img src='https://coveralls.io/repos/github/peczenyj/GDPR-IAB-TCFv2/badge.svg?branch=main' alt='Coverage Status' /></a>
+=for html <a href="https://coveralls.io/github/peczenyj/GDPR-IAB-TCFv2?branch=main"><img src="https://coveralls.io/repos/github/peczenyj/GDPR-IAB-TCFv2/badge.svg?branch=main" alt='Coverage Status' /></a>
 
 =for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/blob/master/LICENSE"><img src="https://img.shields.io/cpan/l/GDPR-IAB-TCFv2.svg" alt='license'/></a>
 
-=for html <a href="https://metacpan.org/dist/GDPR-IAB-TCFv2"><img src="https://img.shields.io/cpan/v/GDPR-IAB-TCFv2.svg" alt='cpan'/></A>
+=for html <a href="https://metacpan.org/dist/GDPR-IAB-TCFv2"><img src="https://img.shields.io/cpan/v/GDPR-IAB-TCFv2.svg" alt='cpan'/></a>
 
 =head1 NAME
 
