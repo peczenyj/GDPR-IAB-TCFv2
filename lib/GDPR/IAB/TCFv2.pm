@@ -20,7 +20,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.06";
+our $VERSION = "0.07";
 
 use constant CONSENT_STRING_TCF2_SEPARATOR => '.';
 use constant CONSENT_STRING_TCF2_PREFIX    => 'C';
@@ -432,7 +432,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.06
+Version 0.07
 
 =head1 SYNOPSIS
 
