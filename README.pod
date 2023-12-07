@@ -32,6 +32,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     use GDPR::IAB::TCFv2;
     use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
     use GDPR::IAB::TCFv2::Constants::SpecialFeature qw<:all>;
+    use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
@@ -63,7 +64,11 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
     say "user is opt in for special feature 'Geolocation (id 1)'" 
-        if $consent->is_special_feature_opt_in(Geolocation); 
+        if $consent->is_special_feature_opt_in(Geolocation);
+
+    # NotAllowed exported by GDPR::IAB::TCFv2::Constants::RestrictionType
+    say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)" 
+        if $consent->check_publisher_restriction(InfoStorageAccess, NotAllowed, 284);
 
 =head1 ACRONYMS
 
@@ -228,6 +233,44 @@ If true, legitimate interest established.
 The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
+
+=head2 check_publisher_restriction
+
+It true, there is a publisher restriction of certain type, for a given purpose id, for a given vendor id:
+
+    # return true if there is publisher restriction to vendor 284 regarding purpose id 1 
+    # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
+    my $ok = $instance->check_publisher_restriction(1, 0, 204);
+
+Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
+
+=over
+
+=item *
+
+Purposes. Restrict the purposes for which personal data is processed by a vendor.
+
+=item *
+
+Legal basis. Specify the legal basis upon which a publisher requires a vendor to operate where a vendor has signaled flexibility on legal basis in the GVL.
+
+=back
+
+Publisher restrictions are custom requirements specified by a publisher. In order for vendors to determine if processing is permissible at all for a specific purpose or which legal basis is applicable (in case they signaled flexibility in the GVL) restrictions must be respected.
+
+=over
+
+=item 1
+Vendors must always respect a restriction signal that disallows them the processing for a specific purpose regardless of whether or not they have declared that purpose to be “flexible”.
+=item 2
+
+Vendors that declared a purpose with a default legal basis (consent or legitimate interest respectively) but also declared this purpose as flexible must respect a legal basis restriction if present. That means for example in case they declared a purpose as legitimate interest but also declared that purpose as flexible and there is a legal basis restriction to require consent, they must then check for the consent signal and must not apply the legitimate interest signal.
+
+=back
+
+For the avoidance of doubt:
+
+In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
 
 =head1 FUNCTIONS
 
