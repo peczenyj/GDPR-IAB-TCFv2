@@ -26,7 +26,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::Constants::RestrictionType - TCF v2.2 publisher retriction type for vendor 
+GDPR::IAB::TCFv2::Constants::RestrictionType - TCF v2.2 publisher restriction type for vendor 
 
 =head1 SYNOPSIS
 
