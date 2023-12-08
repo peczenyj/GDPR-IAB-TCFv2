@@ -380,9 +380,9 @@ sub _validate_and_decode_base64 {
         ^
         (?: [A-Za-z0-9-_]{4} )*
         (?:
-            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048] =?
+            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048]
         |
-            [A-Za-z0-9-_] [AQgw] (?:==)?
+            [A-Za-z0-9-_] [AQgw]
         )?
         \z
     }x;
