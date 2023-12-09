@@ -9,14 +9,19 @@ use GDPR::IAB::TCFv2;
 subtest "valid tcf v2 consent string using bitfield" => sub {
     my $consent;
 
+    my $tc_string =
+      'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA';
     lives_ok {
-        $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
-        );
+        $consent = GDPR::IAB::TCFv2->Parse($tc_string);
     }
     'should not throw exception';
 
     isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+    is $consent->tc_string, $tc_string, 'should return the original tc string';
+
+    is "${consent}", $tc_string,
+      'should return the original tc string in string context';
 
     is $consent->version, 2, 'should return version 2';
 
@@ -152,14 +157,19 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
 subtest "valid tcf v2 consent string using range" => sub {
     my $consent;
 
+    my $tc_string =
+      'COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgAA';
     lives_ok {
-        $consent = GDPR::IAB::TCFv2->Parse(
-            'COyfVVoOyfVVoADACHENAwCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAnSAMABgAFkAgQCDASeAmYBOgAA'
-        );
+        $consent = GDPR::IAB::TCFv2->Parse($tc_string);
     }
     'should not throw exception';
 
     isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+    is $consent->tc_string, $tc_string, 'should return the original tc string';
+
+    is "${consent}", $tc_string,
+      'should return the original tc string in string context';
 
     is $consent->version, 2, 'should return version 2';
 

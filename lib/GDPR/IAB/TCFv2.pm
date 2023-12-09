@@ -54,6 +54,7 @@ use constant {
     VENDOR_CONSENT_OFFSET                => 230,
 };
 
+use overload q<""> => \&tc_string;
 
 INIT {
     if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
@@ -130,6 +131,12 @@ sub Parse {
     # parse section publisher_tc if available
 
     return $self;
+}
+
+sub tc_string {
+    my $self = shift;
+
+    return $self->{tc_string};
 }
 
 sub version {
@@ -302,8 +309,9 @@ sub TO_JSON {
     my $use_epoch = !!$self->{options}->{use_epoch};
 
     return {
-        version => $self->version,
-        created => $use_epoch
+        tc_string => $self->tc_string,
+        version   => $self->version,
+        created   => $use_epoch
         ? $self->created
         : _format_date_iso8601( $self->created ),
         last_updated => $use_epoch
@@ -674,6 +682,12 @@ See L<TO_JSON> for more details.
 =back
 
 =head1 METHODS
+
+=head2 tc_string
+
+Returns the original consent string.
+
+The consent object L<GDPR::IAB::TCFv2> will call this method on string interpolations.
 
 =head2 version
 

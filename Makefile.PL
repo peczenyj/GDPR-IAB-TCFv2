@@ -29,6 +29,9 @@ WriteMakefile(
                           'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'
                     },
                 },
+                recommends => {
+                    'JSON' => 0,
+                },
                 x_authority => 'cpan:PACMAN',
             }
           )
