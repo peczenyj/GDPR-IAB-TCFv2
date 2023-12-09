@@ -5,8 +5,9 @@ use warnings;
 use integer;
 use bytes;
 
-use MIME::Base64 qw<decode_base64>;
 use Carp         qw<croak>;
+use MIME::Base64 qw<decode_base64>;
+use POSIX        qw<strftime>;
 
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
@@ -28,6 +29,8 @@ use constant {
     MIN_BYTE_SIZE                 => 29,
     TCF_VERSION                   => 2,
     ASSUMED_MAX_VENDOR_ID         => 0x7FFF,    # 32767 or (1 << 15) -1
+    MAX_SPECIAL_FEATURE_ID        => 12,
+    MAX_PURPOSE_ID                => 24,
 
 # offsets
     VERSION_OFFSET                       => 0,
@@ -51,6 +54,7 @@ use constant {
     VENDOR_CONSENT_OFFSET                => 230,
 };
 
+
 INIT {
     if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
     {
@@ -58,12 +62,28 @@ INIT {
 
         *_decode_base64url = $native_decode_base64url;
     }
+
+    eval {
+        require JSON;
+
+        if ( my $native_json_true = JSON->can("true") ) {
+            no warnings q<redefine>;
+
+            *_json_true = $native_json_true;
+        }
+
+        if ( my $native_json_false = JSON->can("false") ) {
+            no warnings q<redefine>;
+
+            *_json_false = $native_json_false;
+        }
+    };
 }
 
 # ABSTRACT: gdpr iab tcf v2 consent string parser
 
 sub Parse {
-    my ( $klass, $tc_string ) = @_;
+    my ( $klass, $tc_string, %options ) = @_;
 
     croak 'missing gdpr consent string' unless $tc_string;
 
@@ -77,6 +97,7 @@ sub Parse {
 
     my $self = {
         data                           => $data,
+        options                        => \%options,
         tc_string                      => $tc_string,
         vendor_consents                => undef,
         legitimate_interest_max_vendor => undef,
@@ -261,6 +282,91 @@ sub check_publisher_restriction {
     return $self->{publisher_restrictions}
       ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
 }
+
+sub _format_date_iso8601 {
+    my $timestamp = shift;
+
+    return strftime( "%Y-%m-%dT%H:%M:%SZ", gmtime($timestamp) );
+}
+
+sub _json_true { 1 == 1 }
+
+sub _json_false { 1 == 0 }
+
+sub TO_JSON {
+    my $self = shift;
+
+    my ( $true, $false ) = ( _json_true, _json_false );
+
+    my $verbose   = !!$self->{options}->{verbose};
+    my $use_epoch = !!$self->{options}->{use_epoch};
+
+    return {
+        version => $self->version,
+        created => $use_epoch
+        ? $self->created
+        : _format_date_iso8601( $self->created ),
+        last_updated => $use_epoch
+        ? $self->last_updated
+        : _format_date_iso8601( $self->last_updated ),
+        cmp_id                  => $self->cmp_id,
+        cmp_version             => $self->cmp_version,
+        consent_screen          => $self->consent_screen,
+        consent_language        => $self->consent_language,
+        vendor_list_version     => $self->vendor_list_version,
+        policy_version          => $self->policy_version,
+        is_service_specific     => $self->is_service_specific ? $true : $false,
+        use_non_standard_stacks => $self->use_non_standard_stacks
+        ? $true
+        : $false,
+        purpose_one_treatment => $self->purpose_one_treatment ? $true : $false,
+        publisher_country_code  => $self->publisher_country_code,
+        special_features_opt_in => {
+            map  { @{$_} }
+            grep { $verbose ? 1 : $_->[1] }
+            map {
+                [ $_ => $self->is_special_feature_opt_in($_) ? $true : $false ]
+            } 1 .. MAX_SPECIAL_FEATURE_ID,
+        },
+        purposes_consent => {
+            map  { @{$_} }
+            grep { $verbose ? 1 : $_->[1] }
+            map {
+                [     $_ => $self->is_purpose_consent_allowed($_)
+                    ? $true
+                    : $false
+                ]
+            } 1 .. MAX_PURPOSE_ID,
+        },
+        purposes_legitimate_interest => {
+            map  { @{$_} }
+            grep { $verbose ? 1 : $_->[1] }
+            map {
+                [     $_ => $self->is_purpose_legitimate_interest_allowed($_)
+                    ? $true
+                    : $false
+                ]
+            } 1 .. MAX_PURPOSE_ID,
+        },
+        vendor_consents => {
+            map  { @{$_} }
+            grep { $verbose ? 1 : $_->[1] }
+            map  { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
+              1 .. $self->max_vendor_id_consent,
+        },
+        vendor_legitimate_interests => {
+            map  { @{$_} }
+            grep { $verbose ? 1 : $_->[1] }
+            map {
+                [     $_ => $self->vendor_legitimate_interest($_)
+                    ? $true
+                    : $false
+                ]
+            } 1 .. $self->max_vendor_id_legitimate_interest,
+        },
+    };
+}
+
 
 sub _parse_vendor_consents {
     my $self = shift;
@@ -540,6 +646,33 @@ Will die if can't decode the string.
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
     );
 
+    or
+
+    use GDPR::IAB::TCFv2;
+
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+        verbose => 1,
+        use_epoch => 0,
+    );
+
+Parse may receive optional parameters such as
+
+=over
+
+=item *
+
+C<verbose> changes the json encode. By default we omit some false values such as C<vendor_consents> to create 
+a compact json representation. With C<verbose> we will present everything. See L<TO_JSON> for more details.
+
+=item *
+
+C<use_epoch> changes the json encode. By default we format the C<created> and C<last_updated> are converted to string using 
+L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. With C<use_epoch> we will return the unix epoch in seconds.
+See L<TO_JSON> for more details.
+
+=back
+
 =head1 METHODS
 
 =head2 version
@@ -719,6 +852,30 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 TO_JSON
+
+Will serialize the consent object into a hash reference. The objective is to be used by L<JSON> package.
+
+With option C<convert_blessed>, the encoder will call this method.
+
+    use GDPR::IAB::TCFv2;
+    use JSON;
+
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+        verbose => 0,
+        use_epoch => 0,
+    );
+
+    use feature qw<say>;
+
+    say JSON->new->allow_blessed(1)->convert_blessed(1)->pretty(1)->encode($consent);
+
+If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
+
+By default it returns a compacted format where we omit the C<false> on fields like C<vendor_consents> and we convert the dates 
+using L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. This behaviour can be changed by extra option in the L<Parse> constructor.
 
 =head1 FUNCTIONS
 
