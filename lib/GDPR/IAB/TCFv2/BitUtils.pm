@@ -5,6 +5,8 @@ use integer;
 use bytes;
 use Math::BigInt;
 
+use Carp qw(croak confess);
+
 require Exporter;
 use base qw<Exporter>;
 
@@ -30,7 +32,7 @@ our @EXPORT_OK = qw<is_set
 sub is_set {
     my ( $data, $offset ) = @_;
 
-    # TODO check if offset is in range of $data
+    croak "index our of bounds on offset $offset" if $offset >= length($data);
 
     return substr( $data, $offset, 1 ) == 1;
 }

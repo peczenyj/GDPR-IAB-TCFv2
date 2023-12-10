@@ -671,24 +671,46 @@ Will die if can't decode the string.
 
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
-        verbose => 1,
-        use_epoch => 0,
+        json => {
+            verbose        => 0,
+            compact        => 1,
+            use_epoch      => 0,
+            boolean_values => [ 0, 1 ],
+            date_format    => '%Y%m%d',    # yyymmdd
+        },
     );
 
-Parse may receive optional parameters such as
+Parse may receive an optional hash parameter C<json> with the following properties:
 
 =over
 
 =item *
 
-C<verbose> changes the json encode. By default we omit some false values such as C<vendor_consents> to create 
+C<verbose> changes the json encoding. By default we omit some false values such as C<vendor_consents> to create 
 a compact json representation. With C<verbose> we will present everything. See L<TO_JSON> for more details.
+
+=item *
+
+C<compact> changes the json encoding. All fields that are a mapping of something to a boolean will be changed to an array
+of all elements keys where the value is true. This affects the following fields:  C<special_features_opt_in>,
+C<purposes_consent>, C<purposes_legitimate_interest>, C<vendor_consents> and C<vendor_legitimate_interests>. See L<TO_JSON> for more details.
 
 =item *
 
 C<use_epoch> changes the json encode. By default we format the C<created> and C<last_updated> are converted to string using 
 L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. With C<use_epoch> we will return the unix epoch in seconds.
 See L<TO_JSON> for more details.
+
+=item *
+
+C<boolean_values> if present, expects an arrayref if two elements: the C<false> and the C<true> values to be used in json encoding.
+If omit, we will try to use C<JSON::false> and C<JSON::true> if the package L<JSON> is available, else we will fallback to C<0> and C<1>.
+
+=item *
+
+C<date_format> if present accepts two kinds of value: an C<string> (to be used on C<POSIX::strftime>) or a code reference to a subroutine that
+will be called with two arguments: epoch in seconds and nanoseconds. If omitted the format L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601> will be used
+except if the option C<use_epoch> is true.
 
 =back
 
@@ -884,18 +906,65 @@ Will serialize the consent object into a hash reference. The objective is to be 
 
 With option C<convert_blessed>, the encoder will call this method.
 
-    use GDPR::IAB::TCFv2;
-    use JSON;
-
-    my $consent = GDPR::IAB::TCFv2->Parse(
-        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
-        verbose => 0,
-        use_epoch => 0,
-    );
-
+    use strict;
+    use warnings;
     use feature qw<say>;
 
-    say JSON->new->allow_blessed(1)->convert_blessed(1)->pretty(1)->encode($consent);
+    use JSON;
+    use DateTime;
+    use DateTimeX::TO_JSON formatter => 'DateTime::Format::RFC3339';
+    use GDPR::IAB::TCFv2;
+
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA',
+        json => {
+            compact     => 1,
+            date_format => sub { # can be omitted, with DateTimeX::TO_JSON
+                my ( $epoch, $ns ) = @_;
+
+                return DateTime->from_epoch( epoch => $epoch )
+                ->set_nanosecond($ns);
+            },
+        },
+    );
+
+    my $json    = JSON->new->convert_blessed;
+    my $encoded = $json->pretty->encode($consent);
+
+    say $encoded;
+
+    # outputs:
+
+    {
+    "tc_string":"COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
+    "consent_language":"EN",
+    "purposes_consent":[],
+    "vendor_legitimate_interests":[],
+    "cmp_id":3,
+    "purpose_one_treatment":false,
+    "special_features_opt_in":[],
+    "last_updated":"2020-04-27T20:27:54.200000000Z",
+    "use_non_standard_stacks":false,
+    "policy_version":2,
+    "version":2,
+    "vendor_consents":[
+        23,
+        42,
+        126,
+        127,
+        128,
+        587,
+        613,
+        626
+    ],
+    "is_service_specific":false,
+    "created":"2020-04-27T20:27:54.200000000Z",
+    "consent_screen":7,
+    "vendor_list_version":15,
+    "cmp_version":2,
+    "purposes_legitimate_interest":[],
+    "publisher_country_code":"AA"
+    }
 
 If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
 
