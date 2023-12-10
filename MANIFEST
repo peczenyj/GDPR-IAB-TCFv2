@@ -1,4 +1,5 @@
 Changes
+CODE_OF_CONDUCT.md
 CONTRIBUTING.pod
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
@@ -15,4 +16,5 @@ MANIFEST			This list of files
 README.pod
 t/00-load.t
 t/01-parse.t
+t/02-json.t
 t/99-pod.t
