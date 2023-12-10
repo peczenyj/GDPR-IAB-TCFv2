@@ -31,8 +31,8 @@ use constant {
     ASSUMED_MAX_VENDOR_ID         => 0x7FFF,    # 32767 or (1 << 15) -1
     MAX_SPECIAL_FEATURE_ID        => 12,
     MAX_PURPOSE_ID                => 24,
+    DATE_FORMAT_ISO_8601          => '%Y-%m-%dT%H:%M:%SZ',
 
-# offsets
     VERSION_OFFSET                       => 0,
     CREATED_OFFSET                       => 6,
     LAST_UPDATED_OFFSET                  => 42,
@@ -84,7 +84,7 @@ INIT {
 # ABSTRACT: gdpr iab tcf v2 consent string parser
 
 sub Parse {
-    my ( $klass, $tc_string, %options ) = @_;
+    my ( $klass, $tc_string, %opts ) = @_;
 
     croak 'missing gdpr consent string' unless $tc_string;
 
@@ -95,6 +95,13 @@ sub Parse {
 
     croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
       if $data_size < 8 * MIN_BYTE_SIZE;
+
+    my %options = (
+        json => $opts{json} || {},
+    );
+
+    $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
+    $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
 
     my $self = {
         data                           => $data,
@@ -290,33 +297,47 @@ sub check_publisher_restriction {
       ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
 }
 
-sub _format_date_iso8601 {
-    my $timestamp = shift;
+sub _format_date {
+    my ( $self, $epoch, $nanoseconds ) = @_;
 
-    return strftime( "%Y-%m-%dT%H:%M:%SZ", gmtime($timestamp) );
+    return $epoch if !!$self->{options}->{json}->{use_epoch};
+
+    my $format = $self->{options}->{json}->{date_format};
+
+    return $format->( $epoch, $nanoseconds ) if ref($format) eq ref( sub { } );
+
+    return strftime( $format, gmtime($epoch) );
 }
 
 sub _json_true { 1 == 1 }
 
 sub _json_false { 1 == 0 }
 
+sub _format_json_subsection {
+    my ( $self, @data ) = @_;
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        return [ map { $_->[0] } grep { $_->[1] } @data ];
+    }
+
+    my $verbose = !!$self->{options}->{json}->{verbose};
+
+    return { map { @{$_} } grep { $verbose || $_->[1] } @data };
+}
+
 sub TO_JSON {
     my $self = shift;
 
-    my ( $true, $false ) = ( _json_true, _json_false );
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
-    my $verbose   = !!$self->{options}->{verbose};
-    my $use_epoch = !!$self->{options}->{use_epoch};
+    my $created      = $self->_format_date( $self->created );
+    my $last_updated = $self->_format_date( $self->last_updated );
 
     return {
-        tc_string => $self->tc_string,
-        version   => $self->version,
-        created   => $use_epoch
-        ? $self->created
-        : _format_date_iso8601( $self->created ),
-        last_updated => $use_epoch
-        ? $self->last_updated
-        : _format_date_iso8601( $self->last_updated ),
+        tc_string               => $self->tc_string,
+        version                 => $self->version,
+        created                 => $created,
+        last_updated            => $last_updated,
         cmp_id                  => $self->cmp_id,
         cmp_version             => $self->cmp_version,
         consent_screen          => $self->consent_screen,
@@ -329,49 +350,39 @@ sub TO_JSON {
         : $false,
         purpose_one_treatment => $self->purpose_one_treatment ? $true : $false,
         publisher_country_code  => $self->publisher_country_code,
-        special_features_opt_in => {
-            map  { @{$_} }
-            grep { $verbose ? 1 : $_->[1] }
+        special_features_opt_in => $self->_format_json_subsection(
             map {
                 [ $_ => $self->is_special_feature_opt_in($_) ? $true : $false ]
-            } 1 .. MAX_SPECIAL_FEATURE_ID,
-        },
-        purposes_consent => {
-            map  { @{$_} }
-            grep { $verbose ? 1 : $_->[1] }
+            } 1 .. MAX_SPECIAL_FEATURE_ID
+        ),
+        purposes_consent => $self->_format_json_subsection(
             map {
                 [     $_ => $self->is_purpose_consent_allowed($_)
                     ? $true
                     : $false
                 ]
             } 1 .. MAX_PURPOSE_ID,
-        },
-        purposes_legitimate_interest => {
-            map  { @{$_} }
-            grep { $verbose ? 1 : $_->[1] }
+        ),
+        purposes_legitimate_interest => $self->_format_json_subsection(
             map {
                 [     $_ => $self->is_purpose_legitimate_interest_allowed($_)
                     ? $true
                     : $false
                 ]
             } 1 .. MAX_PURPOSE_ID,
-        },
-        vendor_consents => {
-            map  { @{$_} }
-            grep { $verbose ? 1 : $_->[1] }
-            map  { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
+        ),
+        vendor_consents => $self->_format_json_subsection(
+            map { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
               1 .. $self->max_vendor_id_consent,
-        },
-        vendor_legitimate_interests => {
-            map  { @{$_} }
-            grep { $verbose ? 1 : $_->[1] }
+        ),
+        vendor_legitimate_interests => $self->_format_json_subsection(
             map {
                 [     $_ => $self->vendor_legitimate_interest($_)
                     ? $true
                     : $false
                 ]
             } 1 .. $self->max_vendor_id_legitimate_interest,
-        },
+        ),
     };
 }
 
