@@ -417,6 +417,20 @@ subtest "invalid tcf consent string candidates" => sub {
     qr/invalid base64 format/,
       'string is not a base64 url encoded string';
 
+    throws_ok {
+        GDPR::IAB::TCFv2->Parse('COvcSpYOvcSpYC9AAAENAPCAAAAAAAAAAAAAAFAAAAA')
+    }
+    qr/index our of bounds on offset 256/,
+      'this test uses a crafted consent uses bit field, declares 10 vendors and legitimate interest without required content';
+
+    throws_ok {
+        GDPR::IAB::TCFv2->Parse(
+            'COvcSpYOvcSpYC9AAAENAPCAAAAAAAAAAAAAAFQBgAAgABAACAAEAAQAAgAA')
+    }
+    qr/index our of bounds on offset 360/,
+      'this test uses a crafted consent uses range section, declares 10 vendors, 6 exceptions and legitimate interest without require';
+
+
     done_testing;
 };
 

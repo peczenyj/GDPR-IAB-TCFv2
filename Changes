@@ -1,3 +1,4 @@
+0.08
   - add TO_JSON method
   - substitute offset numbers by constants
   - fix typos in pod documentation
