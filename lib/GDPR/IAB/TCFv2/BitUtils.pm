@@ -32,7 +32,8 @@ our @EXPORT_OK = qw<is_set
 sub is_set {
     my ( $data, $offset ) = @_;
 
-    croak "index our of bounds on offset $offset" if $offset >= length($data);
+    croak "index out of bounds on offset $offset"
+      if $offset + 1 > length($data);
 
     my $r = substr( $data, $offset, 1 ) == 1;
 
@@ -150,6 +151,9 @@ sub _get_bits_with_padding {
 
 sub _add_padding {
     my ( $data, $bits, $offset, $nbits ) = @_;
+
+    croak "index out of bounds on offset $offset"
+      if $offset + $nbits > length($data);
 
     my $padding = "0" x ( $bits - $nbits );
 
