@@ -356,22 +356,22 @@ sub TO_JSON {
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
         purpose => {
-        consents => $self->_format_json_subsection(
-            map {
-                [     $_ => $self->is_purpose_consent_allowed($_)
-                    ? $true
-                    : $false
-                ]
-            } 1 .. MAX_PURPOSE_ID,
-        ),
-        legitimate_interests => $self->_format_json_subsection(
-            map {
-                [     $_ => $self->is_purpose_legitimate_interest_allowed($_)
-                    ? $true
-                    : $false
-                ]
-            } 1 .. MAX_PURPOSE_ID,
-        ),
+            consents => $self->_format_json_subsection(
+                map {
+                    [     $_ => $self->is_purpose_consent_allowed($_)
+                        ? $true
+                        : $false
+                    ]
+                } 1 .. MAX_PURPOSE_ID,
+            ),
+            legitimate_interests => $self->_format_json_subsection(
+                map {
+                    [   $_ => $self->is_purpose_legitimate_interest_allowed($_)
+                        ? $true
+                        : $false
+                    ]
+                } 1 .. MAX_PURPOSE_ID,
+            ),
         },
         vendor => {
             consents => $self->_format_json_subsection(
