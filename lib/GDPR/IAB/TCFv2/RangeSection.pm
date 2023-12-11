@@ -138,13 +138,15 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> receives 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
 
 Will die if any parameter is missing.
 
 Will die if data does not contain all bits required.
 
 Will die if the range sections are malformed.
+
+Will return an array of two elements: the object itself and the next offset.
 
 =head1 METHODS
 
