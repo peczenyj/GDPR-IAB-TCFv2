@@ -542,25 +542,25 @@ sub _is_vendor_consent_range_encoding {
 }
 
 sub _parse_range_section {
-    my ( $self, $vendor_bits_required, $start_bit ) = @_;
+    my ( $self, $max_vendor_id, $start_bit ) = @_;
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
-        data                 => $self->{data},
-        start_bit            => $start_bit,
-        vendor_bits_required => $vendor_bits_required,
+        data          => $self->{data},
+        start_bit     => $start_bit,
+        max_vendor_id => $max_vendor_id,
       );
 
     return ( $range_section, $next_offset );
 }
 
 sub _parse_bitfield {
-    my ( $self, $vendor_bits_required, $start_bit ) = @_;
+    my ( $self, $max_vendor_id, $start_bit ) = @_;
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data                 => $self->{data},
-        start_bit            => $start_bit,
-        vendor_bits_required => $vendor_bits_required,
+        data          => $self->{data},
+        start_bit     => $start_bit,
+        max_vendor_id => $max_vendor_id,
     );
 
     return ( $bitfield, $next_offset );

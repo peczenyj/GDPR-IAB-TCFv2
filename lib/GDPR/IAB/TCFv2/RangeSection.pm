@@ -13,12 +13,12 @@ sub Parse {
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'start_bit'" unless defined $args{start_bit};
-    croak "missing 'vendor_bits_required'"
-      unless defined $args{vendor_bits_required};
+    croak "missing 'max_vendor_id'"
+      unless defined $args{max_vendor_id};
 
-    my $data                 = $args{data};
-    my $start_bit            = $args{start_bit};
-    my $vendor_bits_required = $args{vendor_bits_required};
+    my $data          = $args{data};
+    my $start_bit     = $args{start_bit};
+    my $max_vendor_id = $args{max_vendor_id};
 
 
     my $data_size = length($data);
@@ -35,15 +35,15 @@ sub Parse {
         my $consent;
         ( $consent, $next_offset ) = _parse_range_consent(
             $data, $next_offset,
-            $vendor_bits_required
+            $max_vendor_id
         );
 
         push @consents, $consent;
     }
 
     my $self = {
-        consents             => \@consents,
-        vendor_bits_required => $vendor_bits_required,
+        consents      => \@consents,
+        max_vendor_id => $max_vendor_id,
     };
 
     bless $self, $klass;
@@ -97,7 +97,7 @@ sub _parse_range_consent {
 sub max_vendor_id {
     my $self = shift;
 
-    return $self->{vendor_bits_required};
+    return $self->{max_vendor_id};
 }
 
 sub contains {
@@ -106,7 +106,7 @@ sub contains {
     croak "invalid vendor id $id: must be positive integer bigger than 0"
       if $id < 1;
 
-    return if $id > $self->{vendor_bits_required};
+    return if $id > $self->{max_vendor_id};
 
     foreach my $c ( @{ $self->{consents} } ) {
         return 1 if $c->contains($id);
@@ -129,9 +129,9 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
     my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
-        data                 => $data,
-        start_bit            => 230, # offset for vendor consents
-        vendor_bits_required => $max_vendor_id_consent
+        data          => $data,
+        start_bit     => 230,                      # offset for vendor consents
+        max_vendor_id => $max_vendor_id_consent,
     );
 
     if $range_section->contains(284) { ... }

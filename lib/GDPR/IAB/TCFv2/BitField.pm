@@ -12,36 +12,36 @@ sub Parse {
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'start_bit'" unless defined $args{start_bit};
-    croak "missing 'vendor_bits_required'"
-      unless defined $args{vendor_bits_required};
+    croak "missing 'max_vendor_id'"
+      unless defined $args{max_vendor_id};
 
-    my $data                 = $args{data};
-    my $start_bit            = $args{start_bit};
-    my $vendor_bits_required = $args{vendor_bits_required};
+    my $data          = $args{data};
+    my $start_bit     = $args{start_bit};
+    my $max_vendor_id = $args{max_vendor_id};
 
     my $data_size = length($data);
 
     # add 7 to force rounding to next integer value
-    my $bytes_required = ( $vendor_bits_required + $start_bit + 7 ) / 8;
+    my $bytes_required = ( $max_vendor_id + $start_bit + 7 ) / 8;
 
     croak
-      "a BitField for $vendor_bits_required requires a consent string of $bytes_required bytes. This consent string had $data_size"
+      "a BitField for $max_vendor_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
       if $data_size < $bytes_required;
 
     my $self = {
-        data                 => substr( $data, $start_bit ),
-        vendor_bits_required => $vendor_bits_required,
+        data          => substr( $data, $start_bit ),
+        max_vendor_id => $max_vendor_id,
     };
 
     bless $self, $klass;
 
-    return ( $self, $start_bit + $vendor_bits_required );
+    return ( $self, $start_bit + $max_vendor_id );
 }
 
 sub max_vendor_id {
     my $self = shift;
 
-    return $self->{vendor_bits_required};
+    return $self->{max_vendor_id};
 }
 
 sub contains {
@@ -50,7 +50,7 @@ sub contains {
     croak "invalid vendor id $id: must be positive integer bigger than 0"
       if $id < 1;
 
-    return if $id > $self->{vendor_bits_required};
+    return if $id > $self->{max_vendor_id};
 
     return is_set( $self->{data}, $id - 1 );
 }
@@ -69,9 +69,9 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
     my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
 
     my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
-        data                 => $data,
-        start_bit            => 230, # offset for vendor consents
-        vendor_bits_required => $max_vendor_id_consent
+        data          => $data,
+        start_bit     => 230,                   # offset for vendor consents
+        max_vendor_id => $max_vendor_id_consent,
     );
 
     if $bit_field->contains(284) { ... }
