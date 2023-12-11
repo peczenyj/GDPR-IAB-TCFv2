@@ -355,7 +355,8 @@ sub TO_JSON {
                 [ $_ => $self->is_special_feature_opt_in($_) ? $true : $false ]
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
-        purposes_consent => $self->_format_json_subsection(
+        purpose => {
+        consents => $self->_format_json_subsection(
             map {
                 [     $_ => $self->is_purpose_consent_allowed($_)
                     ? $true
@@ -363,7 +364,7 @@ sub TO_JSON {
                 ]
             } 1 .. MAX_PURPOSE_ID,
         ),
-        purposes_legitimate_interest => $self->_format_json_subsection(
+        legitimate_interests => $self->_format_json_subsection(
             map {
                 [     $_ => $self->is_purpose_legitimate_interest_allowed($_)
                     ? $true
@@ -371,18 +372,21 @@ sub TO_JSON {
                 ]
             } 1 .. MAX_PURPOSE_ID,
         ),
-        vendor_consents => $self->_format_json_subsection(
-            map { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
-              1 .. $self->max_vendor_id_consent,
-        ),
-        vendor_legitimate_interests => $self->_format_json_subsection(
-            map {
-                [     $_ => $self->vendor_legitimate_interest($_)
-                    ? $true
-                    : $false
-                ]
-            } 1 .. $self->max_vendor_id_legitimate_interest,
-        ),
+        },
+        vendor => {
+            consents => $self->_format_json_subsection(
+                map { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
+                  1 .. $self->max_vendor_id_consent,
+            ),
+            legitimate_interests => $self->_format_json_subsection(
+                map {
+                    [     $_ => $self->vendor_legitimate_interest($_)
+                        ? $true
+                        : $false
+                    ]
+                } 1 .. $self->max_vendor_id_legitimate_interest,
+            ),
+        }
     };
 }
 
@@ -936,34 +940,38 @@ With option C<convert_blessed>, the encoder will call this method.
     # outputs:
 
     {
-    "tc_string":"COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
-    "consent_language":"EN",
-    "purposes_consent":[],
-    "vendor_legitimate_interests":[],
-    "cmp_id":3,
-    "purpose_one_treatment":false,
-    "special_features_opt_in":[],
-    "last_updated":"2020-04-27T20:27:54.200000000Z",
-    "use_non_standard_stacks":false,
-    "policy_version":2,
-    "version":2,
-    "vendor_consents":[
-        23,
-        42,
-        126,
-        127,
-        128,
-        587,
-        613,
-        626
-    ],
-    "is_service_specific":false,
-    "created":"2020-04-27T20:27:54.200000000Z",
-    "consent_screen":7,
-    "vendor_list_version":15,
-    "cmp_version":2,
-    "purposes_legitimate_interest":[],
-    "publisher_country_code":"AA"
+    "tc_string" : "COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
+    "consent_language" : "EN",
+    "purpose" : {
+        "consents" : [],
+        "legitimate_interests" : []
+    },
+    "cmp_id" : 3,
+    "purpose_one_treatment" : false,
+    "special_features_opt_in" : [],
+    "last_updated" : "2020-04-27T20:27:54.200000000Z",
+    "use_non_standard_stacks" : false,
+    "policy_version" : 2,
+    "version" : 2,
+    "is_service_specific" : false,
+    "created" : "2020-04-27T20:27:54.200000000Z",
+    "consent_screen" : 7,
+    "vendor_list_version" : 15,
+    "cmp_version" : 2,
+    "publisher_country_code" : "AA",
+    "vendor" : {
+        "consents" : [
+            23,
+            42,
+            126,
+            127,
+            128,
+            587,
+            613,
+            626
+        ],
+        "legitimate_interests" : []
+    }
     }
 
 If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.

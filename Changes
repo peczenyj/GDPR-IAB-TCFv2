@@ -1,3 +1,6 @@
+  - reorganize JSON output
+  - small fixes in pod
+
 0.08
   - add TO_JSON method
   - substitute offset numbers by constants
