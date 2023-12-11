@@ -100,7 +100,7 @@ Will die if can't decode the string.
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA'
     );
 
-    or
+or
 
     use GDPR::IAB::TCFv2;
 
@@ -301,7 +301,7 @@ It true, there is a publisher restriction of certain type, for a given purpose i
 
     # return true if there is publisher restriction to vendor 284 regarding purpose id 1 
     # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
-    my $ok = $instance->check_publisher_restriction(1, 0, 204);
+    my $ok = $instance->check_publisher_restriction(1, 0, 284);
 
 Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
 
