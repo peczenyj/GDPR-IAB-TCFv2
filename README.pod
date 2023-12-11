@@ -26,7 +26,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.08
+Version 0.081
 
 =head1 SYNOPSIS
 
@@ -371,34 +371,38 @@ With option C<convert_blessed>, the encoder will call this method.
     # outputs:
 
     {
-    "tc_string":"COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
-    "consent_language":"EN",
-    "purposes_consent":[],
-    "vendor_legitimate_interests":[],
-    "cmp_id":3,
-    "purpose_one_treatment":false,
-    "special_features_opt_in":[],
-    "last_updated":"2020-04-27T20:27:54.200000000Z",
-    "use_non_standard_stacks":false,
-    "policy_version":2,
-    "version":2,
-    "vendor_consents":[
-        23,
-        42,
-        126,
-        127,
-        128,
-        587,
-        613,
-        626
-    ],
-    "is_service_specific":false,
-    "created":"2020-04-27T20:27:54.200000000Z",
-    "consent_screen":7,
-    "vendor_list_version":15,
-    "cmp_version":2,
-    "purposes_legitimate_interest":[],
-    "publisher_country_code":"AA"
+    "tc_string" : "COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
+    "consent_language" : "EN",
+    "purpose" : {
+        "consents" : [],
+        "legitimate_interests" : []
+    },
+    "cmp_id" : 3,
+    "purpose_one_treatment" : false,
+    "special_features_opt_in" : [],
+    "last_updated" : "2020-04-27T20:27:54.200000000Z",
+    "use_non_standard_stacks" : false,
+    "policy_version" : 2,
+    "version" : 2,
+    "is_service_specific" : false,
+    "created" : "2020-04-27T20:27:54.200000000Z",
+    "consent_screen" : 7,
+    "vendor_list_version" : 15,
+    "cmp_version" : 2,
+    "publisher_country_code" : "AA",
+    "vendor" : {
+        "consents" : [
+            23,
+            42,
+            126,
+            127,
+            128,
+            587,
+            613,
+            626
+        ],
+        "legitimate_interests" : []
+    }
     }
 
 If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
