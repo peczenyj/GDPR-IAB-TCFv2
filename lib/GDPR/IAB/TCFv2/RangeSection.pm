@@ -8,7 +8,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
 use GDPR::IAB::TCFv2::RangeConsent;
 use Carp qw<croak>;
 
-sub new {
+sub Parse {
     my ( $klass, %args ) = @_;
 
     croak "missing 'data'"      unless defined $args{data};
@@ -27,32 +27,28 @@ sub new {
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
       if $data_size < 32;
 
-    my $num_entries = get_uint12( $data, $start_bit );
-
-    my $current_offset = $start_bit + 12;
+    my ( $num_entries, $next_offset ) = get_uint12( $data, $start_bit );
 
     my @consents;
 
     foreach my $i ( 1 .. $num_entries ) {
-        my ( $consent, $bits_consumed ) = _parse_range_consent(
-            $data, $current_offset,
+        my $consent;
+        ( $consent, $next_offset ) = _parse_range_consent(
+            $data, $next_offset,
             $vendor_bits_required
         );
 
         push @consents, $consent;
-
-        $current_offset += $bits_consumed;
     }
 
     my $self = {
         consents             => \@consents,
         vendor_bits_required => $vendor_bits_required,
-        _current_offset      => $current_offset,
     };
 
     bless $self, $klass;
 
-    return $self;
+    return ( $self, $next_offset );
 }
 
 sub _parse_range_consent {
@@ -65,9 +61,12 @@ sub _parse_range_consent {
       if $data_size <= $initial_bit / 8;
 
     # If the first bit is set, it's a Range of IDs
-    if ( is_set $data, $initial_bit ) {
-        my $start = get_uint16( $data, $initial_bit + 1 );
-        my $end   = get_uint16( $data, $initial_bit + 17 );
+    my ( $is_range, $next_offset ) = is_set $data, $initial_bit;
+    if ($is_range) {
+        my ( $start, $end );
+
+        ( $start, $next_offset ) = get_uint16( $data, $next_offset );
+        ( $end,   $next_offset ) = get_uint16( $data, $next_offset );
 
         croak
           "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_vendor_id"
@@ -77,10 +76,12 @@ sub _parse_range_consent {
             start => $start,
             end   => $end
           ),
-          33;
+          $next_offset;
     }
 
-    my $vendor_id = get_uint16( $data, $initial_bit + 1 );
+    my $vendor_id;
+
+    ( $vendor_id, $next_offset ) = get_uint16( $data, $next_offset );
 
     croak
       "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_vendor_id] are valid"
@@ -90,13 +91,7 @@ sub _parse_range_consent {
         start => $vendor_id,
         end   => $vendor_id
       ),
-      17;
-}
-
-sub current_offset {
-    my $self = shift;
-
-    return $self->{_current_offset};
+      $next_offset;
 }
 
 sub max_vendor_id {
@@ -133,7 +128,7 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
     
     my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
 
-    my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
+    my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data                 => $data,
         start_bit            => 230, # offset for vendor consents
         vendor_bits_required => $max_vendor_id_consent
@@ -143,7 +138,7 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
 =head1 CONSTRUCTOR
 
-Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
 
 Will die if any parameter is missing.
 

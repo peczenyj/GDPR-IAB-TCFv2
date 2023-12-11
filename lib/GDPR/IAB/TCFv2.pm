@@ -425,18 +425,21 @@ sub _parse_vendor_consents {
 sub _parse_vendor_legitimate_interests {
     my ( $self, $legitimate_interest_start ) = @_;
 
-    my $legitimate_interest_max_vendor =
-      scalar( get_uint16( $self->{data}, $legitimate_interest_start ) );
+    my ($legitimate_interest_max_vendor,
+        $is_vendor_legitimate_interest_range_offset
+    ) = get_uint16( $self->{data}, $legitimate_interest_start );
 
     $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
 
     my $data_size = length( $self->{data} );
-    croak
-      "invalid consent data: no legitimate interest start position (got $legitimate_interest_start + 16 but $data_size)"
-      if $legitimate_interest_start + 16 > $data_size;
 
-    my $is_vendor_legitimate_interest_range =
-      scalar( is_set( $self->{data}, $legitimate_interest_start + 16 ) );
+    croak
+      "invalid consent data: no legitimate interest start position (got $is_vendor_legitimate_interest_range_offset but $data_size)"
+      if $is_vendor_legitimate_interest_range_offset > $data_size;
+
+    my ($is_vendor_legitimate_interest_range,
+        $vendor_legitimate_interests_offset
+    ) = is_set( $self->{data}, $is_vendor_legitimate_interest_range_offset );
 
     my ( $vendor_legitimate_interests, $pub_restrict_start );
 
@@ -444,14 +447,14 @@ sub _parse_vendor_legitimate_interests {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
           $self->_parse_range_section(
             $self->max_vendor_id_legitimate_interest,
-            $legitimate_interest_start + 17
+            $vendor_legitimate_interests_offset
           );
     }
     else {
         ( $vendor_legitimate_interests, $pub_restrict_start ) =
           $self->_parse_bitfield(
             $self->max_vendor_id_legitimate_interest,
-            $legitimate_interest_start + 17
+            $vendor_legitimate_interests_offset
           );
     }
 
@@ -463,31 +466,28 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_start ) = @_;
 
-    my $num_restrictions =
-      scalar( get_uint12( $self->{data}, $pub_restrict_start ) );
+    my ( $num_restrictions, $next_offset ) =
+      get_uint12( $self->{data}, $pub_restrict_start );
 
     my %restrictions;
 
-    my $current_offset = $pub_restrict_start + 12;
-
     for ( 1 .. $num_restrictions ) {
-        my $purpose_id = scalar( get_uint6( $self->{data}, $current_offset ) );
-        $current_offset += 6;
-        my $restriction_type =
-          scalar( get_uint2( $self->{data}, $current_offset ) );
-        $current_offset += 2;
+        my ( $purpose_id, $restriction_type, $vendor_restrictions );
 
-        my ( $vendor_restrictions, $next_offset ) =
-          $self->_parse_range_section(
+        ( $purpose_id, $next_offset ) =
+          get_uint6( $self->{data}, $next_offset );
+
+        ( $restriction_type, $next_offset ) =
+          get_uint2( $self->{data}, $next_offset );
+
+        ( $vendor_restrictions, $next_offset ) = $self->_parse_range_section(
             ASSUMED_MAX_VENDOR_ID,
-            $current_offset
-          );
+            $next_offset
+        );
 
         $restrictions{$purpose_id} ||= {};
 
         $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
-
-        $current_offset = $next_offset;
     }
 
     my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->new(
@@ -496,7 +496,7 @@ sub _parse_publisher_restrictions {
 
     $self->{publisher_restrictions} = $publisher_restrictions;
 
-    return $current_offset;
+    return $next_offset;
 }
 
 sub _get_core_tc_string {
@@ -544,25 +544,26 @@ sub _is_vendor_consent_range_encoding {
 sub _parse_range_section {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
 
-    my $range_section = GDPR::IAB::TCFv2::RangeSection->new(
+    my ( $range_section, $next_offset ) =
+      GDPR::IAB::TCFv2::RangeSection->Parse(
         data                 => $self->{data},
         start_bit            => $start_bit,
         vendor_bits_required => $vendor_bits_required,
-    );
+      );
 
-    return ( $range_section, $range_section->current_offset );
+    return ( $range_section, $next_offset );
 }
 
 sub _parse_bitfield {
     my ( $self, $vendor_bits_required, $start_bit ) = @_;
 
-    my $bitfield = GDPR::IAB::TCFv2::BitField->new(
+    my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data                 => $self->{data},
         start_bit            => $start_bit,
         vendor_bits_required => $vendor_bits_required,
     );
 
-    return ( $bitfield, $start_bit + $vendor_bits_required );
+    return ( $bitfield, $next_offset );
 }
 
 sub looksLikeIsConsentVersion2 {

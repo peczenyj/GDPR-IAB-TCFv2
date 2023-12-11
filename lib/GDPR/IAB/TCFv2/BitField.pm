@@ -7,7 +7,7 @@ use bytes;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set>;
 use Carp                       qw<croak>;
 
-sub new {
+sub Parse {
     my ( $klass, %args ) = @_;
 
     croak "missing 'data'"      unless defined $args{data};
@@ -35,7 +35,7 @@ sub new {
 
     bless $self, $klass;
 
-    return $self;
+    return ( $self, $start_bit + $vendor_bits_required );
 }
 
 sub max_vendor_id {
@@ -68,7 +68,7 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
     
     my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
 
-    my $bit_field = GDPR::IAB::TCFv2::BitField->new(
+    my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
         data                 => $data,
         start_bit            => 230, # offset for vendor consents
         vendor_bits_required => $max_vendor_id_consent
@@ -78,11 +78,13 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
 
 =head1 CONSTRUCTOR
 
-Receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
 
 Will die if any parameter is missing.
 
 Will die if data does not contain all bits required.
+
+Will return an array of two elements: the object itself and the next offset.
 
 =head1 METHODS
 

@@ -30,7 +30,7 @@ subtest "check interfaces" => sub {
     isa_ok 'GDPR::IAB::TCFv2::Constants::SpecialFeature',  'Exporter';
     isa_ok 'GDPR::IAB::TCFv2::Constants::RestrictionType', 'Exporter';
 
-    my @methods = qw<new max_vendor_id contains>;
+    my @methods = qw<Parse max_vendor_id contains>;
 
     can_ok 'GDPR::IAB::TCFv2::BitField',     @methods;
     can_ok 'GDPR::IAB::TCFv2::RangeSection', @methods;
