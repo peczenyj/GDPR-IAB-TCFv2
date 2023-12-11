@@ -697,7 +697,7 @@ a compact json representation. With C<verbose> we will present everything. See L
 
 C<compact> changes the json encoding. All fields that are a mapping of something to a boolean will be changed to an array
 of all elements keys where the value is true. This affects the following fields:  C<special_features_opt_in>,
-C<purposes_consent>, C<purposes_legitimate_interest>, C<vendor_consents> and C<vendor_legitimate_interests>. See L<TO_JSON> for more details.
+C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L<TO_JSON> for more details.
 
 =item *
 
