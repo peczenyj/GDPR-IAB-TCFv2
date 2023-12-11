@@ -149,7 +149,7 @@ sub tc_string {
 sub version {
     my $self = shift;
 
-    return get_uint6( $self->{data}, VERSION_OFFSET );
+    return scalar( get_uint6( $self->{data}, VERSION_OFFSET ) );
 }
 
 sub created {
@@ -171,7 +171,7 @@ sub last_updated {
 sub _get_epoch {
     my ( $self, $offset ) = @_;
 
-    my $deciseconds = get_uint36( $self->{data}, $offset );
+    my $deciseconds = scalar( get_uint36( $self->{data}, $offset ) );
 
     return (
         ( $deciseconds / 10 ),
@@ -182,49 +182,49 @@ sub _get_epoch {
 sub cmp_id {
     my $self = shift;
 
-    return get_uint12( $self->{data}, CMP_ID_OFFSET );
+    return scalar( get_uint12( $self->{data}, CMP_ID_OFFSET ) );
 }
 
 sub cmp_version {
     my $self = shift;
 
-    return get_uint12( $self->{data}, CMP_VERSION_OFFSET );
+    return scalar( get_uint12( $self->{data}, CMP_VERSION_OFFSET ) );
 }
 
 sub consent_screen {
     my $self = shift;
 
-    return get_uint6( $self->{data}, CONSENT_SCREEN_OFFSET );
+    return scalar( get_uint6( $self->{data}, CONSENT_SCREEN_OFFSET ) );
 }
 
 sub consent_language {
     my $self = shift;
 
-    return get_char6_pair( $self->{data}, CONSENT_LANGUAGE_OFFSET );
+    return scalar( get_char6_pair( $self->{data}, CONSENT_LANGUAGE_OFFSET ) );
 }
 
 sub vendor_list_version {
     my $self = shift;
 
-    return get_uint12( $self->{data}, VENDOR_LIST_VERSION_OFFSET );
+    return scalar( get_uint12( $self->{data}, VENDOR_LIST_VERSION_OFFSET ) );
 }
 
 sub policy_version {
     my $self = shift;
 
-    return get_uint6( $self->{data}, POLICY_VERSION_OFFSET );
+    return scalar( get_uint6( $self->{data}, POLICY_VERSION_OFFSET ) );
 }
 
 sub is_service_specific {
     my $self = shift;
 
-    return is_set( $self->{data}, SERVICE_SPECIFIC_OFFSET );
+    return scalar( is_set( $self->{data}, SERVICE_SPECIFIC_OFFSET ) );
 }
 
 sub use_non_standard_stacks {
     my $self = shift;
 
-    return is_set( $self->{data}, USE_NON_STANDARD_STACKS_OFFSET );
+    return scalar( is_set( $self->{data}, USE_NON_STANDARD_STACKS_OFFSET ) );
 }
 
 sub is_special_feature_opt_in {
@@ -233,7 +233,9 @@ sub is_special_feature_opt_in {
     croak "invalid special feature id $id: must be between 1 and 12"
       if $id < 1 || $id > 12;
 
-    return is_set( $self->{data}, SPECIAL_FEATURE_OPT_IN_OFFSET + $id - 1 );
+    return
+      scalar(
+        is_set( $self->{data}, SPECIAL_FEATURE_OPT_IN_OFFSET + $id - 1 ) );
 }
 
 sub is_purpose_consent_allowed {
@@ -242,7 +244,9 @@ sub is_purpose_consent_allowed {
     croak "invalid purpose id $id: must be between 1 and 24"
       if $id < 1 || $id > 24;
 
-    return is_set( $self->{data}, PURPOSE_CONSENT_ALLOWED_OFFSET + $id - 1 );
+    return
+      scalar(
+        is_set( $self->{data}, PURPOSE_CONSENT_ALLOWED_OFFSET + $id - 1 ) );
 }
 
 sub is_purpose_legitimate_interest_allowed {
@@ -251,25 +255,27 @@ sub is_purpose_legitimate_interest_allowed {
     croak "invalid purpose id $id: must be between 1 and 24"
       if $id < 1 || $id > 24;
 
-    return is_set( $self->{data}, PURPOSE_LIT_ALLOWED_OFFSET + $id - 1 );
+    return
+      scalar( is_set( $self->{data}, PURPOSE_LIT_ALLOWED_OFFSET + $id - 1 ) );
 }
 
 sub purpose_one_treatment {
     my $self = shift;
 
-    return is_set( $self->{data}, PURPOSE_ONE_TREATMENT_OFFSET );
+    return scalar( is_set( $self->{data}, PURPOSE_ONE_TREATMENT_OFFSET ) );
 }
 
 sub publisher_country_code {
     my $self = shift;
 
-    return get_char6_pair( $self->{data}, PUBLISHER_COUNTRY_CODE_OFFSET );
+    return
+      scalar( get_char6_pair( $self->{data}, PUBLISHER_COUNTRY_CODE_OFFSET ) );
 }
 
 sub max_vendor_id_consent {
     my $self = shift;
 
-    return get_uint16( $self->{data}, MAX_VENDOR_ID_CONSENT_OFFSET );
+    return scalar( get_uint16( $self->{data}, MAX_VENDOR_ID_CONSENT_OFFSET ) );
 }
 
 sub max_vendor_id_legitimate_interest {
@@ -420,7 +426,7 @@ sub _parse_vendor_legitimate_interests {
     my ( $self, $legitimate_interest_start ) = @_;
 
     my $legitimate_interest_max_vendor =
-      get_uint16( $self->{data}, $legitimate_interest_start );
+      scalar( get_uint16( $self->{data}, $legitimate_interest_start ) );
 
     $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
 
@@ -430,7 +436,7 @@ sub _parse_vendor_legitimate_interests {
       if $legitimate_interest_start + 16 > $data_size;
 
     my $is_vendor_legitimate_interest_range =
-      is_set( $self->{data}, $legitimate_interest_start + 16 );
+      scalar( is_set( $self->{data}, $legitimate_interest_start + 16 ) );
 
     my ( $vendor_legitimate_interests, $pub_restrict_start );
 
@@ -457,16 +463,18 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_start ) = @_;
 
-    my $num_restrictions = get_uint12( $self->{data}, $pub_restrict_start );
+    my $num_restrictions =
+      scalar( get_uint12( $self->{data}, $pub_restrict_start ) );
 
     my %restrictions;
 
     my $current_offset = $pub_restrict_start + 12;
 
     for ( 1 .. $num_restrictions ) {
-        my $purpose_id = get_uint6( $self->{data}, $current_offset );
+        my $purpose_id = scalar( get_uint6( $self->{data}, $current_offset ) );
         $current_offset += 6;
-        my $restriction_type = get_uint2( $self->{data}, $current_offset );
+        my $restriction_type =
+          scalar( get_uint2( $self->{data}, $current_offset ) );
         $current_offset += 2;
 
         my ( $vendor_restrictions, $next_offset ) =
@@ -529,7 +537,8 @@ sub _decode_base64url {
 sub _is_vendor_consent_range_encoding {
     my $self = shift;
 
-    return is_set( $self->{data}, VENDOR_CONSENT_RANGE_ENCODING_OFFSET );
+    return
+      scalar( is_set( $self->{data}, VENDOR_CONSENT_RANGE_ENCODING_OFFSET ) );
 }
 
 sub _parse_range_section {

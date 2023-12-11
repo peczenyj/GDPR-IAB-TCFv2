@@ -34,34 +34,53 @@ sub is_set {
 
     croak "index our of bounds on offset $offset" if $offset >= length($data);
 
-    return substr( $data, $offset, 1 ) == 1;
+    my $r = substr( $data, $offset, 1 ) == 1;
+
+    return wantarray ? ( $r, $offset + 1 ) : $r;
 }
 
 sub get_uint2 {
     my ( $data, $offset ) = @_;
 
-    return unpack(
+    my ( $bits_with_pading, $next_offset ) =
+      _get_bits_with_padding( $data, 8, $offset, 2 );
+
+    my $r = unpack(
         "C",
-        _get_bits_with_padding( $data, 8, $offset, 2 )
+        $bits_with_pading
     );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub get_uint6 {
     my ( $data, $offset ) = @_;
 
-    return unpack(
+    my ( $bits_with_pading, $next_offset ) =
+      _get_bits_with_padding( $data, 8, $offset, 6 );
+
+    my $r = unpack(
         "C",
-        _get_bits_with_padding( $data, 8, $offset, 6 )
+        $bits_with_pading
     );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub get_char6_pair {
     my ( $data, $offset ) = @_;
 
-    my $first_letter  = chr( ASCII_OFFSET + get_uint6( $data, $offset ) );
-    my $second_letter = chr( ASCII_OFFSET + get_uint6( $data, $offset + 6 ) );
+    my $pair;
 
-    return $first_letter . $second_letter;
+    for ( 1 .. 2 ) {
+        my ( $byte, $next_offset ) = get_uint6( $data, $offset );
+
+        $pair .= chr( ASCII_OFFSET + $byte );
+
+        $offset = $next_offset;
+    }
+
+    return wantarray ? ( $pair, $offset ) : $pair;
 }
 
 sub get_uint12 {
@@ -79,22 +98,41 @@ sub get_uint16 {
 sub _get_big_endian_short_16bits {
     my ( $data, $offset, $nbits ) = @_;
 
-    return unpack(
-        "S>",
-        _get_bits_with_padding( $data, 16, $offset, $nbits )
-    ) if $CAN_FORCE_BIG_ENDIAN;
+    if ($CAN_FORCE_BIG_ENDIAN) {
+        my ( $bits_with_pading, $next_offset ) =
+          _get_bits_with_padding( $data, 16, $offset, $nbits );
 
-    return Math::BigInt->new(
-        "0b" . _add_padding( $data, 16, $offset, $nbits ) );
+        my $r = unpack( "S>", $bits_with_pading );
+
+        return wantarray ? ( $r, $next_offset ) : $r;
+    }
+
+    my ( $data_with_padding, $next_offset ) =
+      _add_padding( $data, 16, $offset, $nbits );
+
+    my $r = Math::BigInt->new( "0b" . $data_with_padding );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub get_uint36 {
     my ( $data, $offset ) = @_;
 
-    return unpack( "Q>", _get_bits_with_padding( $data, 64, $offset, 36 ) )
-      if $CAN_PACK_QUADS;
+    if ($CAN_PACK_QUADS) {
+        my ( $bits_with_pading, $next_offset ) =
+          _get_bits_with_padding( $data, 64, $offset, 36 );
 
-    return Math::BigInt->new( "0b" . _add_padding( $data, 64, $offset, 36 ) );
+        my $r = unpack( "Q>", $bits_with_pading );
+
+        return wantarray ? ( $r, $next_offset ) : $r;
+    }
+
+    my ( $data_with_padding, $next_offset ) =
+      _add_padding( $data, 64, $offset, 36 );
+
+    my $r = Math::BigInt->new( "0b" . $data_with_padding );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub _get_bits_with_padding {
@@ -102,7 +140,12 @@ sub _get_bits_with_padding {
 
     # TODO check if offset is in range of $data ?
 
-    return pack( "B${bits}", _add_padding( $data, $bits, $offset, $nbits ) );
+    my ( $data_with_padding, $next_offset ) =
+      _add_padding( $data, $bits, $offset, $nbits );
+
+    my $r = pack( "B${bits}", $data_with_padding );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub _add_padding {
@@ -110,7 +153,9 @@ sub _add_padding {
 
     my $padding = "0" x ( $bits - $nbits );
 
-    return $padding . substr( $data, $offset, $nbits );
+    my $r = $padding . substr( $data, $offset, $nbits );
+
+    return wantarray ? ( $r, $offset + $nbits ) : $r;
 }
 
 1;
