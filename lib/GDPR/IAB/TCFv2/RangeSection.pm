@@ -5,8 +5,7 @@ use integer;
 use bytes;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
-use GDPR::IAB::TCFv2::RangeConsent;
-use Carp qw<croak>;
+use Carp                       qw<croak>;
 
 sub Parse {
     my ( $klass, %args ) = @_;
@@ -32,23 +31,23 @@ sub Parse {
 
     my ( $num_entries, $next_offset ) = get_uint12( $data, $offset );
 
-    my @range_consents;
+    my @ranges;
 
     foreach my $i ( 1 .. $num_entries ) {
-        my $range_consent;
-        ( $range_consent, $next_offset ) = _parse_range_consent(
+        my $range;
+        ( $range, $next_offset ) = _parse_range(
             $data, $next_offset,
             $max_id,
             $options,
         );
 
-        push @range_consents, $range_consent;
+        push @ranges, $range;
     }
 
     my $self = {
-        range_consents => \@range_consents,
-        max_id         => $max_id,
-        options        => $options,
+        ranges  => \@ranges,
+        max_id  => $max_id,
+        options => $options,
     };
 
     bless $self, $klass;
@@ -56,7 +55,7 @@ sub Parse {
     return ( $self, $next_offset );
 }
 
-sub _parse_range_consent {
+sub _parse_range {
     my ( $data, $initial_bit, $max_id, $options ) = @_;
 
     my $data_size = length($data);
@@ -77,11 +76,7 @@ sub _parse_range_consent {
           "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_id"
           if $end > $max_id;
 
-        return GDPR::IAB::TCFv2::RangeConsent->new(
-            start   => $start,
-            end     => $end,
-            options => $options,
-          ),
+        return [ $start, $end ],
           $next_offset;
     }
 
@@ -93,12 +88,7 @@ sub _parse_range_consent {
       "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_id] are valid"
       if $vendor_id > $max_id;
 
-    return GDPR::IAB::TCFv2::RangeConsent->new(
-        start   => $vendor_id,
-        end     => $vendor_id,
-        options => $options,
-      ),
-      $next_offset;
+    return [ $vendor_id, $vendor_id ], $next_offset;
 }
 
 sub contains {
@@ -109,8 +99,8 @@ sub contains {
 
     return if $id > $self->{max_id};
 
-    foreach my $range_consent ( @{ $self->{range_consents} } ) {
-        return 1 if $range_consent->contains($id);
+    foreach my $range ( @{ $self->{ranges} } ) {
+        return 1 if $range->[0] <= $id && $id <= $range->[1];
     }
 
     return 0;
@@ -120,8 +110,8 @@ sub all {
     my $self = shift;
 
     my @vendors;
-    foreach my $range_consent ( @{ $self->{range_consents} } ) {
-        push @vendors, @{ $range_consent->all };
+    foreach my $range ( @{ $self->{ranges} } ) {
+        push @vendors, $range->[0] .. $range->[1];
     }
 
     return \@vendors;
@@ -133,9 +123,8 @@ sub TO_JSON {
     if ( !!$self->{options}->{json}->{compact} ) {
         my @vendors;
 
-        foreach my $range_consent ( @{ $self->{range_consents} } ) {
-            push @vendors, @{ $range_consent->TO_JSON }
-              ;    # todo use all when we convert back to arrayref
+        foreach my $range ( @{ $self->{ranges} } ) {
+            push @vendors, $range->[0] .. $range->[1];
         }
 
         return \@vendors;
@@ -148,8 +137,8 @@ sub TO_JSON {
         %map = map { $_ => $false } 1 .. $self->{max_id};
     }
 
-    foreach my $range_consent ( @{ $self->{range_consents} } ) {
-        %map = ( %map, %{ $range_consent->TO_JSON } );
+    foreach my $range ( @{ $self->{ranges} } ) {
+        %map = ( %map, map { $_ => $true } $range->[0] .. $range->[1] );
     }
 
     return \%map;
@@ -170,7 +159,7 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data          => $data,
-        offset     => 230,                      # offset for vendor range_consents
+        offset     => 230,                      # offset for vendor ranges
         max_id => $max_id_consent,
     );
 
@@ -205,5 +194,3 @@ Returns the max vendor id.
 =head2 all
 
 Returns an arrayref of all vendors mapped with the bit enabled.
-
-It is a combination of all the responses of L<GDPR::IAB::TCFv2::RangeConsent#all>.

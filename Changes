@@ -1,3 +1,5 @@
+  - performance improvement: when we parse a range-based consent string now the Parse method is 23% faster, TO_JSON is 9% faster and check vendor consent or legitimate interest is between 122% and 137% faster than the previous version
+  - remove GDPR::IAB::TCFv2::RangeConsent package
 0.082
   - increase TO_JSON performance by 76% on bitfields and 3116% on range based vendor section
   - add json section 'publisher' and include all publisher restriction, if any, per purpose id, vendor id and restriction type
