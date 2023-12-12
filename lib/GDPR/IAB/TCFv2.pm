@@ -122,16 +122,16 @@ sub Parse {
 
     # parse consent
 
-    my $legitimate_interest_start = $self->_parse_vendor_consents();
+    my $legitimate_interest_offset = $self->_parse_vendor_consents();
 
     # parse legitimate interest
 
-    my $pub_restrict_start =
-      $self->_parse_vendor_legitimate_interests($legitimate_interest_start);
+    my $pub_restrict_offset =
+      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
 
     # parse publisher restrictions from section core string
 
-    $self->_parse_publisher_restrictions($pub_restrict_start);
+    $self->_parse_publisher_restrictions($pub_restrict_offset);
 
     # parse section disclosed vendors if available
 
@@ -392,7 +392,10 @@ sub TO_JSON {
                     ]
                 } 1 .. $self->max_vendor_id_legitimate_interest,
             ),
-        }
+        },
+        publisher => {
+            restrictions => $self->{publisher_restrictions}->TO_JSON,
+        },
     };
 }
 
@@ -400,17 +403,17 @@ sub TO_JSON {
 sub _parse_vendor_consents {
     my $self = shift;
 
-    my ( $vendor_consents, $legitimate_interest_start );
+    my ( $vendor_consents, $legitimate_interest_offset );
 
     if ( $self->_is_vendor_consent_range_encoding ) {
-        ( $vendor_consents, $legitimate_interest_start ) =
+        ( $vendor_consents, $legitimate_interest_offset ) =
           $self->_parse_range_section(
             $self->max_vendor_id_consent,
             VENDOR_CONSENT_OFFSET
           );
     }
     else {
-        ( $vendor_consents, $legitimate_interest_start ) =
+        ( $vendor_consents, $legitimate_interest_offset ) =
           $self->_parse_bitfield(
             $self->max_vendor_id_consent,
             VENDOR_CONSENT_OFFSET
@@ -419,15 +422,15 @@ sub _parse_vendor_consents {
 
     $self->{vendor_consents} = $vendor_consents;
 
-    return $legitimate_interest_start;
+    return $legitimate_interest_offset;
 }
 
 sub _parse_vendor_legitimate_interests {
-    my ( $self, $legitimate_interest_start ) = @_;
+    my ( $self, $legitimate_interest_offset ) = @_;
 
     my ($legitimate_interest_max_vendor,
         $is_vendor_legitimate_interest_range_offset
-    ) = get_uint16( $self->{data}, $legitimate_interest_start );
+    ) = get_uint16( $self->{data}, $legitimate_interest_offset );
 
     $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
 
@@ -441,17 +444,17 @@ sub _parse_vendor_legitimate_interests {
         $vendor_legitimate_interests_offset
     ) = is_set( $self->{data}, $is_vendor_legitimate_interest_range_offset );
 
-    my ( $vendor_legitimate_interests, $pub_restrict_start );
+    my ( $vendor_legitimate_interests, $pub_restrict_offset );
 
     if ($is_vendor_legitimate_interest_range) {
-        ( $vendor_legitimate_interests, $pub_restrict_start ) =
+        ( $vendor_legitimate_interests, $pub_restrict_offset ) =
           $self->_parse_range_section(
             $self->max_vendor_id_legitimate_interest,
             $vendor_legitimate_interests_offset
           );
     }
     else {
-        ( $vendor_legitimate_interests, $pub_restrict_start ) =
+        ( $vendor_legitimate_interests, $pub_restrict_offset ) =
           $self->_parse_bitfield(
             $self->max_vendor_id_legitimate_interest,
             $vendor_legitimate_interests_offset
@@ -460,14 +463,14 @@ sub _parse_vendor_legitimate_interests {
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
-    return $pub_restrict_start;
+    return $pub_restrict_offset;
 }
 
 sub _parse_publisher_restrictions {
-    my ( $self, $pub_restrict_start ) = @_;
+    my ( $self, $pub_restrict_offset ) = @_;
 
     my ( $num_restrictions, $next_offset ) =
-      get_uint12( $self->{data}, $pub_restrict_start );
+      get_uint12( $self->{data}, $pub_restrict_offset );
 
     my %restrictions;
 
@@ -835,7 +838,7 @@ See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
 =head2 purpose_one_treatment
 
-CMPs can use the PublisherCC field to indicate the legal jurisdiction the publisher is under to help vendors determine whether the vendor needs consent for Purpose 1.
+CMPs can use the C<publisher_country_code> field to indicate the legal jurisdiction the publisher is under to help vendors determine whether the vendor needs consent for Purpose 1.
 
 Returns true if Purpose 1 was NOT disclosed at all.
 

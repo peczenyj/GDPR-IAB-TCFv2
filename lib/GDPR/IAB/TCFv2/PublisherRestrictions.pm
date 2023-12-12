@@ -29,6 +29,30 @@ sub check_publisher_restriction {
       ->contains($vendor);
 }
 
+sub TO_JSON {
+    my $self = shift;
+
+    my %publisher_restrictions;
+
+    foreach my $purpose_id ( keys %{ $self->{restrictions} } ) {
+        my $restriction_map = $self->{restrictions}->{$purpose_id};
+
+        my %purpose_restrictions;
+
+        foreach my $restrict_type ( keys %{$restriction_map} ) {
+            my $vendors = $restriction_map->{$restrict_type}->all;
+
+            foreach my $vendor ( @{$vendors} ) {
+                $purpose_restrictions{$vendor} = int($restrict_type);
+            }
+        }
+
+        $publisher_restrictions{$purpose_id} = \%purpose_restrictions;
+    }
+
+    return \%publisher_restrictions;
+}
+
 1;
 __END__
 

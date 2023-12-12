@@ -29,21 +29,21 @@ sub Parse {
 
     my ( $num_entries, $next_offset ) = get_uint12( $data, $start_bit );
 
-    my @consents;
+    my @range_consents;
 
     foreach my $i ( 1 .. $num_entries ) {
-        my $consent;
-        ( $consent, $next_offset ) = _parse_range_consent(
+        my $range_consent;
+        ( $range_consent, $next_offset ) = _parse_range_consent(
             $data, $next_offset,
             $max_vendor_id
         );
 
-        push @consents, $consent;
+        push @range_consents, $range_consent;
     }
 
     my $self = {
-        consents      => \@consents,
-        max_vendor_id => $max_vendor_id,
+        range_consents => \@range_consents,
+        max_vendor_id  => $max_vendor_id,
     };
 
     bless $self, $klass;
@@ -108,11 +108,23 @@ sub contains {
 
     return if $id > $self->{max_vendor_id};
 
-    foreach my $c ( @{ $self->{consents} } ) {
-        return 1 if $c->contains($id);
+    foreach my $range_consent ( @{ $self->{range_consents} } ) {
+        return 1 if $range_consent->contains($id);
     }
 
     return 0;
+}
+
+sub all {
+    my $self = shift;
+
+    my @ids;
+
+    foreach my $range_consent ( @{ $self->{range_consents} } ) {
+        push @ids, @{ $range_consent->all };
+    }
+
+    return \@ids;
 }
 
 1;
@@ -130,7 +142,7 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data          => $data,
-        start_bit     => 230,                      # offset for vendor consents
+        start_bit     => 230,                      # offset for vendor range_consents
         max_vendor_id => $max_vendor_id_consent,
     );
 

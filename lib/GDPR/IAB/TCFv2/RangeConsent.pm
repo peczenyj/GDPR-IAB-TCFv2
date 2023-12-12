@@ -36,6 +36,12 @@ sub contains {
     return $self->{start} <= $id && $id <= $self->{end};
 }
 
+sub all {
+    my $self = shift;
+
+    return [ $self->{start} .. $self->{end} ];
+}
+
 1;
 __END__
 
