@@ -106,3 +106,7 @@ Will return false if id is bigger than max vendor id.
 =head2 max_vendor_id
 
 Returns the max vendor id.
+
+=head2 all
+
+Returns an arrayref of all vendors that contains the bit true.

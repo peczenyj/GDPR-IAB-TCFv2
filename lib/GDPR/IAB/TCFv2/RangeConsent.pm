@@ -73,3 +73,7 @@ Will die if start is bigger than end.
 Return true if the id is present on the range [start, end]
 
     my $ok = $range->contains(15);
+
+=head2 all
+
+Returns an arrayref of all vendors that contains the bit true.

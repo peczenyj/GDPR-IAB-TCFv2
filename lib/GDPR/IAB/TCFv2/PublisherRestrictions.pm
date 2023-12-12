@@ -89,3 +89,24 @@ Return true for a given combination of purpose id, restriction type and vendor
     my $restriction_type = 0;
     my $vendor = 284;
     $ok = $range->contains($purpose_id, $restriction_type, $vendor);
+
+=head2 TO_JSON
+
+Returns a hashref with the following format:
+
+    {
+        '[purpose id]' => {
+            # 0 - Not Allowed
+            # 1 - Require Consent
+            # 2 - Require Legitimate Interest
+            '[vendor id]' => 1,
+        },
+    }
+
+Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this hashref.
+
+    {
+        "7" => {
+            "32" => 1
+        }
+    }
