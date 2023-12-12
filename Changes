@@ -1,3 +1,5 @@
+  - add json section 'publisher' and include all publisher restriction, if any, per purpose id, vendor id and restriction type
+
 0.081
   - reorganize JSON output
   - small fixes in pod
