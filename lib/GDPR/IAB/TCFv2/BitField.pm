@@ -10,8 +10,7 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"   unless defined $args{data};
-    croak "missing 'offset'" unless defined $args{offset};
+    croak "missing 'data'" unless defined $args{data};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
@@ -19,7 +18,7 @@ sub Parse {
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
     my $data    = $args{data};
-    my $offset  = $args{offset};
+    my $offset  = $args{offset} || 0;
     my $max_id  = $args{max_id};
     my $options = $args{options};
 

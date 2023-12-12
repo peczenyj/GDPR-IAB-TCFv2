@@ -16,18 +16,19 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"   unless defined $args{data};
-    croak "missing 'offset'" unless defined $args{offset};
+    croak "missing 'data'"      unless defined $args{data};
+    croak "missing 'data_size'" unless defined $args{data_size};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data    = $args{data};
-    my $offset  = $args{offset};
-    my $max_id  = $args{max_id};
-    my $options = $args{options};
+    my $data      = $args{data};
+    my $data_size = $args{data_size};
+    my $offset    = $args{offset} || 0;
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     my ( $num_restrictions, $next_offset ) = get_uint12( $data, $offset );
 
@@ -42,10 +43,11 @@ sub Parse {
 
         ( $vendor_restrictions, $next_offset ) =
           GDPR::IAB::TCFv2::RangeSection->Parse(
-            data    => $data,
-            offset  => $next_offset,
-            max_id  => $max_id,
-            options => $options,
+            data      => $data,
+            data_size => $data_size,
+            offset    => $next_offset,
+            max_id    => $max_id,
+            options   => $options,
           );
 
         $restrictions{$purpose_id} ||= {};
@@ -111,7 +113,7 @@ GDPR::IAB::TCFv2::PublisherRestrictions - Transparency & Consent String version 
         max_id =>ASSUMED_MAX_VENDOR_ID,
         options => $self->{options},
     );
-    
+
     die "there is publisher restriction on purpose id 1, type 0 on vendor 284"
         if $range->contains(1, 0, 284);
 

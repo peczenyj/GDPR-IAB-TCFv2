@@ -10,22 +10,22 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"   unless defined $args{data};
-    croak "missing 'offset'" unless defined $args{offset};
+    croak "missing 'data'"      unless defined $args{data};
+    croak "missing 'data_size'" unless defined $args{data_size};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data    = $args{data};
-    my $offset  = $args{offset};
+    my $data      = $args{data};
+    my $data_size = $args{data_size};
+
+    my $offset  = $args{offset} || 0;
     my $max_id  = $args{max_id};
     my $options = $args{options};
 
-    my $data_size = length($data);
-
-    croak
+    Carp::confess
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
       if $data_size < 31;
 
