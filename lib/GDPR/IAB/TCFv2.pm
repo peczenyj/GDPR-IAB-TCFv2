@@ -122,32 +122,21 @@ sub Parse {
 
     # TODO parse special feature opt in
 
-    #_parse_bitfield()
+    $self->_parse_special_features_opt_in();
 
     # TODO parse purpose section
-    # TODO parse purpose consent
 
-    # TODO parse purpose legitimate interest
+    $self->_parse_purposes();
 
     # parse vendor section
-    # parse vendor consent
 
-    my $legitimate_interest_offset = $self->_parse_vendor_consents();
-
-    # parse vendor legitimate interest
-
-    my $pub_restrict_offset =
-      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+    my $pub_restrict_offset = $self->_parse_vendor();
 
     # parse publisher section
 
-    # parse publisher restrictions from section core string
-
-    $self->_parse_publisher_restrictions($pub_restrict_offset);
+    $self->_parse_publisher($pub_restrict_offset);
 
     # TODO parse section disclosed vendors if available
-
-    # TODO parse section publisher_tc if available
 
     return $self;
 }
@@ -242,33 +231,29 @@ sub use_non_standard_stacks {
 sub is_special_feature_opt_in {
     my ( $self, $id ) = @_;
 
-    croak "invalid special feature id $id: must be between 1 and 12"
-      if $id < 1 || $id > 12;
+    croak
+      "invalid special feature id $id: must be between 1 and @{[ MAX_SPECIAL_FEATURE_ID ]}"
+      if $id < 1 || $id > MAX_SPECIAL_FEATURE_ID;
 
-    return
-      scalar(
-        is_set( $self->{data}, SPECIAL_FEATURE_OPT_IN_OFFSET + $id - 1 ) );
+    return $self->{special_features_opt_in}->contains($id);
 }
 
 sub is_purpose_consent_allowed {
     my ( $self, $id ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and 24"
-      if $id < 1 || $id > 24;
+    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
+      if $id < 1 || $id > MAX_PURPOSE_ID;
 
-    return
-      scalar(
-        is_set( $self->{data}, PURPOSE_CONSENT_ALLOWED_OFFSET + $id - 1 ) );
+    return $self->{purpose_consents}->contains($id);
 }
 
 sub is_purpose_legitimate_interest_allowed {
     my ( $self, $id ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and 24"
-      if $id < 1 || $id > 24;
+    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
+      if $id < 1 || $id > MAX_PURPOSE_ID;
 
-    return
-      scalar( is_set( $self->{data}, PURPOSE_LIT_ALLOWED_OFFSET + $id - 1 ) );
+    return $self->{purpose_legitimate_interests}->contains($id);
 }
 
 sub purpose_one_treatment {
@@ -331,18 +316,6 @@ sub _json_true { 1 == 1 }
 
 sub _json_false { 1 == 0 }
 
-sub _format_json_subsection {
-    my ( $self, @data ) = @_;
-
-    if ( !!$self->{options}->{json}->{compact} ) {
-        return [ map { $_->[0] } grep { $_->[1] } @data ];
-    }
-
-    my $verbose = !!$self->{options}->{json}->{verbose};
-
-    return { map { @{$_} } grep { $verbose || $_->[1] } @data };
-}
-
 sub TO_JSON {
     my $self = shift;
 
@@ -368,28 +341,11 @@ sub TO_JSON {
         : $false,
         purpose_one_treatment => $self->purpose_one_treatment ? $true : $false,
         publisher_country_code  => $self->publisher_country_code,
-        special_features_opt_in => $self->_format_json_subsection(
-            map {
-                [ $_ => $self->is_special_feature_opt_in($_) ? $true : $false ]
-            } 1 .. MAX_SPECIAL_FEATURE_ID
-        ),
-        purpose => {
-            consents => $self->_format_json_subsection(
-                map {
-                    [     $_ => $self->is_purpose_consent_allowed($_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
-            legitimate_interests => $self->_format_json_subsection(
-                map {
-                    [   $_ => $self->is_purpose_legitimate_interest_allowed($_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
+        special_features_opt_in => $self->{special_features_opt_in}->TO_JSON,
+        purpose                 => {
+            consents             => $self->{purpose_consents}->TO_JSON,
+            legitimate_interests =>
+              $self->{purpose_legitimate_interests}->TO_JSON,
         },
         vendor => {
             consents             => $self->{vendor_consents}->TO_JSON,
@@ -402,6 +358,48 @@ sub TO_JSON {
     };
 }
 
+sub _parse_special_features_opt_in {
+    my $self = shift;
+
+    my $special_features_opt_in = $self->_parse_bitfield(
+        MAX_SPECIAL_FEATURE_ID,
+        SPECIAL_FEATURE_OPT_IN_OFFSET,
+    );
+
+    $self->{special_features_opt_in} = $special_features_opt_in;
+}
+
+sub _parse_purposes {
+    my $self = shift;
+
+    # TODO parse purpose consent
+    my $purpose_consents = $self->_parse_bitfield(
+        MAX_PURPOSE_ID,
+        PURPOSE_CONSENT_ALLOWED_OFFSET,
+    );
+
+    $self->{purpose_consents} = $purpose_consents;
+
+    # TODO parse purpose legitimate interest
+
+    my $purpose_legitimate_interests = $self->_parse_bitfield(
+        MAX_PURPOSE_ID,
+        PURPOSE_LIT_ALLOWED_OFFSET,
+    );
+
+    $self->{purpose_legitimate_interests} = $purpose_legitimate_interests;
+}
+
+sub _parse_vendor {
+    my $self = shift;
+
+    my $legitimate_interest_offset = $self->_parse_vendor_consents();
+
+    my $pub_restrict_offset =
+      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+
+    return $pub_restrict_offset;
+}
 
 sub _parse_vendor_consents {
     my $self = shift;
@@ -469,6 +467,14 @@ sub _parse_vendor_legitimate_interests {
     return $pub_restrict_offset;
 }
 
+sub _parse_publisher {
+    my ( $self, $pub_restrict_offset ) = @_;
+
+    $self->_parse_publisher_restrictions($pub_restrict_offset);
+
+    # TODO parse section publisher_tc if available
+}
+
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_offset ) = @_;
 
@@ -501,8 +507,6 @@ sub _parse_publisher_restrictions {
     );
 
     $self->{publisher_restrictions} = $publisher_restrictions;
-
-    return $next_offset;
 }
 
 sub _get_core_tc_string {
@@ -558,7 +562,7 @@ sub _parse_range_section {
         options => $self->{options},
       );
 
-    return ( $range_section, $next_offset );
+    return wantarray ? ( $range_section, $next_offset ) : $range_section;
 }
 
 sub _parse_bitfield {
@@ -571,7 +575,7 @@ sub _parse_bitfield {
         options => $self->{options},
     );
 
-    return ( $bitfield, $next_offset );
+    return wantarray ? ( $bitfield, $next_offset ) : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
