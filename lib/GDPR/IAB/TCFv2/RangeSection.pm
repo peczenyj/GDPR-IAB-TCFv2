@@ -11,18 +11,18 @@ use Carp qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"      unless defined $args{data};
-    croak "missing 'start_bit'" unless defined $args{start_bit};
+    croak "missing 'data'"   unless defined $args{data};
+    croak "missing 'offset'" unless defined $args{offset};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data      = $args{data};
-    my $start_bit = $args{start_bit};
-    my $max_id    = $args{max_id};
-    my $options   = $args{options};
+    my $data    = $args{data};
+    my $offset  = $args{offset};
+    my $max_id  = $args{max_id};
+    my $options = $args{options};
 
     my $data_size = length($data);
 
@@ -30,7 +30,7 @@ sub Parse {
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
       if $data_size < 32;
 
-    my ( $num_entries, $next_offset ) = get_uint12( $data, $start_bit );
+    my ( $num_entries, $next_offset ) = get_uint12( $data, $offset );
 
     my @range_consents;
 
@@ -170,7 +170,7 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data          => $data,
-        start_bit     => 230,                      # offset for vendor range_consents
+        offset     => 230,                      # offset for vendor range_consents
         max_id => $max_id_consent,
     );
 

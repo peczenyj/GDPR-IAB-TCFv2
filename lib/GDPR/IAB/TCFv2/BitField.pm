@@ -10,23 +10,23 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"      unless defined $args{data};
-    croak "missing 'start_bit'" unless defined $args{start_bit};
+    croak "missing 'data'"   unless defined $args{data};
+    croak "missing 'offset'" unless defined $args{offset};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data      = $args{data};
-    my $start_bit = $args{start_bit};
-    my $max_id    = $args{max_id};
-    my $options   = $args{options};
+    my $data    = $args{data};
+    my $offset  = $args{offset};
+    my $max_id  = $args{max_id};
+    my $options = $args{options};
 
     my $data_size = length($data);
 
     # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_id + $start_bit + 7 ) / 8;
+    my $bytes_required = ( $max_id + $offset + 7 ) / 8;
 
     croak
       "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
@@ -35,14 +35,14 @@ sub Parse {
     my $self = {
 
         # TODO consider store data as arrayref of bits
-        data    => substr( $data, $start_bit ),
+        data    => substr( $data, $offset ),
         max_id  => $max_id,
         options => $options,
     };
 
     bless $self, $klass;
 
-    return ( $self, $start_bit + $max_id );
+    return ( $self, $offset + $max_id );
 }
 
 sub contains {
@@ -119,7 +119,7 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
 
     my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
         data          => $data,
-        start_bit     => 230,                   # offset for vendor consents
+        offset     => 230,                   # offset for vendor consents
         max_id => $max_id_consent,
     );
 
