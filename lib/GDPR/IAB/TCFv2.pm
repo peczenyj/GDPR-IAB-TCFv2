@@ -242,8 +242,15 @@ sub use_non_standard_stacks {
 sub is_special_feature_opt_in {
     my ( $self, $id ) = @_;
 
-    croak "invalid special feature id $id: must be between 1 and 12"
-      if $id < 1 || $id > 12;
+    croak
+      "invalid special feature id $id: must be between 1 and @{[ MAX_SPECIAL_FEATURE_ID ]}"
+      if $id < 1 || $id > MAX_SPECIAL_FEATURE_ID;
+
+    return $self->_safe_is_special_feature_opt_in($id);
+}
+
+sub _safe_is_special_feature_opt_in {
+    my ( $self, $id ) = @_;
 
     return
       scalar(
@@ -253,9 +260,14 @@ sub is_special_feature_opt_in {
 sub is_purpose_consent_allowed {
     my ( $self, $id ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and 24"
-      if $id < 1 || $id > 24;
+    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
+      if $id < 1 || $id > MAX_PURPOSE_ID;
 
+    return $self->_safe_is_purpose_consent_allowed($id);
+}
+
+sub _safe_is_purpose_consent_allowed {
+    my ( $self, $id ) = @_;
     return
       scalar(
         is_set( $self->{data}, PURPOSE_CONSENT_ALLOWED_OFFSET + $id - 1 ) );
@@ -264,8 +276,14 @@ sub is_purpose_consent_allowed {
 sub is_purpose_legitimate_interest_allowed {
     my ( $self, $id ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and 24"
-      if $id < 1 || $id > 24;
+    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
+      if $id < 1 || $id > MAX_PURPOSE_ID;
+
+    return $self->_safe_is_purpose_legitimate_interest_allowed($id);
+}
+
+sub _safe_is_purpose_legitimate_interest_allowed {
+    my ( $self, $id ) = @_;
 
     return
       scalar( is_set( $self->{data}, PURPOSE_LIT_ALLOWED_OFFSET + $id - 1 ) );
@@ -370,13 +388,15 @@ sub TO_JSON {
         publisher_country_code  => $self->publisher_country_code,
         special_features_opt_in => $self->_format_json_subsection(
             map {
-                [ $_ => $self->is_special_feature_opt_in($_) ? $true : $false ]
+                [     $_ => $self->_safe_is_special_feature_opt_in($_)
+                    ? $true
+                    : $false ]
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
         purpose => {
             consents => $self->_format_json_subsection(
                 map {
-                    [     $_ => $self->is_purpose_consent_allowed($_)
+                    [     $_ => $self->_safe_is_purpose_consent_allowed($_)
                         ? $true
                         : $false
                     ]
@@ -384,7 +404,9 @@ sub TO_JSON {
             ),
             legitimate_interests => $self->_format_json_subsection(
                 map {
-                    [   $_ => $self->is_purpose_legitimate_interest_allowed($_)
+                    [   $_ =>
+                          $self->_safe_is_purpose_legitimate_interest_allowed(
+                            $_)
                         ? $true
                         : $false
                     ]
