@@ -4,22 +4,65 @@ use warnings;
 
 use Carp qw<croak>;
 
-sub new {
+use GDPR::IAB::TCFv2::BitUtils qw<is_set
+  get_uint2
+  get_uint6
+  get_uint12
+  get_uint16
+  get_uint36
+  get_char6_pair
+>;
+
+sub Parse {
     my ( $klass, %args ) = @_;
 
-    my $restrictions = $args{restrictions}
-      or croak "missing field 'restrictions'";
+    croak "missing 'data'"   unless defined $args{data};
+    croak "missing 'offset'" unless defined $args{offset};
+    croak "missing 'max_id'"
+      unless defined $args{max_id};
+
+    croak "missing 'options'"      unless defined $args{options};
+    croak "missing 'options.json'" unless defined $args{options}->{json};
+
+    my $data    = $args{data};
+    my $offset  = $args{offset};
+    my $max_id  = $args{max_id};
+    my $options = $args{options};
+
+    my ( $num_restrictions, $next_offset ) = get_uint12( $data, $offset );
+
+    my %restrictions;
+
+    for ( 1 .. $num_restrictions ) {
+        my ( $purpose_id, $restriction_type, $vendor_restrictions );
+
+        ( $purpose_id, $next_offset ) = get_uint6( $data, $next_offset );
+
+        ( $restriction_type, $next_offset ) = get_uint2( $data, $next_offset );
+
+        ( $vendor_restrictions, $next_offset ) =
+          GDPR::IAB::TCFv2::RangeSection->Parse(
+            data    => $data,
+            offset  => $next_offset,
+            max_id  => $max_id,
+            options => $options,
+          );
+
+        $restrictions{$purpose_id} ||= {};
+
+        $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
+    }
 
     my $self = {
-        restrictions => $restrictions,
+        restrictions => \%restrictions,
     };
 
     bless $self, $klass;
 
-    return $self;
+    return wantarray ? ( $self, $next_offset ) : $self;
 }
 
-sub check_publisher_restriction {
+sub contains {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return 0
@@ -62,14 +105,13 @@ GDPR::IAB::TCFv2::PublisherRestrictions - Transparency & Consent String version 
 
 =head1 SYNOPSIS
 
-    my $range = GDPR::IAB::TCFv2::PublisherRestrictions->new(
-        restrictions => {
-            purpose id => {
-                restriction type => instance of GDPR::IAB::TCFv2::RangeSection
-            },
-        },
+    my ($publisher_restrictions, $next_offset) = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data => $self->{data},
+        offset => $pub_restrict_offset,
+        max_id =>ASSUMED_MAX_VENDOR_ID,
+        options => $self->{options},
     );
-
+    
     die "there is publisher restriction on purpose id 1, type 0 on vendor 284"
         if $range->contains(1, 0, 284);
 

@@ -330,7 +330,7 @@ sub check_publisher_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return $self->{publisher_restrictions}
-      ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
+      ->contains( $purpose_id, $restrict_type, $vendor );
 }
 
 sub _format_date {
@@ -495,32 +495,11 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_offset ) = @_;
 
-    my ( $num_restrictions, $next_offset ) =
-      get_uint12( $self->{data}, $pub_restrict_offset );
-
-    my %restrictions;
-
-    for ( 1 .. $num_restrictions ) {
-        my ( $purpose_id, $restriction_type, $vendor_restrictions );
-
-        ( $purpose_id, $next_offset ) =
-          get_uint6( $self->{data}, $next_offset );
-
-        ( $restriction_type, $next_offset ) =
-          get_uint2( $self->{data}, $next_offset );
-
-        ( $vendor_restrictions, $next_offset ) = $self->_parse_range_section(
-            ASSUMED_MAX_VENDOR_ID,
-            $next_offset
-        );
-
-        $restrictions{$purpose_id} ||= {};
-
-        $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
-    }
-
-    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->new(
-        restrictions => \%restrictions,
+    my ($publisher_restrictions, $next_offset) = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data => $self->{data},
+        offset => $pub_restrict_offset,
+        max_id =>ASSUMED_MAX_VENDOR_ID,
+        options => $self->{options},
     );
 
     $self->{publisher_restrictions} = $publisher_restrictions;

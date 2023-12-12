@@ -56,14 +56,6 @@ sub contains {
     return is_set( $self->{data}, $id - 1 );
 }
 
-sub all {
-    my $self = shift;
-
-    my @data = split //, $self->{data};
-
-    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
-}
-
 sub TO_JSON {
     my $self = shift;
 

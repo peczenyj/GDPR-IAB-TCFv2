@@ -27,7 +27,7 @@ sub Parse {
 
     croak
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
-      if $data_size < 32;
+      if $data_size < 31;
 
     my ( $num_entries, $next_offset ) = get_uint12( $data, $offset );
 
