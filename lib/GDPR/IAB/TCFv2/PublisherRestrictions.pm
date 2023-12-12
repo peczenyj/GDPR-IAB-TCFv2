@@ -42,7 +42,7 @@ sub TO_JSON {
         foreach my $restrict_type ( keys %{$restriction_map} ) {
             my $vendors = $restriction_map->{$restrict_type}->all;
 
-            foreach my $vendor ( grep { $vendors->{$_} } keys %{$vendors} ) {
+            foreach my $vendor ( @{$vendors} ) {
                 $purpose_restrictions{$vendor} = int($restrict_type);
             }
         }

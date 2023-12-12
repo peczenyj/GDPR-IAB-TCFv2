@@ -46,6 +46,18 @@ sub all {
 
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
+    return [ $self->{start} .. $self->{end} ];
+}
+
+sub TO_JSON {
+    my $self = shift;
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        return [ $self->{start} .. $self->{end} ];
+    }
+
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
     return { map { $_ => $true } $self->{start} .. $self->{end} };
 }
 
@@ -83,4 +95,4 @@ Return true if the id is present on the range [start, end]
 
 =head2 all
 
-Returns an hashref of all vendors mapped to the bit enable (returns true or false).
+Returns an arrayref of all vendors mapped with the bit enabled (or all vendors in range).

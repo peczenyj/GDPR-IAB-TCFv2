@@ -398,14 +398,9 @@ sub TO_JSON {
             ),
         },
         vendor => {
-            consents => $self->_format_json_subsection2(
-                $self->{vendor_consents}->all,
-                $self->max_vendor_id_consent,
-            ),
-            legitimate_interests => $self->_format_json_subsection2(
-                $self->{vendor_legitimate_interests}->all,
-                $self->max_vendor_id_legitimate_interest,
-            ),
+            consents             => $self->{vendor_consents}->TO_JSON,
+            legitimate_interests =>
+              $self->{vendor_legitimate_interests}->TO_JSON,
         },
         publisher => {
             restrictions => $self->{publisher_restrictions}->TO_JSON,

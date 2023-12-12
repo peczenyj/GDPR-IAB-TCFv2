@@ -125,12 +125,37 @@ sub contains {
 sub all {
     my $self = shift;
 
+    my @vendors;
+    foreach my $range_consent ( @{ $self->{range_consents} } ) {
+        push @vendors, @{ $range_consent->all };
+    }
+
+    return \@vendors;
+}
+
+sub TO_JSON {
+    my $self = shift;
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        my @vendors;
+
+        foreach my $range_consent ( @{ $self->{range_consents} } ) {
+            push @vendors, @{ $range_consent->TO_JSON }
+              ;    # todo use all when we convert back to arrayref
+        }
+
+        return \@vendors;
+    }
+
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
-    my %map = map { $_ => $false } 1 .. $self->{max_vendor_id};
+    my %map;
+    if ( !!$self->{options}->{json}->{verbose} ) {
+        %map = map { $_ => $false } 1 .. $self->{max_vendor_id};
+    }
 
     foreach my $range_consent ( @{ $self->{range_consents} } ) {
-        %map = ( %map, %{ $range_consent->all } );
+        %map = ( %map, %{ $range_consent->TO_JSON } );
     }
 
     return \%map;
@@ -185,6 +210,6 @@ Returns the max vendor id.
 
 =head2 all
 
-Returns an hashref of all vendors mapped to the bit enable (returns true or false).
+Returns an arrayref of all vendors mapped with the bit enabled.
 
 It is a combination of all the responses of L<GDPR::IAB::TCFv2::RangeConsent#all>.

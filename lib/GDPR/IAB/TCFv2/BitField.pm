@@ -65,10 +65,47 @@ sub all {
 
     my @data = split //, $self->{data};
 
+    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id} ];
+}
+
+sub TO_JSON {
+    my $self = shift;
+
+    my @data = split //, $self->{data};
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id} ];
+    }
+
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
-    return { map { $_ => $data[ $_ - 1 ] ? $true : $false }
-          1 .. $self->{max_vendor_id} };
+    if ( !!$self->{options}->{json}->{verbose} ) {
+        return { map { $_ => $data[ $_ - 1 ] ? $true : $false }
+              1 .. $self->{max_vendor_id} };
+    }
+
+    return {
+        map  { $_ => $true }
+        grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id}
+    };
+}
+
+sub _format_json_subsection2 {
+    my ( $self, $data, $max ) = @_;
+
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        return [
+            grep { $data->{$_} } 1 .. $max,
+        ];
+    }
+
+    my $verbose = !!$self->{options}->{json}->{verbose};
+
+    return $data if $verbose;
+
+    return { map { $_ => $true } grep { $data->{$_} } keys %{$data} };
 }
 
 1;
@@ -117,4 +154,4 @@ Returns the max vendor id.
 
 =head2 all
 
-Returns an hashref of all vendors mapped to the bit enable (returns true or false).
+Returns an array of all vendors mapped with the bit enabled.
