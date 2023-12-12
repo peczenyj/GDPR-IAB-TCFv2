@@ -390,7 +390,8 @@ sub TO_JSON {
             map {
                 [     $_ => $self->_safe_is_special_feature_opt_in($_)
                     ? $true
-                    : $false ]
+                    : $false
+                ]
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
         purpose => {
