@@ -26,7 +26,7 @@ sub Parse {
 
     my $data      = $args{data};
     my $data_size = $args{data_size};
-    my $offset    = $args{offset} || 0;
+    my $offset    = 0;
     my $max_id    = $args{max_id};
     my $options   = $args{options};
 

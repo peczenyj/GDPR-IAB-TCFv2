@@ -17,23 +17,20 @@ sub Parse {
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data    = $args{data};
-    my $offset  = $args{offset} || 0;
-    my $max_id  = $args{max_id};
-    my $options = $args{options};
-
-    my $data_size = length($data);
+    my $data      = $args{data};
+    my $data_size = $args{data_size};
+    my $offset    = 0;
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_id + $offset + 7 ) / 8;
+    my $bytes_required = ( $max_id + 7 ) / 8;
 
     croak
       "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
       if $data_size < $bytes_required;
 
     my $self = {
-
-        # TODO consider store data as arrayref of bits
         data    => substr( $data, $offset, $max_id ),
         max_id  => $max_id,
         options => $options,

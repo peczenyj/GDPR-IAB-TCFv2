@@ -20,10 +20,9 @@ sub Parse {
 
     my $data      = $args{data};
     my $data_size = $args{data_size};
-
-    my $offset  = $args{offset} || 0;
-    my $max_id  = $args{max_id};
-    my $options = $args{options};
+    my $offset    = $args{offset} || 0;
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     Carp::confess
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"

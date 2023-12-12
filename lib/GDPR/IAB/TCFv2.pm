@@ -565,6 +565,7 @@ sub _parse_bitfield {
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data    => $data,
+        data_size => length($self->{data}),
         max_id  => $max_id,
         options => $self->{options},
     );
