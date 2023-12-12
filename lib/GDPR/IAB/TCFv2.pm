@@ -551,6 +551,7 @@ sub _parse_range_section {
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data    => $data,
         data_size => length($self->{data}),
+        offset => 0,
         max_id  => $max_id,
         options => $self->{options},
       );

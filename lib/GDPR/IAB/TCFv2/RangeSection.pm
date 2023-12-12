@@ -12,6 +12,7 @@ sub Parse {
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'data_size'" unless defined $args{data_size};
+    croak "missing 'offset'"    unless defined $args{offset};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
@@ -20,7 +21,7 @@ sub Parse {
 
     my $data      = $args{data};
     my $data_size = $args{data_size};
-    my $offset    = $args{offset} || 0;
+    my $offset    = $args{offset};
     my $max_id    = $args{max_id};
     my $options   = $args{options};
 
