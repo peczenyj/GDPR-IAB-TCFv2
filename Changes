@@ -1,4 +1,4 @@
-  - increase TO_JSON performance by 2x on bitfields and 26x on range based vendor section
+  - increase TO_JSON performance by 76% on bitfields and 3116% on range based vendor section
   - add json section 'publisher' and include all publisher restriction, if any, per purpose id, vendor id and restriction type
 
 0.081
