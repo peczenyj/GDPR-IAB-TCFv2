@@ -12,8 +12,12 @@ sub new {
     croak "missing field 'start'" unless defined $args{start};
     croak "missing field 'end'"   unless defined $args{end};
 
-    my $start = $args{start};
-    my $end   = $args{end};
+    croak "missing 'options'"      unless defined $args{options};
+    croak "missing 'options.json'" unless defined $args{options}->{json};
+
+    my $start   = $args{start};
+    my $end     = $args{end};
+    my $options = $args{options};
 
     croak "field 'start' should be a non zero, positive integer"
       if $start <= 0;
@@ -21,8 +25,9 @@ sub new {
     croak "ops start should not be bigger than end" if $start > $end;
 
     my $self = {
-        start => $start,
-        end   => $end,
+        start   => $start,
+        end     => $end,
+        options => $options,
     };
 
     bless $self, $klass;
@@ -39,7 +44,9 @@ sub contains {
 sub all {
     my $self = shift;
 
-    return [ $self->{start} .. $self->{end} ];
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
+    return { map { $_ => $true } $self->{start} .. $self->{end} };
 }
 
 1;
@@ -76,4 +83,4 @@ Return true if the id is present on the range [start, end]
 
 =head2 all
 
-Returns an arrayref of all vendors that contains the bit true.
+Returns an hashref of all vendors mapped to the bit enable (returns true or false).

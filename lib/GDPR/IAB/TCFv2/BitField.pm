@@ -15,9 +15,13 @@ sub Parse {
     croak "missing 'max_vendor_id'"
       unless defined $args{max_vendor_id};
 
+    croak "missing 'options'"      unless defined $args{options};
+    croak "missing 'options.json'" unless defined $args{options}->{json};
+
     my $data          = $args{data};
     my $start_bit     = $args{start_bit};
     my $max_vendor_id = $args{max_vendor_id};
+    my $options       = $args{options};
 
     my $data_size = length($data);
 
@@ -31,6 +35,7 @@ sub Parse {
     my $self = {
         data          => substr( $data, $start_bit ),
         max_vendor_id => $max_vendor_id,
+        options       => $options,
     };
 
     bless $self, $klass;
@@ -60,7 +65,10 @@ sub all {
 
     my @data = split //, $self->{data};
 
-    return [ grep { $data[$_] } 1 .. 1 + $self->{max_vendor_id} ];
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
+    return { map { $_ => $data[ $_ - 1 ] ? $true : $false }
+          1 .. $self->{max_vendor_id} };
 }
 
 1;
@@ -109,4 +117,4 @@ Returns the max vendor id.
 
 =head2 all
 
-Returns an arrayref of all vendors that contains the bit true.
+Returns an hashref of all vendors mapped to the bit enable (returns true or false).

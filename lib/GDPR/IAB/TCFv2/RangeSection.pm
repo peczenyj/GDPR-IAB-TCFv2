@@ -16,10 +16,13 @@ sub Parse {
     croak "missing 'max_vendor_id'"
       unless defined $args{max_vendor_id};
 
+    croak "missing 'options'"      unless defined $args{options};
+    croak "missing 'options.json'" unless defined $args{options}->{json};
+
     my $data          = $args{data};
     my $start_bit     = $args{start_bit};
     my $max_vendor_id = $args{max_vendor_id};
-
+    my $options       = $args{options};
 
     my $data_size = length($data);
 
@@ -35,7 +38,8 @@ sub Parse {
         my $range_consent;
         ( $range_consent, $next_offset ) = _parse_range_consent(
             $data, $next_offset,
-            $max_vendor_id
+            $max_vendor_id,
+            $options,
         );
 
         push @range_consents, $range_consent;
@@ -44,6 +48,7 @@ sub Parse {
     my $self = {
         range_consents => \@range_consents,
         max_vendor_id  => $max_vendor_id,
+        options        => $options,
     };
 
     bless $self, $klass;
@@ -52,7 +57,7 @@ sub Parse {
 }
 
 sub _parse_range_consent {
-    my ( $data, $initial_bit, $max_vendor_id ) = @_;
+    my ( $data, $initial_bit, $max_vendor_id, $options ) = @_;
 
     my $data_size = length($data);
 
@@ -73,8 +78,9 @@ sub _parse_range_consent {
           if $end > $max_vendor_id;
 
         return GDPR::IAB::TCFv2::RangeConsent->new(
-            start => $start,
-            end   => $end
+            start   => $start,
+            end     => $end,
+            options => $options,
           ),
           $next_offset;
     }
@@ -88,8 +94,9 @@ sub _parse_range_consent {
       if $vendor_id > $max_vendor_id;
 
     return GDPR::IAB::TCFv2::RangeConsent->new(
-        start => $vendor_id,
-        end   => $vendor_id
+        start   => $vendor_id,
+        end     => $vendor_id,
+        options => $options,
       ),
       $next_offset;
 }
@@ -118,13 +125,15 @@ sub contains {
 sub all {
     my $self = shift;
 
-    my @ids;
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
+    my %map = map { $_ => $false } 1 .. $self->{max_vendor_id};
 
     foreach my $range_consent ( @{ $self->{range_consents} } ) {
-        push @ids, @{ $range_consent->all };
+        %map = ( %map, %{ $range_consent->all } );
     }
 
-    return \@ids;
+    return \%map;
 }
 
 1;
@@ -176,6 +185,6 @@ Returns the max vendor id.
 
 =head2 all
 
-Returns an arrayref of all vendors that contains the bit true.
+Returns an hashref of all vendors mapped to the bit enable (returns true or false).
 
 It is a combination of all the responses of L<GDPR::IAB::TCFv2::RangeConsent#all>.

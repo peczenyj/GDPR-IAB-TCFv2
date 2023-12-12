@@ -331,6 +331,24 @@ sub _format_json_subsection {
     return { map { @{$_} } grep { $verbose || $_->[1] } @data };
 }
 
+sub _format_json_subsection2 {
+    my ( $self, $data, $max ) = @_;
+
+    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+
+    if ( !!$self->{options}->{json}->{compact} ) {
+        return [
+            grep { $data->{$_} } 1 .. $max,
+        ];
+    }
+
+    my $verbose = !!$self->{options}->{json}->{verbose};
+
+    return $data if $verbose;
+
+    return { map { $_ => $true } grep { $data->{$_} } keys %{$data} };
+}
+
 sub TO_JSON {
     my $self = shift;
 
@@ -380,17 +398,13 @@ sub TO_JSON {
             ),
         },
         vendor => {
-            consents => $self->_format_json_subsection(
-                map { [ $_ => $self->vendor_consent($_) ? $true : $false ] }
-                  1 .. $self->max_vendor_id_consent,
+            consents => $self->_format_json_subsection2(
+                $self->{vendor_consents}->all,
+                $self->max_vendor_id_consent,
             ),
-            legitimate_interests => $self->_format_json_subsection(
-                map {
-                    [     $_ => $self->vendor_legitimate_interest($_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. $self->max_vendor_id_legitimate_interest,
+            legitimate_interests => $self->_format_json_subsection2(
+                $self->{vendor_legitimate_interests}->all,
+                $self->max_vendor_id_legitimate_interest,
             ),
         },
         publisher => {
@@ -552,6 +566,7 @@ sub _parse_range_section {
         data          => $self->{data},
         start_bit     => $start_bit,
         max_vendor_id => $max_vendor_id,
+        options       => $self->{options},
       );
 
     return ( $range_section, $next_offset );
@@ -564,6 +579,7 @@ sub _parse_bitfield {
         data          => $self->{data},
         start_bit     => $start_bit,
         max_vendor_id => $max_vendor_id,
+        options       => $self->{options},
     );
 
     return ( $bitfield, $next_offset );
