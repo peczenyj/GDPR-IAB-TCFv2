@@ -30,15 +30,15 @@ subtest "check interfaces" => sub {
     isa_ok 'GDPR::IAB::TCFv2::Constants::SpecialFeature',  'Exporter';
     isa_ok 'GDPR::IAB::TCFv2::Constants::RestrictionType', 'Exporter';
 
-    my @methods = qw<Parse max_vendor_id contains>;
+    my @methods = qw<Parse max_vendor_id contains all>;
 
     can_ok 'GDPR::IAB::TCFv2::BitField',     @methods;
     can_ok 'GDPR::IAB::TCFv2::RangeSection', @methods;
 
-    can_ok 'GDPR::IAB::TCFv2::RangeConsent', 'new', 'contains';
+    can_ok 'GDPR::IAB::TCFv2::RangeConsent', 'new', 'contains', 'all';
 
     can_ok 'GDPR::IAB::TCFv2::PublisherRestrictions', 'new',
-      'check_publisher_restriction';
+      'check_publisher_restriction', 'TO_JSON';
 
     done_testing;
 };
