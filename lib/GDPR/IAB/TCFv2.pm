@@ -950,7 +950,7 @@ With option C<convert_blessed>, the encoder will call this method.
 
     say $encoded;
 
-    # outputs:
+Outputs:
 
     {
         "tc_string" : "COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA",
