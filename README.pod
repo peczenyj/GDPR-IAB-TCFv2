@@ -26,7 +26,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.081
+Version 0.082
 
 =head1 SYNOPSIS
 
