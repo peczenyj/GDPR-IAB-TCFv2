@@ -36,7 +36,9 @@ sub Parse {
     foreach my $i ( 1 .. $num_entries ) {
         my $range;
         ( $range, $next_offset ) = _parse_range(
-            $data, $next_offset,
+            $data,
+            $data_size,
+            $next_offset,
             $max_id,
             $options,
         );
@@ -56,16 +58,14 @@ sub Parse {
 }
 
 sub _parse_range {
-    my ( $data, $initial_bit, $max_id, $options ) = @_;
-
-    my $data_size = length($data);
+    my ( $data, $data_size, $offset, $max_id, $options ) = @_;
 
     croak
-      "bit $initial_bit was suppose to start a new range entry, but the consent string was only $data_size bytes long"
-      if $data_size <= $initial_bit / 8;
+      "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
+      if $data_size <= $offset / 8;
 
     # If the first bit is set, it's a Range of IDs
-    my ( $is_range, $next_offset ) = is_set $data, $initial_bit;
+    my ( $is_range, $next_offset ) = is_set $data, $offset;
     if ($is_range) {
         my ( $start, $end );
 
@@ -73,8 +73,14 @@ sub _parse_range {
         ( $end,   $next_offset ) = get_uint16( $data, $next_offset );
 
         croak
-          "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_id"
+          "bit $offset range entry exclusion starts at $start, but the min vendor ID is 1"
+          if 1 > $start;
+
+        croak
+          "bit $offset range entry exclusion ends at $end, but the max vendor ID is $max_id"
           if $end > $max_id;
+
+        croak "start $start can't be bigger than end $end" if $start > $end;
 
         return [ $start, $end ],
           $next_offset;
@@ -85,8 +91,8 @@ sub _parse_range {
     ( $vendor_id, $next_offset ) = get_uint16( $data, $next_offset );
 
     croak
-      "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_id] are valid"
-      if $vendor_id > $max_id;
+      "bit $offset range entry exclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
+      if 1 > $vendor_id || $vendor_id > $max_id;
 
     return [ $vendor_id, $vendor_id ], $next_offset;
 }
