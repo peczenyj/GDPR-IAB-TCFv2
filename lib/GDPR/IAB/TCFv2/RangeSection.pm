@@ -13,16 +13,16 @@ sub Parse {
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'start_bit'" unless defined $args{start_bit};
-    croak "missing 'max_vendor_id'"
-      unless defined $args{max_vendor_id};
+    croak "missing 'max_id'"
+      unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data          = $args{data};
-    my $start_bit     = $args{start_bit};
-    my $max_vendor_id = $args{max_vendor_id};
-    my $options       = $args{options};
+    my $data      = $args{data};
+    my $start_bit = $args{start_bit};
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     my $data_size = length($data);
 
@@ -38,7 +38,7 @@ sub Parse {
         my $range_consent;
         ( $range_consent, $next_offset ) = _parse_range_consent(
             $data, $next_offset,
-            $max_vendor_id,
+            $max_id,
             $options,
         );
 
@@ -47,7 +47,7 @@ sub Parse {
 
     my $self = {
         range_consents => \@range_consents,
-        max_vendor_id  => $max_vendor_id,
+        max_id         => $max_id,
         options        => $options,
     };
 
@@ -57,7 +57,7 @@ sub Parse {
 }
 
 sub _parse_range_consent {
-    my ( $data, $initial_bit, $max_vendor_id, $options ) = @_;
+    my ( $data, $initial_bit, $max_id, $options ) = @_;
 
     my $data_size = length($data);
 
@@ -74,8 +74,8 @@ sub _parse_range_consent {
         ( $end,   $next_offset ) = get_uint16( $data, $next_offset );
 
         croak
-          "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_vendor_id"
-          if $end > $max_vendor_id;
+          "bit $initial_bit range entry exclusion ends at $end, but the max vendor ID is $max_id"
+          if $end > $max_id;
 
         return GDPR::IAB::TCFv2::RangeConsent->new(
             start   => $start,
@@ -90,8 +90,8 @@ sub _parse_range_consent {
     ( $vendor_id, $next_offset ) = get_uint16( $data, $next_offset );
 
     croak
-      "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_vendor_id] are valid"
-      if $vendor_id > $max_vendor_id;
+      "bit $initial_bit range entry excludes vendor $vendor_id, but only vendors [1, $max_id] are valid"
+      if $vendor_id > $max_id;
 
     return GDPR::IAB::TCFv2::RangeConsent->new(
         start   => $vendor_id,
@@ -101,19 +101,13 @@ sub _parse_range_consent {
       $next_offset;
 }
 
-sub max_vendor_id {
-    my $self = shift;
-
-    return $self->{max_vendor_id};
-}
-
 sub contains {
     my ( $self, $id ) = @_;
 
     croak "invalid vendor id $id: must be positive integer bigger than 0"
       if $id < 1;
 
-    return if $id > $self->{max_vendor_id};
+    return if $id > $self->{max_id};
 
     foreach my $range_consent ( @{ $self->{range_consents} } ) {
         return 1 if $range_consent->contains($id);
@@ -151,7 +145,7 @@ sub TO_JSON {
 
     my %map;
     if ( !!$self->{options}->{json}->{verbose} ) {
-        %map = map { $_ => $false } 1 .. $self->{max_vendor_id};
+        %map = map { $_ => $false } 1 .. $self->{max_id};
     }
 
     foreach my $range_consent ( @{ $self->{range_consents} } ) {
@@ -172,12 +166,12 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
 
     my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
     
-    my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
+    my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data          => $data,
         start_bit     => 230,                      # offset for vendor range_consents
-        max_vendor_id => $max_vendor_id_consent,
+        max_id => $max_id_consent,
     );
 
     if $range_section->contains(284) { ... }
@@ -204,7 +198,7 @@ Will return false if id is bigger than max vendor id.
 
     my $ok = $range_section->contains(284);
 
-=head2 max_vendor_id
+=head2 max_id
 
 Returns the max vendor id.
 

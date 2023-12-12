@@ -120,22 +120,34 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    # parse consent
+    # TODO parse special feature opt in
+
+    #_parse_bitfield()
+
+    # TODO parse purpose section
+    # TODO parse purpose consent
+
+    # TODO parse purpose legitimate interest
+
+    # parse vendor section
+    # parse vendor consent
 
     my $legitimate_interest_offset = $self->_parse_vendor_consents();
 
-    # parse legitimate interest
+    # parse vendor legitimate interest
 
     my $pub_restrict_offset =
       $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+
+    # parse publisher section
 
     # parse publisher restrictions from section core string
 
     $self->_parse_publisher_restrictions($pub_restrict_offset);
 
-    # parse section disclosed vendors if available
+    # TODO parse section disclosed vendors if available
 
-    # parse section publisher_tc if available
+    # TODO parse section publisher_tc if available
 
     return $self;
 }
@@ -536,27 +548,27 @@ sub _is_vendor_consent_range_encoding {
 }
 
 sub _parse_range_section {
-    my ( $self, $max_vendor_id, $start_bit ) = @_;
+    my ( $self, $max_id, $start_bit ) = @_;
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
-        data          => $self->{data},
-        start_bit     => $start_bit,
-        max_vendor_id => $max_vendor_id,
-        options       => $self->{options},
+        data      => $self->{data},
+        start_bit => $start_bit,
+        max_id    => $max_id,
+        options   => $self->{options},
       );
 
     return ( $range_section, $next_offset );
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_vendor_id, $start_bit ) = @_;
+    my ( $self, $max_id, $start_bit ) = @_;
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data          => $self->{data},
-        start_bit     => $start_bit,
-        max_vendor_id => $max_vendor_id,
-        options       => $self->{options},
+        data      => $self->{data},
+        start_bit => $start_bit,
+        max_id    => $max_id,
+        options   => $self->{options},
     );
 
     return ( $bitfield, $next_offset );

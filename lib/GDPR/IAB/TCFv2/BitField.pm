@@ -12,41 +12,37 @@ sub Parse {
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'start_bit'" unless defined $args{start_bit};
-    croak "missing 'max_vendor_id'"
-      unless defined $args{max_vendor_id};
+    croak "missing 'max_id'"
+      unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data          = $args{data};
-    my $start_bit     = $args{start_bit};
-    my $max_vendor_id = $args{max_vendor_id};
-    my $options       = $args{options};
+    my $data      = $args{data};
+    my $start_bit = $args{start_bit};
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     my $data_size = length($data);
 
     # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_vendor_id + $start_bit + 7 ) / 8;
+    my $bytes_required = ( $max_id + $start_bit + 7 ) / 8;
 
     croak
-      "a BitField for $max_vendor_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
+      "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
       if $data_size < $bytes_required;
 
     my $self = {
-        data          => substr( $data, $start_bit ),
-        max_vendor_id => $max_vendor_id,
-        options       => $options,
+
+        # TODO consider store data as arrayref of bits
+        data    => substr( $data, $start_bit ),
+        max_id  => $max_id,
+        options => $options,
     };
 
     bless $self, $klass;
 
-    return ( $self, $start_bit + $max_vendor_id );
-}
-
-sub max_vendor_id {
-    my $self = shift;
-
-    return $self->{max_vendor_id};
+    return ( $self, $start_bit + $max_id );
 }
 
 sub contains {
@@ -55,7 +51,7 @@ sub contains {
     croak "invalid vendor id $id: must be positive integer bigger than 0"
       if $id < 1;
 
-    return if $id > $self->{max_vendor_id};
+    return if $id > $self->{max_id};
 
     return is_set( $self->{data}, $id - 1 );
 }
@@ -65,7 +61,7 @@ sub all {
 
     my @data = split //, $self->{data};
 
-    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id} ];
+    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
 }
 
 sub TO_JSON {
@@ -74,19 +70,19 @@ sub TO_JSON {
     my @data = split //, $self->{data};
 
     if ( !!$self->{options}->{json}->{compact} ) {
-        return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id} ];
+        return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
     }
 
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
     if ( !!$self->{options}->{json}->{verbose} ) {
         return { map { $_ => $data[ $_ - 1 ] ? $true : $false }
-              1 .. $self->{max_vendor_id} };
+              1 .. $self->{max_id} };
     }
 
     return {
         map  { $_ => $true }
-        grep { $data[ $_ - 1 ] } 1 .. $self->{max_vendor_id}
+        grep { $data[ $_ - 1 ] } 1 .. $self->{max_id}
     };
 }
 
@@ -119,12 +115,12 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
 
     my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
     
-    my $max_vendor_id_consent = << get 16 bits from $data offset 213 >>
+    my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
         data          => $data,
         start_bit     => 230,                   # offset for vendor consents
-        max_vendor_id => $max_vendor_id_consent,
+        max_id => $max_id_consent,
     );
 
     if $bit_field->contains(284) { ... }
@@ -148,7 +144,7 @@ Will return false if id is bigger than max vendor id.
 
     my $ok = $bit_field->contains(284);
 
-=head2 max_vendor_id
+=head2 max_id
 
 Returns the max vendor id.
 
