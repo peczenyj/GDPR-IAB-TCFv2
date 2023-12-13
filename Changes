@@ -1,3 +1,5 @@
+  - refactor on Publisher Restriction parsing.
+  - small fixes about data and offset.
   - performance improvement: when we parse a range-based consent string now the Parse method is 23% faster, TO_JSON is 9% faster and check vendor consent or legitimate interest is between 122% and 137% faster than the previous version
   - remove GDPR::IAB::TCFv2::RangeConsent package
 

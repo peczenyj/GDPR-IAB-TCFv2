@@ -32,8 +32,11 @@ our @EXPORT_OK = qw<is_set
 sub is_set {
     my ( $data, $offset ) = @_;
 
-    croak "index out of bounds on offset $offset"
-      if $offset + 1 > length($data);
+    my $data_size = length($data);
+
+    croak
+      "index out of bounds on offset $offset: can't read 1, only has: $data_size"
+      if $offset + 1 > $data_size;
 
     my $r = substr( $data, $offset, 1 ) == 1;
 
@@ -139,8 +142,6 @@ sub get_uint36 {
 sub _get_bits_with_padding {
     my ( $data, $bits, $offset, $nbits ) = @_;
 
-    # TODO check if offset is in range of $data ?
-
     my ( $data_with_padding, $next_offset ) =
       _add_padding( $data, $bits, $offset, $nbits );
 
@@ -152,8 +153,11 @@ sub _get_bits_with_padding {
 sub _add_padding {
     my ( $data, $bits, $offset, $nbits ) = @_;
 
-    croak "index out of bounds on offset $offset"
-      if $offset + $nbits > length($data);
+    my $data_size = length($data);
+
+    croak
+      "index out of bounds on offset $offset: can't read $nbits, only has: $data_size"
+      if $offset + $nbits > $data_size;
 
     my $padding = "0" x ( $bits - $nbits );
 
