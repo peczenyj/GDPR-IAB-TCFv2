@@ -35,7 +35,7 @@ sub Parse {
     my $self = {
 
         # TODO consider store data as arrayref of bits
-        data    => substr( $data, $offset ),
+        data    => substr( $data, $offset, $max_id ),
         max_id  => $max_id,
         options => $options,
     };
