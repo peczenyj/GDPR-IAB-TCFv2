@@ -576,8 +576,7 @@ sub _parse_bitfield {
         options   => $self->{options},
     );
 
-    return
-      wantarray
+    return wantarray
       ? ( $bitfield, $bitfield_start_offset + $next_offset )
       : $bitfield;
 }
