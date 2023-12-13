@@ -21,7 +21,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.082";
+our $VERSION = "0.083";
 
 use constant {
     CONSENT_STRING_TCF2_SEPARATOR => '.',
@@ -119,15 +119,6 @@ sub Parse {
       unless $self->version == TCF_VERSION;
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
-
-    # TODO parse special feature opt in
-
-    #_parse_bitfield()
-
-    # TODO parse purpose section
-    # TODO parse purpose consent
-
-    # TODO parse purpose legitimate interest
 
     # parse vendor section
     # parse vendor consent
@@ -330,7 +321,7 @@ sub check_publisher_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return $self->{publisher_restrictions}
-      ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
+      ->contains( $purpose_id, $restrict_type, $vendor );
 }
 
 sub _format_date {
@@ -495,37 +486,20 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_offset ) = @_;
 
-    my ( $num_restrictions, $next_offset ) =
-      get_uint12( $self->{data}, $pub_restrict_offset );
+    my $data =
+      substr( $self->{data}, $pub_restrict_offset, ASSUMED_MAX_VENDOR_ID );
 
-    my %restrictions;
-
-    for ( 1 .. $num_restrictions ) {
-        my ( $purpose_id, $restriction_type, $vendor_restrictions );
-
-        ( $purpose_id, $next_offset ) =
-          get_uint6( $self->{data}, $next_offset );
-
-        ( $restriction_type, $next_offset ) =
-          get_uint2( $self->{data}, $next_offset );
-
-        ( $vendor_restrictions, $next_offset ) = $self->_parse_range_section(
-            ASSUMED_MAX_VENDOR_ID,
-            $next_offset
-        );
-
-        $restrictions{$purpose_id} ||= {};
-
-        $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
-    }
-
-    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->new(
-        restrictions => \%restrictions,
-    );
+    my ( $publisher_restrictions, $relative_next_offset ) =
+      GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => ASSUMED_MAX_VENDOR_ID,
+        options   => $self->{options},
+      );
 
     $self->{publisher_restrictions} = $publisher_restrictions;
 
-    return $next_offset;
+    return $pub_restrict_offset + $relative_next_offset;
 }
 
 sub _get_core_tc_string {
@@ -571,30 +545,40 @@ sub _is_vendor_consent_range_encoding {
 }
 
 sub _parse_range_section {
-    my ( $self, $max_id, $offset ) = @_;
+    my ( $self, $max_id, $range_section_start_offset ) = @_;
+
+    my $data = substr( $self->{data}, $range_section_start_offset, $max_id );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
-        data    => $self->{data},
-        offset  => $offset,
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        offset    => 0,
+        max_id    => $max_id,
+        options   => $self->{options},
       );
 
-    return ( $range_section, $next_offset );
+    return
+      wantarray
+      ? ( $range_section, $range_section_start_offset + $next_offset )
+      : $range_section;
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_id, $offset ) = @_;
+    my ( $self, $max_id, $bitfield_start_offset ) = @_;
+
+    my $data = substr( $self->{data}, $bitfield_start_offset, $max_id );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data    => $self->{data},
-        offset  => $offset,
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => $max_id,
+        options   => $self->{options},
     );
 
-    return ( $bitfield, $next_offset );
+    return wantarray
+      ? ( $bitfield, $bitfield_start_offset + $next_offset )
+      : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
@@ -636,7 +620,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.082
+Version 0.083
 
 =head1 SYNOPSIS
 
@@ -732,19 +716,19 @@ Parse may receive an optional hash parameter C<json> with the following properti
 =item *
 
 C<verbose> changes the json encoding. By default we omit some false values such as C<vendor_consents> to create 
-a compact json representation. With C<verbose> we will present everything. See L<TO_JSON> for more details.
+a compact json representation. With C<verbose> we will present everything. See L</TO_JSON> for more details.
 
 =item *
 
 C<compact> changes the json encoding. All fields that are a mapping of something to a boolean will be changed to an array
 of all elements keys where the value is true. This affects the following fields:  C<special_features_opt_in>,
-C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L<TO_JSON> for more details.
+C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L</TO_JSON> for more details.
 
 =item *
 
 C<use_epoch> changes the json encode. By default we format the C<created> and C<last_updated> are converted to string using 
 L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. With C<use_epoch> we will return the unix epoch in seconds.
-See L<TO_JSON> for more details.
+See L</TO_JSON> for more details.
 
 =item *
 
@@ -1019,7 +1003,7 @@ Outputs:
     }
 
 
-If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
+If L<JSON> is installed, the L</TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
 
 By default it returns a compacted format where we omit the C<false> on fields like C<vendor_consents> and we convert the dates 
 using L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. This behaviour can be changed by extra option in the L<Parse> constructor.
@@ -1037,6 +1021,10 @@ The original documentation of the L<TCF v2 from IAB documentation|https://github
 =head1 AUTHOR
 
 Tiago Peczenyj L<mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com>
+
+=head1 THANKS
+
+Special thanks to L<ikegami|https://metacpan.org/author/IKEGAMI> for the patience on several question about Perl on L<Stack Overflow|https://stackoverflow.com>.
 
 =head1 BUGS
 

@@ -26,7 +26,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.082
+Version 0.083
 
 =head1 SYNOPSIS
 
@@ -122,19 +122,19 @@ Parse may receive an optional hash parameter C<json> with the following properti
 =item *
 
 C<verbose> changes the json encoding. By default we omit some false values such as C<vendor_consents> to create 
-a compact json representation. With C<verbose> we will present everything. See L<TO_JSON> for more details.
+a compact json representation. With C<verbose> we will present everything. See L</TO_JSON> for more details.
 
 =item *
 
 C<compact> changes the json encoding. All fields that are a mapping of something to a boolean will be changed to an array
 of all elements keys where the value is true. This affects the following fields:  C<special_features_opt_in>,
-C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L<TO_JSON> for more details.
+C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L</TO_JSON> for more details.
 
 =item *
 
 C<use_epoch> changes the json encode. By default we format the C<created> and C<last_updated> are converted to string using 
 L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. With C<use_epoch> we will return the unix epoch in seconds.
-See L<TO_JSON> for more details.
+See L</TO_JSON> for more details.
 
 =item *
 
@@ -409,7 +409,7 @@ Outputs:
     }
 
 
-If L<JSON> is installed, the C<TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
+If L<JSON> is installed, the L</TO_JSON> method will use C<JSON::true> and C<JSON::false> as boolean value.
 
 By default it returns a compacted format where we omit the C<false> on fields like C<vendor_consents> and we convert the dates 
 using L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. This behaviour can be changed by extra option in the L<Parse> constructor.
@@ -427,6 +427,10 @@ The original documentation of the L<TCF v2 from IAB documentation|https://github
 =head1 AUTHOR
 
 Tiago Peczenyj L<mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com>
+
+=head1 THANKS
+
+Special thanks to L<ikegami|https://metacpan.org/author/IKEGAMI> for the patience on several question about Perl on L<Stack Overflow|https://stackoverflow.com>.
 
 =head1 BUGS
 

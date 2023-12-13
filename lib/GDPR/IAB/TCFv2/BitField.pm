@@ -10,32 +10,28 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'"   unless defined $args{data};
-    croak "missing 'offset'" unless defined $args{offset};
+    croak "missing 'data'" unless defined $args{data};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data    = $args{data};
-    my $offset  = $args{offset};
-    my $max_id  = $args{max_id};
-    my $options = $args{options};
-
-    my $data_size = length($data);
+    my $data      = $args{data};
+    my $data_size = $args{data_size};
+    my $offset    = 0;
+    my $max_id    = $args{max_id};
+    my $options   = $args{options};
 
     # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_id + $offset + 7 ) / 8;
+    my $bytes_required = ( $max_id + 7 ) / 8;
 
     croak
       "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
       if $data_size < $bytes_required;
 
     my $self = {
-
-        # TODO consider store data as arrayref of bits
-        data    => substr( $data, $offset ),
+        data    => substr( $data, $offset, $max_id ),
         max_id  => $max_id,
         options => $options,
     };
@@ -54,14 +50,6 @@ sub contains {
     return if $id > $self->{max_id};
 
     return is_set( $self->{data}, $id - 1 );
-}
-
-sub all {
-    my $self = shift;
-
-    my @data = split //, $self->{data};
-
-    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
 }
 
 sub TO_JSON {
