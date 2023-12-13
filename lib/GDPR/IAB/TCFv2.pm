@@ -486,14 +486,16 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_offset ) = @_;
 
-    my $data = substr($self->{data}, $pub_restrict_offset, ASSUMED_MAX_VENDOR_ID);
+    my $data =
+      substr( $self->{data}, $pub_restrict_offset, ASSUMED_MAX_VENDOR_ID );
 
-    my ($publisher_restrictions, $relative_next_offset) = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data    => $data,
-        data_size => length($self->{data}),
-        max_id  => ASSUMED_MAX_VENDOR_ID,
-        options => $self->{options},
-    );
+    my ( $publisher_restrictions, $relative_next_offset ) =
+      GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => ASSUMED_MAX_VENDOR_ID,
+        options   => $self->{options},
+      );
 
     $self->{publisher_restrictions} = $publisher_restrictions;
 
@@ -545,33 +547,39 @@ sub _is_vendor_consent_range_encoding {
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data = substr($self->{data}, $range_section_start_offset, $max_id);
+    my $data = substr( $self->{data}, $range_section_start_offset, $max_id );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
-        data    => $data,
-        data_size => length($self->{data}),
-        offset => 0,
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        offset    => 0,
+        max_id    => $max_id,
+        options   => $self->{options},
       );
 
-    return wantarray  ? ( $range_section, $range_section_start_offset +$next_offset ) : $range_section;
+    return
+      wantarray
+      ? ( $range_section, $range_section_start_offset + $next_offset )
+      : $range_section;
 }
 
 sub _parse_bitfield {
     my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
-    my $data = substr($self->{data}, $bitfield_start_offset, $max_id);
+    my $data = substr( $self->{data}, $bitfield_start_offset, $max_id );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data    => $data,
-        data_size => length($self->{data}),
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => $max_id,
+        options   => $self->{options},
     );
 
-    return wantarray ? ( $bitfield, $bitfield_start_offset + $next_offset ) : $bitfield;
+    return
+      wantarray
+      ? ( $bitfield, $bitfield_start_offset + $next_offset )
+      : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
