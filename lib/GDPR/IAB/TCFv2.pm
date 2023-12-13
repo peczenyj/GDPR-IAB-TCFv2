@@ -120,15 +120,6 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    # TODO parse special feature opt in
-
-    #_parse_bitfield()
-
-    # TODO parse purpose section
-    # TODO parse purpose consent
-
-    # TODO parse purpose legitimate interest
-
     # parse vendor section
     # parse vendor consent
 
@@ -330,7 +321,7 @@ sub check_publisher_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return $self->{publisher_restrictions}
-      ->check_publisher_restriction( $purpose_id, $restrict_type, $vendor );
+      ->contains( $purpose_id, $restrict_type, $vendor );
 }
 
 sub _format_date {
@@ -495,37 +486,20 @@ sub _parse_vendor_legitimate_interests {
 sub _parse_publisher_restrictions {
     my ( $self, $pub_restrict_offset ) = @_;
 
-    my ( $num_restrictions, $next_offset ) =
-      get_uint12( $self->{data}, $pub_restrict_offset );
+    my $data =
+      substr( $self->{data}, $pub_restrict_offset, ASSUMED_MAX_VENDOR_ID );
 
-    my %restrictions;
-
-    for ( 1 .. $num_restrictions ) {
-        my ( $purpose_id, $restriction_type, $vendor_restrictions );
-
-        ( $purpose_id, $next_offset ) =
-          get_uint6( $self->{data}, $next_offset );
-
-        ( $restriction_type, $next_offset ) =
-          get_uint2( $self->{data}, $next_offset );
-
-        ( $vendor_restrictions, $next_offset ) = $self->_parse_range_section(
-            ASSUMED_MAX_VENDOR_ID,
-            $next_offset
-        );
-
-        $restrictions{$purpose_id} ||= {};
-
-        $restrictions{$purpose_id}->{$restriction_type} = $vendor_restrictions;
-    }
-
-    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->new(
-        restrictions => \%restrictions,
-    );
+    my ( $publisher_restrictions, $relative_next_offset ) =
+      GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => ASSUMED_MAX_VENDOR_ID,
+        options   => $self->{options},
+      );
 
     $self->{publisher_restrictions} = $publisher_restrictions;
 
-    return $next_offset;
+    return $pub_restrict_offset + $relative_next_offset;
 }
 
 sub _get_core_tc_string {
@@ -571,30 +545,40 @@ sub _is_vendor_consent_range_encoding {
 }
 
 sub _parse_range_section {
-    my ( $self, $max_id, $offset ) = @_;
+    my ( $self, $max_id, $range_section_start_offset ) = @_;
+
+    my $data = substr( $self->{data}, $range_section_start_offset, $max_id );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
-        data    => $self->{data},
-        offset  => $offset,
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        offset    => 0,
+        max_id    => $max_id,
+        options   => $self->{options},
       );
 
-    return ( $range_section, $next_offset );
+    return
+      wantarray
+      ? ( $range_section, $range_section_start_offset + $next_offset )
+      : $range_section;
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_id, $offset ) = @_;
+    my ( $self, $max_id, $bitfield_start_offset ) = @_;
+
+    my $data = substr( $self->{data}, $bitfield_start_offset, $max_id );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data    => $self->{data},
-        offset  => $offset,
-        max_id  => $max_id,
-        options => $self->{options},
+        data      => $data,
+        data_size => length( $self->{data} ),
+        max_id    => $max_id,
+        options   => $self->{options},
     );
 
-    return ( $bitfield, $next_offset );
+    return wantarray
+      ? ( $bitfield, $bitfield_start_offset + $next_offset )
+      : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
