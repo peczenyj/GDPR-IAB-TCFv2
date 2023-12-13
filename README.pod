@@ -122,19 +122,19 @@ Parse may receive an optional hash parameter C<json> with the following properti
 =item *
 
 C<verbose> changes the json encoding. By default we omit some false values such as C<vendor_consents> to create 
-a compact json representation. With C<verbose> we will present everything. See L<TO_JSON> for more details.
+a compact json representation. With C<verbose> we will present everything. See L<SERIALIZATION> for more details.
 
 =item *
 
 C<compact> changes the json encoding. All fields that are a mapping of something to a boolean will be changed to an array
 of all elements keys where the value is true. This affects the following fields:  C<special_features_opt_in>,
-C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L<TO_JSON> for more details.
+C<purpose/consents>, C<purpose/legitimate_interests>, C<vendor/consents> and C<vendor/legitimate_interests>. See L<SERIALIZATION> for more details.
 
 =item *
 
 C<use_epoch> changes the json encode. By default we format the C<created> and C<last_updated> are converted to string using 
 L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. With C<use_epoch> we will return the unix epoch in seconds.
-See L<TO_JSON> for more details.
+See L<SERIALIZATION> for more details.
 
 =item *
 
@@ -334,6 +334,8 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head1 SERIALIZATION
 
 =head2 TO_JSON
 
