@@ -16,4 +16,5 @@ README.pod
 t/00-load.t
 t/01-parse.t
 t/02-json.t
+t/03-bugs.t
 t/99-pod.t

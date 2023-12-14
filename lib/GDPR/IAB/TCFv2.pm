@@ -21,7 +21,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.083";
+our $VERSION = "0.084";
 
 use constant {
     CONSENT_STRING_TCF2_SEPARATOR => '.',
@@ -547,7 +547,7 @@ sub _is_vendor_consent_range_encoding {
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data = substr( $self->{data}, $range_section_start_offset, $max_id );
+    my $data = substr( $self->{data}, $range_section_start_offset );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
@@ -620,7 +620,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.083
+Version 0.084
 
 =head1 SYNOPSIS
 
