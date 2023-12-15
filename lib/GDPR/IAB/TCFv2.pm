@@ -36,7 +36,6 @@ use constant {
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
     SEGMENT_TYPES           => {
         CORE              => 0,
-        DISCLOSED_VENDORS => 1,
         PUBLISHER_TC      => 3,
     },
     OFFSETS => {
@@ -110,7 +109,6 @@ sub Parse {
     my $self = {
         core_data              => $segments->{core_data},
         publisher_tc_data      => $segments->{publisher_tc},
-        disclosed_vendors_data => $segments->{disclosed_vendors},
         options                => \%options,
         tc_string              => $tc_string,
 
@@ -129,8 +127,6 @@ sub Parse {
     my $next_offset = $self->_parse_vendor_section();
 
     $self->_parse_publisher_section($next_offset);
-
-    $self->_parse_disclosed_vendors();
 
     return $self;
 }
@@ -454,13 +450,10 @@ sub _decode_tc_string_segments {
         $segments{$segment_type} = $decoded;
     }
 
-    my $disclosed_vendors = $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} };
     my $publisher_tc      = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
 
-    # return hashref
     return {
         core_data         => $core_data,
-        disclosed_vendors => $disclosed_vendors,
         publisher_tc      => $publisher_tc,
     };
 }
@@ -550,31 +543,17 @@ sub _parse_publisher_section {
     $self->{publisher} = $publisher;
 }
 
-sub _parse_disclosed_vendors {
-    my $self = shift;
-
-    # TODO parse section disclosed vendors if available
-
-    return unless defined $self->{disclosed_vendors_data};    # if avaliable
-
-# my $disclosed_vendors = $self->_parse_bitfield_or_range(0, 'disclosed_vendors_data');
-
-    # $self->{disclosed_vendors} = $disclosed_vendors;
-}
-
 sub _parse_bitfield_or_range {
-    my ( $self, $offset, $section ) = @_;
-
-    $section ||= q<core_data>;
+    my ( $self, $offset ) = @_;
 
     my $something;
 
-    my ( $max_id, $next_offset ) = get_uint16( $self->{$section}, $offset );
+    my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
 
     my $is_range;
 
     ( $is_range, $next_offset ) = is_set(
-        $self->{$section},
+        $self->{core_data},
         $next_offset,
     );
 
@@ -582,14 +561,12 @@ sub _parse_bitfield_or_range {
         ( $something, $next_offset ) = $self->_parse_range_section(
             $max_id,
             $next_offset,
-            $section,
         );
     }
     else {
         ( $something, $next_offset ) = $self->_parse_bitfield(
             $max_id,
             $next_offset,
-            $section,
         );
     }
 
@@ -597,11 +574,10 @@ sub _parse_bitfield_or_range {
 }
 
 sub _parse_range_section {
-    my ( $self, $max_id, $range_section_start_offset, $section ) = @_;
+    my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    $section ||= q<core_data>;
-    my $data      = substr( $self->{$section}, $range_section_start_offset );
-    my $data_size = length( $self->{$section} );
+    my $data      = substr( $self->{core_data}, $range_section_start_offset );
+    my $data_size = length( $self->{core_data} );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
@@ -619,11 +595,10 @@ sub _parse_range_section {
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_id, $bitfield_start_offset, $section ) = @_;
+    my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
-    $section ||= q<core_data>;
-    my $data = substr( $self->{$section}, $bitfield_start_offset, $max_id );
-    my $data_size = length( $self->{$section} );
+    my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
+    my $data_size = length( $self->{core_data} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
