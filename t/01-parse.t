@@ -161,53 +161,135 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
 subtest
   "valid tcf v2 consent string using bitfield with publisher TC section" =>
   sub {
-    my $consent;
+    subtest "without custom purposes" => sub {
+        my $consent;
 
-    my $tc_string =
-      'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA';
-    lives_ok {
-        $consent = GDPR::IAB::TCFv2->Parse($tc_string);
-    }
-    'should not throw exception';
-
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
-
-    is $consent->tc_string, $tc_string, 'should return the original tc string';
-
-    is "${consent}", $tc_string,
-      'should return the original tc string in string context';
-
-    is $consent->version, 2, 'should return version 2';
-
-    my $publisher_tc = $consent->publisher_tc;
-
-    ok defined($publisher_tc), "should return publisher_tc";
-
-    is $publisher_tc->num_custom_purposes, 0,
-      "should not have any custom purposes";
-
-    subtest "check publisher purpose consent ids" => sub {
-        plan tests => 24;
-
-        my %allowed_purposes = map { $_ => 1 } ( 2, 4, 6, 8, 9, 10 );
-
-        foreach my $id ( 1 .. 24 ) {
-            is !!$publisher_tc->is_purpose_consent_allowed($id),
-              !!$allowed_purposes{$id},
-              "checking publisher purpose id $id for consent";
+        my $tc_string =
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA';
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse($tc_string);
         }
+        'should not throw exception';
+
+        isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+        is $consent->tc_string, $tc_string,
+          'should return the original tc string';
+
+        is "${consent}", $tc_string,
+          'should return the original tc string in string context';
+
+        is $consent->version, 2, 'should return version 2';
+
+        my $publisher_tc = $consent->publisher_tc;
+
+        ok defined($publisher_tc), "should return publisher_tc";
+
+        is $publisher_tc->num_custom_purposes, 0,
+          "should not have any custom purposes";
+
+        subtest "check publisher purpose consent ids" => sub {
+            plan tests => 24;
+
+            my %allowed_purposes = map { $_ => 1 } ( 2, 4, 6, 8, 9, 10 );
+
+            foreach my $id ( 1 .. 24 ) {
+                is !!$publisher_tc->is_purpose_consent_allowed($id),
+                  !!$allowed_purposes{$id},
+                  "checking publisher purpose id $id for consent";
+            }
+        };
+
+        subtest "check publisher purpose legitimate interest ids" => sub {
+            plan tests => 24;
+
+            my %allowed_purposes = map { $_ => 1 } ( 2, 4, 5, 7, 10 );
+
+            foreach my $id ( 1 .. 24 ) {
+                is !!$publisher_tc->is_purpose_legitimate_interest_allowed(
+                    $id),
+                  !!$allowed_purposes{$id},
+                  "checking publisher purpose id $id for legitimate interest";
+            }
+        };
+
+        done_testing;
     };
 
-    subtest "check publisher purpose legitimate interest ids" => sub {
-        plan tests => 24;
+    subtest "with custom purposes" => sub {
 
-        my %allowed_purposes = map { $_ => 1 } ( 2, 4, 5, 7, 10 );
+        my $consent;
 
-        foreach my $id ( 1 .. 24 ) {
-            is !!$publisher_tc->is_purpose_legitimate_interest_allowed($id),
-              !!$allowed_purposes{$id},
-              "checking publisher purpose id $id for legitimate interest";
+        my $tc_string =
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.YAAAAAAAAXA';
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse($tc_string);
         }
+        'should not throw exception';
+
+        isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+
+        is $consent->tc_string, $tc_string,
+          'should return the original tc string';
+
+        is "${consent}", $tc_string,
+          'should return the original tc string in string context';
+
+        is $consent->version, 2, 'should return version 2';
+
+        my $publisher_tc = $consent->publisher_tc;
+
+        ok defined($publisher_tc), "should return publisher_tc";
+
+        is $publisher_tc->num_custom_purposes, 2,
+          "should have 2 custom purposes";
+
+        subtest "check publisher purpose consent ids" => sub {
+            plan tests => 24;
+
+            my %allowed_purposes;
+
+            foreach my $id ( 1 .. 24 ) {
+                is !!$publisher_tc->is_purpose_consent_allowed($id),
+                  !!$allowed_purposes{$id},
+                  "checking publisher purpose id $id for consent";
+            }
+        };
+
+        subtest "check publisher purpose legitimate interest ids" => sub {
+            plan tests => 24;
+
+            my %allowed_purposes;
+
+            foreach my $id ( 1 .. 24 ) {
+                is !!$publisher_tc->is_purpose_legitimate_interest_allowed(
+                    $id),
+                  !!$allowed_purposes{$id},
+                  "checking publisher purpose id $id for legitimate interest";
+            }
+        };
+
+
+        subtest "check publisher custom purpose consent ids" => sub {
+            plan tests => 2;
+
+            ok $publisher_tc->is_custom_purpose_consent_allowed(1),
+              "should have custom purpose 1 allowed";
+            ok $publisher_tc->is_custom_purpose_consent_allowed(2),
+              "should have custom purpose 2 allowed";
+        };
+
+        subtest "check publisher custom purpose legitimate interest ids" =>
+          sub {
+            plan tests => 2;
+
+            ok $publisher_tc->is_custom_purpose_legitimate_interest_allowed(1),
+              "should have custom purpose 1 allowed";
+            ok !$publisher_tc->is_custom_purpose_legitimate_interest_allowed(
+                2), "should not have custom purpose 2 allowed";
+          };
+
+      done_testing:
     };
 
     done_testing;

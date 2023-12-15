@@ -130,31 +130,65 @@ subtest "publisher section" => sub {
     done_testing;
 };
 subtest "publisher section with publisher_tc" => sub {
-    my $consent = GDPR::IAB::TCFv2->Parse(
-        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
-        json => {
-            verbose        => 0,
-            compact        => 1,
-            use_epoch      => 0,
-            boolean_values => [ 0, 1 ],
-        },
-    );
-
-    my $got      = $consent->TO_JSON;
-    my $expected = {
-        "publisher" => {
-            "consents"             => [ 2, 4, 6, 8, 9, 10 ],
-            "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
-            "custom_purposes"      => {
-                "consents"             => [],
-                "legitimate_interests" => [],
+    subtest "without custom purposes" => sub {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
+            json => {
+                verbose        => 0,
+                compact        => 1,
+                use_epoch      => 0,
+                boolean_values => [ 0, 1 ],
             },
-            "restrictions" => { "7" => { "32" => 1 } }
-        }
+        );
+
+        my $got      = $consent->TO_JSON;
+        my $expected = {
+            "publisher" => {
+                "consents"             => [ 2, 4, 6, 8, 9, 10 ],
+                "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
+                "custom_purposes"      => {
+                    "consents"             => [],
+                    "legitimate_interests" => [],
+                },
+                "restrictions" => { "7" => { "32" => 1 } }
+            }
+        };
+
+        is_deeply $got->{publisher}, $expected->{publisher},
+          "must return the same publisher restriction section";
+
+        done_testing;
     };
 
-    is_deeply $got->{publisher}, $expected->{publisher},
-      "must return the same publisher restriction section";
+    subtest "with custom purposes" => sub {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.YAAAAAAAAXA',
+            json => {
+                verbose        => 0,
+                compact        => 1,
+                use_epoch      => 0,
+                boolean_values => [ 0, 1 ],
+            },
+        );
+
+        my $got      = $consent->TO_JSON;
+        my $expected = {
+            "publisher" => {
+                "consents"             => [],
+                "legitimate_interests" => [],
+                "custom_purposes"      => {
+                    "consents"             => [ 1, 2 ],
+                    "legitimate_interests" => [1],
+                },
+                "restrictions" => { "7" => { "32" => 1 } }
+            }
+        };
+
+        is_deeply $got->{publisher}, $expected->{publisher},
+          "must return the same publisher restriction section";
+
+        done_testing;
+    };
 
     done_testing;
 };
