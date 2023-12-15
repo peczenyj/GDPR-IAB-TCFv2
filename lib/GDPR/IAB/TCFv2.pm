@@ -1009,7 +1009,7 @@ With option C<convert_blessed>, the encoder will call this method.
     use GDPR::IAB::TCFv2;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA',
+        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA.argAC0gAAAAAAAAAAAA',
         json => {
             compact     => 1,
             date_format => sub { # can be omitted, with DateTimeX::TO_JSON
@@ -1038,6 +1038,25 @@ Outputs:
         "cmp_id" : 3,
         "purpose_one_treatment" : false,
         "publisher" : {
+            "consents" : [
+                2,
+                4,
+                6,
+                8,
+                9,
+                10
+            ],
+            "legitimate_interests" : [
+                2,
+                4,
+                5,
+                7,
+                10
+            ],
+            "custom_purpose" : {
+                "consents" : [],
+                "legitimate_interests" : []
+            },
             "restrictions" : {}
         },
         "special_features_opt_in" : [],
