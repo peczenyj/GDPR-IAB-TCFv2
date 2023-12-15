@@ -14,7 +14,7 @@ subtest
     subtest "should convert data to json using yyyymmdd as date format" =>
       sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 1,
@@ -37,7 +37,7 @@ subtest
 
     subtest "should convert data to json using epoch date format" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 1,
@@ -67,7 +67,7 @@ subtest
 
     subtest "default non verbose, date as iso 8601" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 0,
@@ -87,7 +87,7 @@ subtest
 
     subtest "default non verbose, date as iso 8601" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 1,
                 compact        => 0,
@@ -109,7 +109,7 @@ subtest
   };
 
 
-subtest "publisher" => sub {
+subtest "publisher section" => sub {
     my $consent = GDPR::IAB::TCFv2->Parse(
         'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA',
         json => {
@@ -129,10 +129,72 @@ subtest "publisher" => sub {
 
     done_testing;
 };
+subtest "publisher section with publisher_tc" => sub {
+    subtest "without custom purposes" => sub {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
+            json => {
+                verbose        => 0,
+                compact        => 1,
+                use_epoch      => 0,
+                boolean_values => [ 0, 1 ],
+            },
+        );
 
+        my $got      = $consent->TO_JSON;
+        my $expected = {
+            "publisher" => {
+                "consents"             => [ 2, 4, 6, 8, 9, 10 ],
+                "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
+                "custom_purposes"      => {
+                    "consents"             => [],
+                    "legitimate_interests" => [],
+                },
+                "restrictions" => { "7" => { "32" => 1 } }
+            }
+        };
+
+        is_deeply $got->{publisher}, $expected->{publisher},
+          "must return the same publisher restriction section";
+
+        done_testing;
+    };
+
+    subtest "with custom purposes" => sub {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.YAAAAAAAAXA',
+            json => {
+                verbose        => 0,
+                compact        => 1,
+                use_epoch      => 0,
+                boolean_values => [ 0, 1 ],
+            },
+        );
+
+        my $got      = $consent->TO_JSON;
+        my $expected = {
+            "publisher" => {
+                "consents"             => [],
+                "legitimate_interests" => [],
+                "custom_purposes"      => {
+                    "consents"             => [ 1, 2 ],
+                    "legitimate_interests" => [1],
+                },
+                "restrictions" => { "7" => { "32" => 1 } }
+            }
+        };
+
+        is_deeply $got->{publisher}, $expected->{publisher},
+          "must return the same publisher restriction section";
+
+        done_testing;
+    };
+
+    done_testing;
+};
 subtest "TO_JSON method should return the same hashref " => sub {
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         json => {
             verbose        => 0,
             compact        => 1,
@@ -161,7 +223,7 @@ sub _fixture_compact {
         'last_updated'            => '2012-01-10T17:10:13Z',
         'policy_version'          => 2,
         'tc_string'               =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'version'             => 2,
         'consent_language'    => 'EN',
         'is_service_specific' => 1,
@@ -275,7 +337,7 @@ sub _fixture_default {
 
     return {
         'tc_string' =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'consent_language' => 'EN',
         'purpose'          => {
             'consents' => {
@@ -393,7 +455,7 @@ sub _fixture_verbose {
 
     return {
         'tc_string' =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'consent_language' => 'EN',
         'purpose'          => {
             'consents' => {

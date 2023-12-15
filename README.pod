@@ -340,6 +340,12 @@ For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
 
+=head2 publisher_tc
+
+If the consent string has a C<Publisher TC> section, we will decode this section as an instance of L<GDPR::IAB::TCFv2::PublisherTC>.
+
+Will return undefined if there is no C<Publisher TC> section.
+
 =head2 TO_JSON
 
 Will serialize the consent object into a hash reference. The objective is to be used by L<JSON> package.
@@ -356,7 +362,7 @@ With option C<convert_blessed>, the encoder will call this method.
     use GDPR::IAB::TCFv2;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA',
+        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA.argAC0gAAAAAAAAAAAA',
         json => {
             compact     => 1,
             date_format => sub { # can be omitted, with DateTimeX::TO_JSON
@@ -385,6 +391,25 @@ Outputs:
         "cmp_id" : 3,
         "purpose_one_treatment" : false,
         "publisher" : {
+            "consents" : [
+                2,
+                4,
+                6,
+                8,
+                9,
+                10
+            ],
+            "legitimate_interests" : [
+                2,
+                4,
+                5,
+                7,
+                10
+            ],
+            "custom_purpose" : {
+                "consents" : [],
+                "legitimate_interests" : []
+            },
             "restrictions" : {}
         },
         "special_features_opt_in" : [],
