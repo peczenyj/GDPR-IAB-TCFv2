@@ -117,7 +117,6 @@ sub Parse {
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
         publisher                   => undef,
-        publisher_restrictions      => undef,
     };
 
     bless $self, $klass;
@@ -336,10 +335,10 @@ sub check_publisher_restriction {
       ->check_restriction( $purpose_id, $restrict_type, $vendor );
 }
 
-sub with_publisher_tc {
-    my ( $self, $callback ) = @_;
+sub publisher_tc {
+    my $self = shift;
 
-    return $self->{publisher}->with_publisher_tc($callback);
+    return $self->{publisher}->publisher_tc;
 }
 
 sub _format_date {

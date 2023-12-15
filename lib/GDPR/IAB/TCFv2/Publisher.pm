@@ -57,12 +57,10 @@ sub check_restriction {
       ->contains( $purpose_id, $restrict_type, $vendor );
 }
 
-sub with_publish_tc {
+sub publisher_tc {
     my ( $self, $callback ) = @_;
 
-    return unless defined $self->{publisher_tc};
-
-    return $callback->( $self->{publisher_tc} );
+    return $self->{publisher_tc};
 }
 
 sub TO_JSON {
