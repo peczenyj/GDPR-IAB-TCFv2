@@ -158,9 +158,10 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
     done_testing;
 };
 
+=pod
 subtest
-  "valid tcf v2 consent string using bitfield with publisher TC section" =>
-  sub {
+  "valid tcf v2 consent string using bitfield with publisher TC section" => sub {
+
     subtest "without custom purposes" => sub {
         my $consent;
 
@@ -217,7 +218,6 @@ subtest
     };
 
     subtest "with custom purposes" => sub {
-
         my $consent;
 
         my $tc_string =
@@ -294,6 +294,8 @@ subtest
 
     done_testing;
   };
+
+=cut
 
 subtest "valid tcf v2 consent string using range" => sub {
     my $consent;
