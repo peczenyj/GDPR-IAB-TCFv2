@@ -10,7 +10,8 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'" unless defined $args{data};
+    croak "missing 'data'"      unless defined $args{data};
+    croak "missing 'data_size'" unless defined $args{data_size};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
@@ -94,22 +95,37 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
     my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
-        data          => $data,
-        offset     => 230,                   # offset for vendor consents
-        max_id => $max_id_consent,
+        data      => substr($data, OFFSET),
+        data_size => length($data),
+        max_id    => $max_id_consent,
+        options   => { json => ... },
     );
 
-    if $bit_field->contains(284) { ... }
+    say "bit field contains id 284" if $bit_field->contains(284);
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> receives an hash of 4 parameters: 
 
-Will die if any parameter is missing.
+=over
 
-Will die if data does not contain all bits required.
+=item *
 
-Will return an array of two elements: the object itself and the next offset.
+Key C<data> is the binary data
+
+=item *
+
+Key C<data_size> is the original binary data size
+
+=item *
+
+Key C<max_id> is the max id (used to validate the ranges if all data is between 1 and  C<max_id>)
+
+=item *
+
+Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
+
+=back
 
 =head1 METHODS
 

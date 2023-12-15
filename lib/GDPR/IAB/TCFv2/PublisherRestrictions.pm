@@ -66,13 +66,7 @@ sub Parse {
     return $self;
 }
 
-sub max_id {
-    my $self = @_;
-
-    return ASSUMED_MAX_VENDOR_ID;
-}
-
-sub contains {
+sub check_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return 0
@@ -115,36 +109,45 @@ GDPR::IAB::TCFv2::PublisherRestrictions - Transparency & Consent String version 
 
 =head1 SYNOPSIS
 
-    my ($publisher_restrictions, $next_offset) = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data => $self->{data},
-        offset => $pub_restrict_offset,
-        max_id =>ASSUMED_MAX_VENDOR_ID,
-        options => $self->{options},
+    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data      => substr($self->{data}, OFFSET ),
+        data_size => length($self->{data}),
+        options => { json => ... },
     );
 
-    die "there is publisher restriction on purpose id 1, type 0 on vendor 284"
-        if $range->contains(1, 0, 284);
+    say "there is publisher restriction on purpose id 1, type 0 on vendor 284"
+        if $publisher_restrictions->check_restriction(1, 0, 284);
 
 =head1 CONSTRUCTOR
 
-Receive 1 parameters: restrictions. Hashref.
+Constructor C<Parse> receives an hash of 3 parameters: 
 
-Will die if it is undefined.
+=over
+
+=item *
+
+Key C<data> is the binary data
+
+=item *
+
+Key C<data_size> is the original binary data size
+
+=item *
+
+Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
+
+=back
 
 =head1 METHODS
 
-=head2 contains
+=head2 check_restriction
 
 Return true for a given combination of purpose id, restriction type and vendor 
 
     my $purpose_id = 1;
     my $restriction_type = 0;
     my $vendor = 284;
-    $ok = $range->contains($purpose_id, $restriction_type, $vendor);
-
-=head2 max_id
-
-Returns the max vendor id.
+    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
 
 =head2 TO_JSON
 
