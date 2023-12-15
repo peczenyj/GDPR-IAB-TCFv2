@@ -434,7 +434,15 @@ sub TO_JSON {
 sub _decode_tc_string_segments {
     my $tc_string = shift;
 
-    my (@parts) = split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
+    my ( $core, @parts ) = split CONSENT_STRING_TCF_V2->{SEPARATOR},
+      $tc_string;
+
+    my $core_data      = _validate_and_decode_base64($core);
+    my $core_data_size = length($core_data) / 8;
+
+    croak
+      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
+      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
 
     my %segments;
 
@@ -446,18 +454,8 @@ sub _decode_tc_string_segments {
         $segments{$segment_type} = $decoded;
     }
 
-    croak "missing core section"
-      unless exists $segments{ SEGMENT_TYPES->{CORE} };
-
-    my $core_data         = $segments{ SEGMENT_TYPES->{CORE} };
     my $disclosed_vendors = $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} };
     my $publisher_tc      = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
-
-    my $core_data_size = length($core_data) / 8;
-
-    croak
-      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
-      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
 
     # return hashref
     return {
