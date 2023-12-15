@@ -218,6 +218,7 @@ subtest
 
         done_testing;
     };
+=cut
 
     subtest "with custom purposes" => sub {
         my $consent;
@@ -293,9 +294,8 @@ subtest
 
       done_testing:
     };
-=cut
 
-ok 1, "foo";
+    ok 1, "foo";
 
     done_testing;
   };
