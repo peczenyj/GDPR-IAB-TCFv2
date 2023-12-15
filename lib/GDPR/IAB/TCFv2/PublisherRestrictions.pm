@@ -6,6 +6,7 @@ use Carp qw<croak>;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint2
+  get_uint3
   get_uint6
   get_uint12
   get_uint16
@@ -13,13 +14,14 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_char6_pair
 >;
 
+use constant ASSUMED_MAX_VENDOR_ID => 0x7FFF;    # 32767 or (1 << 15) -1
+
+
 sub Parse {
     my ( $klass, %args ) = @_;
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'data_size'" unless defined $args{data_size};
-    croak "missing 'max_id'"
-      unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
@@ -27,7 +29,7 @@ sub Parse {
     my $data      = $args{data};
     my $data_size = $args{data_size};
     my $offset    = 0;
-    my $max_id    = $args{max_id};
+    my $max_id    = ASSUMED_MAX_VENDOR_ID;
     my $options   = $args{options};
 
     my ( $num_restrictions, $next_offset ) = get_uint12( $data, $offset );
@@ -46,7 +48,7 @@ sub Parse {
             data      => $data,
             data_size => $data_size,
             offset    => $next_offset,
-            max_id    => $max_id,
+            max_id    => ASSUMED_MAX_VENDOR_ID,
             options   => $options,
           );
 
@@ -57,18 +59,17 @@ sub Parse {
 
     my $self = {
         restrictions => \%restrictions,
-        max_id       => $max_id,
     };
 
     bless $self, $klass;
 
-    return wantarray ? ( $self, $next_offset ) : $self;
+    return $self;
 }
 
 sub max_id {
     my $self = @_;
 
-    return $self->{max_id};
+    return ASSUMED_MAX_VENDOR_ID;
 }
 
 sub contains {

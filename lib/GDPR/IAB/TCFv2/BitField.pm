@@ -80,24 +80,6 @@ sub TO_JSON {
     };
 }
 
-sub _format_json_subsection2 {
-    my ( $self, $data, $max ) = @_;
-
-    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
-
-    if ( !!$self->{options}->{json}->{compact} ) {
-        return [
-            grep { $data->{$_} } 1 .. $max,
-        ];
-    }
-
-    my $verbose = !!$self->{options}->{json}->{verbose};
-
-    return $data if $verbose;
-
-    return { map { $_ => $true } grep { $data->{$_} } keys %{$data} };
-}
-
 1;
 __END__
 

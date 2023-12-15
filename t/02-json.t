@@ -14,7 +14,7 @@ subtest
     subtest "should convert data to json using yyyymmdd as date format" =>
       sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 1,
@@ -37,7 +37,7 @@ subtest
 
     subtest "should convert data to json using epoch date format" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 1,
@@ -67,7 +67,7 @@ subtest
 
     subtest "default non verbose, date as iso 8601" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 0,
@@ -87,7 +87,7 @@ subtest
 
     subtest "default non verbose, date as iso 8601" => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 1,
                 compact        => 0,
@@ -132,7 +132,7 @@ subtest "publisher" => sub {
 
 subtest "TO_JSON method should return the same hashref " => sub {
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         json => {
             verbose        => 0,
             compact        => 1,
@@ -161,7 +161,7 @@ sub _fixture_compact {
         'last_updated'            => '2012-01-10T17:10:13Z',
         'policy_version'          => 2,
         'tc_string'               =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'version'             => 2,
         'consent_language'    => 'EN',
         'is_service_specific' => 1,
@@ -275,7 +275,7 @@ sub _fixture_default {
 
     return {
         'tc_string' =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'consent_language' => 'EN',
         'purpose'          => {
             'consents' => {
@@ -393,7 +393,7 @@ sub _fixture_verbose {
 
     return {
         'tc_string' =>
-          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA',
+          'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
         'consent_language' => 'EN',
         'purpose'          => {
             'consents' => {

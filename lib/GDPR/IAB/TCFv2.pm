@@ -19,7 +19,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint36
   get_char6_pair
 >;
-use GDPR::IAB::TCFv2::PublisherRestrictions;
+use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
 our $VERSION = "0.084";
@@ -31,7 +31,6 @@ use constant {
         MIN_BYTE_SIZE => 29,
     },
     EXPECTED_TCF_V2_VERSION => 2,
-    ASSUMED_MAX_VENDOR_ID   => 0x7FFF,                 # 32767 or (1 << 15) -1
     MAX_SPECIAL_FEATURE_ID  => 12,
     MAX_PURPOSE_ID          => 24,
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
@@ -117,6 +116,7 @@ sub Parse {
 
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
+        publisher                   => undef,
         publisher_restrictions      => undef,
     };
 
@@ -332,8 +332,14 @@ sub vendor_legitimate_interest {
 sub check_publisher_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
-    return $self->{publisher_restrictions}
-      ->contains( $purpose_id, $restrict_type, $vendor );
+    return $self->{publisher}
+      ->check_restriction( $purpose_id, $restrict_type, $vendor );
+}
+
+sub with_publisher_tc {
+    my ( $self, $callback ) = @_;
+
+    return $self->{publisher}->with_publisher_tc($callback);
 }
 
 sub _format_date {
@@ -422,9 +428,7 @@ sub TO_JSON {
             legitimate_interests =>
               $self->{vendor_legitimate_interests}->TO_JSON,
         },
-        publisher => {
-            restrictions => $self->{publisher_restrictions}->TO_JSON,
-        },
+        publisher => $self->{publisher}->TO_JSON,
     };
 }
 
@@ -531,65 +535,22 @@ sub _parse_vendor_legitimate_interests {
     return $pub_restrict_offset;
 }
 
-sub _parse_bitfield_or_range {
-    my ( $self, $offset ) = @_;
-
-    my $something;
-
-    my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
-
-    my $is_range;
-
-    ( $is_range, $next_offset ) = is_set(
-        $self->{core_data},
-        $next_offset,
-    );
-
-    if ($is_range) {
-        ( $something, $next_offset ) = $self->_parse_range_section(
-            $max_id,
-            $next_offset,
-        );
-    }
-    else {
-        ( $something, $next_offset ) = $self->_parse_bitfield(
-            $max_id,
-            $next_offset,
-        );
-    }
-
-    return wantarray ? ( $something, $next_offset ) : $something;
-}
-
 sub _parse_publisher_section {
     my ( $self, $pub_restrict_offset ) = @_;
 
-    $self->_parse_publisher_restrictions($pub_restrict_offset);
+    # parse public restrictions
 
-    # TODO parse section publisher_tc if available
+    my $core_data      = substr( $self->{core_data}, $pub_restrict_offset );
+    my $core_data_size = length( $self->{core_data} );
 
-    # $self->{publisher_tc_data}; # if avaliable
-}
-
-sub _parse_publisher_restrictions {
-    my ( $self, $pub_restrict_offset ) = @_;
-
-    my $data = substr(
-        $self->{core_data}, $pub_restrict_offset,
-        ASSUMED_MAX_VENDOR_ID
+    my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
+        core_data         => $core_data,
+        core_data_size    => $core_data_size,
+        publisher_tc_data => $self->{publisher_tc_data},
+        options           => $self->{options},
     );
 
-    my ( $publisher_restrictions, $relative_next_offset ) =
-      GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data      => $data,
-        data_size => length( $self->{core_data} ),
-        max_id    => ASSUMED_MAX_VENDOR_ID,
-        options   => $self->{options},
-      );
-
-    $self->{publisher_restrictions} = $publisher_restrictions;
-
-    return $pub_restrict_offset + $relative_next_offset;
+    $self->{publisher} = $publisher;
 }
 
 sub _parse_disclosed_vendors {
@@ -597,7 +558,45 @@ sub _parse_disclosed_vendors {
 
     # TODO parse section disclosed vendors if available
 
-    # $self->{disclosed_vendors_data}; # if avaliable
+    return unless defined $self->{disclosed_vendors_data};    # if avaliable
+
+# my $disclosed_vendors = $self->_parse_bitfield_or_range(0, 'disclosed_vendors_data');
+
+    # $self->{disclosed_vendors} = $disclosed_vendors;
+}
+
+sub _parse_bitfield_or_range {
+    my ( $self, $offset, $section ) = @_;
+
+    $section ||= q<core_data>;
+
+    my $something;
+
+    my ( $max_id, $next_offset ) = get_uint16( $self->{$section}, $offset );
+
+    my $is_range;
+
+    ( $is_range, $next_offset ) = is_set(
+        $self->{$section},
+        $next_offset,
+    );
+
+    if ($is_range) {
+        ( $something, $next_offset ) = $self->_parse_range_section(
+            $max_id,
+            $next_offset,
+            $section,
+        );
+    }
+    else {
+        ( $something, $next_offset ) = $self->_parse_bitfield(
+            $max_id,
+            $next_offset,
+            $section,
+        );
+    }
+
+    return wantarray ? ( $something, $next_offset ) : $something;
 }
 
 sub _parse_range_section {
