@@ -25,7 +25,7 @@ our $VERSION = "0.084";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
-        SEPARATOR     => q<.>,
+        SEPARATOR     => quotemeta q<.>,
         PREFIX        => q<C>,
         MIN_BYTE_SIZE => 29,
     },
@@ -91,7 +91,7 @@ sub Parse {
 
     croak 'missing gdpr consent string' unless $tc_string;
 
-    my $core_tc_string = _get_core_tc_string($tc_string);
+    my ( $core_tc_string, @rest ) = _split_tc_string($tc_string);
 
     my ( $data, $data_size ) = _validate_and_decode_base64($core_tc_string);
 
@@ -522,14 +522,10 @@ sub _parse_publisher_restrictions {
     return $pub_restrict_offset + $relative_next_offset;
 }
 
-sub _get_core_tc_string {
+sub _split_tc_string {
     my $tc_string = shift;
 
-    my $pos = index( $tc_string, CONSENT_STRING_TCF_V2->{SEPARATOR} );
-
-    return $tc_string if $pos < 0;
-
-    return substr( $tc_string, 0, $pos );
+    return split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
 }
 
 sub _validate_and_decode_base64 {
