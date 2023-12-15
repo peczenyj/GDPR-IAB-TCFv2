@@ -41,6 +41,12 @@ sub Parse {
     return ( $self, $offset + $max_id );
 }
 
+sub max_id {
+    my $self = shift;
+
+    return $self->{max_id};
+}
+
 sub contains {
     my ( $self, $id ) = @_;
 

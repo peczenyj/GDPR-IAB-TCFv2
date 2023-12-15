@@ -97,6 +97,12 @@ sub _parse_range {
     return [ $vendor_id, $vendor_id ], $next_offset;
 }
 
+sub max_id {
+    my $self = shift;
+
+    return $self->{max_id};
+}
+
 sub contains {
     my ( $self, $id ) = @_;
 

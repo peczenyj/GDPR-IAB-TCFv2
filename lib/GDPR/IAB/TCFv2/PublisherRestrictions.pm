@@ -57,11 +57,18 @@ sub Parse {
 
     my $self = {
         restrictions => \%restrictions,
+        max_id       => $max_id,
     };
 
     bless $self, $klass;
 
     return wantarray ? ( $self, $next_offset ) : $self;
+}
+
+sub max_id {
+    my $self = @_;
+
+    return $self->{max_id};
 }
 
 sub contains {
@@ -133,6 +140,10 @@ Return true for a given combination of purpose id, restriction type and vendor
     my $restriction_type = 0;
     my $vendor = 284;
     $ok = $range->contains($purpose_id, $restriction_type, $vendor);
+
+=head2 max_id
+
+Returns the max vendor id.
 
 =head2 TO_JSON
 
