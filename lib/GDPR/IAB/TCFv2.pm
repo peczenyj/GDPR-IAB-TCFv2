@@ -109,9 +109,11 @@ sub Parse {
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
 
     my $self = {
-        core_data => $segments->{core_data},
-        options   => \%options,
-        tc_string => $tc_string,
+        core_data              => $segments->{core_data},
+        publisher_tc_data      => $segments->{publisher_tc},
+        disclosed_vendors_data => $segments->{disclosed_vendors},
+        options                => \%options,
+        tc_string              => $tc_string,
 
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
@@ -127,11 +129,9 @@ sub Parse {
 
     my $next_offset = $self->_parse_vendor_section();
 
-    $self->_parse_publisher_section( $next_offset, $segments->{publisher_tc} );
+    $self->_parse_publisher_section($next_offset);
 
-    # TODO parse section disclosed vendors if available
-
-    $self->_parse_disclosed_vendors( $segments->{disclosed_vendors} );
+    $self->_parse_disclosed_vendors();
 
     return $self;
 }
@@ -428,6 +428,67 @@ sub TO_JSON {
     };
 }
 
+sub _decode_tc_string_segments {
+    my $tc_string = shift;
+
+    my (@parts) = split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
+
+    my %segments;
+
+    foreach my $part (@parts) {
+        my $decoded = _validate_and_decode_base64($part);
+
+        my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
+
+        $segments{$segment_type} = $decoded;
+    }
+
+    croak "missing core section"
+      unless exists $segments{ SEGMENT_TYPES->{CORE} };
+
+    my $core_data         = $segments{ SEGMENT_TYPES->{CORE} };
+    my $disclosed_vendors = $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} };
+    my $publisher_tc      = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
+
+    my $core_data_size = length($core_data) / 8;
+
+    croak
+      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
+      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
+
+    # return hashref
+    return {
+        core_data         => $core_data,
+        disclosed_vendors => $disclosed_vendors,
+        publisher_tc      => $publisher_tc,
+    };
+}
+
+sub _validate_and_decode_base64 {
+    my $s = shift;
+
+    # see: https://www.perlmonks.org/?node_id=775820
+    croak "invalid base64 format" unless $s =~ m{
+        ^
+        (?: [A-Za-z0-9-_]{4} )*
+        (?:
+            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048]
+        |
+            [A-Za-z0-9-_] [AQgw]
+        )?
+        \z
+    }x;
+
+    return unpack 'B*', _decode_base64url($s);
+}
+
+sub _decode_base64url {
+    my $s = shift;
+    $s =~ tr[-_][+/];
+    $s .= '=' while length($s) % 4;
+    return decode_base64($s);
+}
+
 sub _parse_vendor_section {
     my $self = shift;
 
@@ -501,13 +562,13 @@ sub _parse_bitfield_or_range {
 }
 
 sub _parse_publisher_section {
-    my ( $self, $pub_restrict_offset, $publisher_tc_section ) = @_;
+    my ( $self, $pub_restrict_offset ) = @_;
 
     $self->_parse_publisher_restrictions($pub_restrict_offset);
 
     # TODO parse section publisher_tc if available
 
-    return if !defined $publisher_tc_section;
+    # $self->{publisher_tc_data}; # if avaliable
 }
 
 sub _parse_publisher_restrictions {
@@ -532,81 +593,24 @@ sub _parse_publisher_restrictions {
 }
 
 sub _parse_disclosed_vendors {
-    my ( $self, $disclosed_vendors ) = @_;
+    my $self = shift;
 
-    return if !defined $disclosed_vendors;
-}
+    # TODO parse section disclosed vendors if available
 
-sub _decode_tc_string_segments {
-    my $tc_string = shift;
-
-    my (@parts) = split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
-
-    my %segments;
-
-    foreach my $part (@parts) {
-        my $decoded = _validate_and_decode_base64($part);
-
-        my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
-
-        $segments{$segment_type} = $decoded;
-    }
-
-    croak "missing core section"
-      unless exists $segments{ SEGMENT_TYPES->{CORE} };
-
-    my $core_data         = $segments{ SEGMENT_TYPES->{CORE} };
-    my $disclosed_vendors = $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} };
-    my $publisher_tc      = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
-
-    my $core_data_size = length($core_data) / 8;
-
-    croak
-      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
-      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
-
-    # return hashref
-    return {
-        core_data         => $core_data,
-        disclosed_vendors => $disclosed_vendors,
-        publisher_tc      => $publisher_tc,
-    };
-}
-
-sub _validate_and_decode_base64 {
-    my $s = shift;
-
-    # see: https://www.perlmonks.org/?node_id=775820
-    croak "invalid base64 format" unless $s =~ m{
-        ^
-        (?: [A-Za-z0-9-_]{4} )*
-        (?:
-            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048]
-        |
-            [A-Za-z0-9-_] [AQgw]
-        )?
-        \z
-    }x;
-
-    return unpack 'B*', _decode_base64url($s);
-}
-
-sub _decode_base64url {
-    my $s = shift;
-    $s =~ tr[-_][+/];
-    $s .= '=' while length($s) % 4;
-    return decode_base64($s);
+    # $self->{disclosed_vendors_data}; # if avaliable
 }
 
 sub _parse_range_section {
-    my ( $self, $max_id, $range_section_start_offset ) = @_;
+    my ( $self, $max_id, $range_section_start_offset, $section ) = @_;
 
-    my $data = substr( $self->{core_data}, $range_section_start_offset );
+    $section ||= q<core_data>;
+    my $data      = substr( $self->{$section}, $range_section_start_offset );
+    my $data_size = length( $self->{$section} );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
-        data_size => length( $self->{core_data} ),
+        data_size => $data_size,
         offset    => 0,
         max_id    => $max_id,
         options   => $self->{options},
@@ -619,13 +623,15 @@ sub _parse_range_section {
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_id, $bitfield_start_offset ) = @_;
+    my ( $self, $max_id, $bitfield_start_offset, $section ) = @_;
 
-    my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
+    $section ||= q<core_data>;
+    my $data = substr( $self->{$section}, $bitfield_start_offset, $max_id );
+    my $data_size = length( $self->{$section} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
-        data_size => length( $self->{core_data} ),
+        data_size => $data_size,
         max_id    => $max_id,
         options   => $self->{options},
     );
