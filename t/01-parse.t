@@ -163,7 +163,6 @@ subtest
   "valid tcf v2 consent string using bitfield with publisher TC section" =>
   sub {
 
-=pod
     subtest "without custom purposes" => sub {
         my $consent;
 
@@ -218,7 +217,6 @@ subtest
 
         done_testing;
     };
-=cut
 
     subtest "with custom purposes" => sub {
         my $consent;
@@ -292,10 +290,8 @@ subtest
                 2), "should not have custom purpose 2 allowed";
           };
 
-      done_testing:
+        done_testing;
     };
-
-    ok 1, "foo";
 
     done_testing;
   };
