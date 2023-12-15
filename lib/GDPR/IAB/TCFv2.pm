@@ -122,17 +122,11 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    my $pub_restrict_offset = $self->_parse_vendor_section();
+    my $next_offset = $self->_parse_vendor_section();
 
-    # parse publisher section
-
-    # parse publisher restrictions from section core string
-
-    $self->_parse_publisher_restrictions($pub_restrict_offset);
+    $self->_parse_publisher_section($next_offset);
 
     # TODO parse section disclosed vendors if available
-
-    # TODO parse section publisher_tc if available
 
     return $self;
 }
@@ -498,6 +492,15 @@ sub _parse_vendor_legitimate_interests {
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
     return $pub_restrict_offset;
+}
+
+sub _parse_publisher_section {
+    my ( $self, $pub_restrict_offset ) = @_;
+
+    $self->_parse_publisher_restrictions($pub_restrict_offset);
+
+    # TODO parse section publisher_tc if available
+
 }
 
 sub _parse_publisher_restrictions {
