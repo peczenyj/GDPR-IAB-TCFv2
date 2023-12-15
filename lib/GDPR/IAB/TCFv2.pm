@@ -120,15 +120,7 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    # parse vendor section
-    # parse vendor consent
-
-    my $legitimate_interest_offset = $self->_parse_vendor_consents();
-
-    # parse vendor legitimate interest
-
-    my $pub_restrict_offset =
-      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+    my $pub_restrict_offset = $self->_parse_vendor_section();
 
     # parse publisher section
 
@@ -414,6 +406,21 @@ sub TO_JSON {
             restrictions => $self->{publisher_restrictions}->TO_JSON,
         },
     };
+}
+
+sub _parse_vendor_section {
+    my $self = shift;
+
+    # parse vendor consent
+
+    my $legitimate_interest_offset = $self->_parse_vendor_consents();
+
+    # parse vendor legitimate interest
+
+    my $pub_restrict_offset =
+      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+
+    return $pub_restrict_offset;
 }
 
 
