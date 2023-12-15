@@ -35,8 +35,8 @@ use constant {
     MAX_PURPOSE_ID          => 24,
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
     SEGMENT_TYPES           => {
-        CORE              => 0,
-        PUBLISHER_TC      => 3,
+        CORE         => 0,
+        PUBLISHER_TC => 3,
     },
     OFFSETS => {
         SEGMENT_TYPE            => 0,
@@ -107,10 +107,10 @@ sub Parse {
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
 
     my $self = {
-        core_data              => $segments->{core_data},
-        publisher_tc_data      => $segments->{publisher_tc},
-        options                => \%options,
-        tc_string              => $tc_string,
+        core_data         => $segments->{core_data},
+        publisher_tc_data => $segments->{publisher_tc},
+        options           => \%options,
+        tc_string         => $tc_string,
 
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
@@ -450,11 +450,11 @@ sub _decode_tc_string_segments {
         $segments{$segment_type} = $decoded;
     }
 
-    my $publisher_tc      = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
+    my $publisher_tc = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
 
     return {
-        core_data         => $core_data,
-        publisher_tc      => $publisher_tc,
+        core_data    => $core_data,
+        publisher_tc => $publisher_tc,
     };
 }
 
