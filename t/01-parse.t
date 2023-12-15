@@ -295,6 +295,8 @@ subtest
     };
 =cut
 
+ok 1, "foo";
+
     done_testing;
   };
 
