@@ -109,7 +109,7 @@ subtest
   };
 
 
-subtest "publisher" => sub {
+subtest "publisher section" => sub {
     my $consent = GDPR::IAB::TCFv2->Parse(
         'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA',
         json => {
@@ -129,7 +129,35 @@ subtest "publisher" => sub {
 
     done_testing;
 };
+subtest "publisher section with publisher_tc" => sub {
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
+        json => {
+            verbose        => 0,
+            compact        => 1,
+            use_epoch      => 0,
+            boolean_values => [ 0, 1 ],
+        },
+    );
 
+    my $got      = $consent->TO_JSON;
+    my $expected = {
+        "publisher" => {
+            "consents"             => [ 2, 4, 6, 8, 9, 10 ],
+            "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
+            "custom_purposes"      => {
+                "consents"             => [],
+                "legitimate_interests" => [],
+            },
+            "restrictions" => { "7" => { "32" => 1 } }
+        }
+    };
+
+    is_deeply $got->{publisher}, $expected->{publisher},
+      "must return the same publisher restriction section";
+
+    done_testing;
+};
 subtest "TO_JSON method should return the same hashref " => sub {
     my $consent = GDPR::IAB::TCFv2->Parse(
         'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',

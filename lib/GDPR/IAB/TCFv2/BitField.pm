@@ -143,3 +143,11 @@ Returns the max vendor id.
 =head2 all
 
 Returns an array of all vendors mapped with the bit enabled.
+
+=head2 TO_JSON
+
+By default it returns an hashref mapping id to a boolean, that represent if the id is active or not in the bitfield.
+
+The json option C<verbose> controls if all ids between 1 to L</max_id> will be present on the C<json> or only the ones that are true.
+
+The json option C<compact> change the response, will return an arrayref of all ids active on the bitfield.

@@ -151,6 +151,10 @@ subtest "valid tcf v2 consent string using bitfield" => sub {
     ok !$consent->check_publisher_restriction( 1, 0, 284 ),
       "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
 
+    my $publisher_tc = $consent->publisher_tc;
+
+    ok !defined($publisher_tc), "should not return publisher_tc";
+
     done_testing;
 };
 
@@ -174,6 +178,37 @@ subtest
       'should return the original tc string in string context';
 
     is $consent->version, 2, 'should return version 2';
+
+    my $publisher_tc = $consent->publisher_tc;
+
+    ok defined($publisher_tc), "should return publisher_tc";
+
+    is $publisher_tc->num_custom_purposes, 0,
+      "should not have any custom purposes";
+
+    subtest "check publisher purpose consent ids" => sub {
+        plan tests => 24;
+
+        my %allowed_purposes = map { $_ => 1 } ( 2, 4, 6, 8, 9, 10 );
+
+        foreach my $id ( 1 .. 24 ) {
+            is !!$publisher_tc->is_purpose_consent_allowed($id),
+              !!$allowed_purposes{$id},
+              "checking publisher purpose id $id for consent";
+        }
+    };
+
+    subtest "check publisher purpose legitimate interest ids" => sub {
+        plan tests => 24;
+
+        my %allowed_purposes = map { $_ => 1 } ( 2, 4, 5, 7, 10 );
+
+        foreach my $id ( 1 .. 24 ) {
+            is !!$publisher_tc->is_purpose_legitimate_interest_allowed($id),
+              !!$allowed_purposes{$id},
+              "checking publisher purpose id $id for legitimate interest";
+        }
+    };
 
     done_testing;
   };
@@ -306,6 +341,10 @@ subtest "valid tcf v2 consent string using range" => sub {
 
     ok !$consent->check_publisher_restriction( 1, 0, 284 ),
       "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+
+    my $publisher_tc = $consent->publisher_tc;
+
+    ok !defined($publisher_tc), "should not return publisher_tc";
 
     done_testing;
 };

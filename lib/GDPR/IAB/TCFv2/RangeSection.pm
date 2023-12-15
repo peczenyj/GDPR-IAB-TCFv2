@@ -170,9 +170,10 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
     my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
-        data   => $data,
-        offset => 230,             # offset for vendor ranges
-        max_id => $max_id_consent,
+        data      => $data,
+        data_size => length($data),
+        offset    => 230,             # offset for vendor ranges
+        max_id    => $max_id_consent,
     );
 
     say "range section contains id 284" if $range_section->contains(284);
@@ -230,3 +231,11 @@ Returns the max vendor id.
 =head2 all
 
 Returns an arrayref of all vendors mapped with the bit enabled.
+
+=head2 TO_JSON
+
+By default it returns an hashref mapping id to a boolean, that represent if the id is present or not in all ranges sections.
+
+The json option C<verbose> controls if all ids between 1 to L</max_id> will be present on the C<json> or only the ones that are true.
+
+The json option C<compact> change the response, will return an arrayref of all ids present on the ranges section.
