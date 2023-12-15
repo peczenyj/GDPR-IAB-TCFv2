@@ -97,6 +97,12 @@ sub _parse_range {
     return [ $vendor_id, $vendor_id ], $next_offset;
 }
 
+sub max_id {
+    my $self = shift;
+
+    return $self->{max_id};
+}
+
 sub contains {
     my ( $self, $id ) = @_;
 
@@ -164,16 +170,41 @@ GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range s
     my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
-        data          => $data,
-        offset     => 230,                      # offset for vendor ranges
-        max_id => $max_id_consent,
+        data      => $data,
+        data_size => length($data),
+        offset    => 230,             # offset for vendor ranges
+        max_id    => $max_id_consent,
     );
 
-    if $range_section->contains(284) { ... }
+    say "range section contains id 284" if $range_section->contains(284);
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> receives an hash of 5 parameters: 
+
+=over
+
+=item *
+
+Key C<data> is the binary data
+
+=item *
+
+Key C<data_size> is the original binary data size
+
+=item *
+
+Key C<offset> is the binary data offset. Can be 0.
+
+=item *
+
+Key C<max_id> is the max id (used to validate the ranges if all data is between 1 and  C<max_id>)
+
+=item *
+
+Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
+
+=back
 
 Will die if any parameter is missing.
 
@@ -200,3 +231,11 @@ Returns the max vendor id.
 =head2 all
 
 Returns an arrayref of all vendors mapped with the bit enabled.
+
+=head2 TO_JSON
+
+By default it returns an hashref mapping id to a boolean, that represent if the id is present or not in all ranges sections.
+
+The json option C<verbose> controls if all ids between 1 to L</max_id> will be present on the C<json> or only the ones that are true.
+
+The json option C<compact> change the response, will return an arrayref of all ids present on the ranges section.

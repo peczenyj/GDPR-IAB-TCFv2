@@ -22,6 +22,7 @@ BEGIN {
 
 our @EXPORT_OK = qw<is_set
   get_uint2
+  get_uint3
   get_uint6
   get_uint12
   get_uint16
@@ -46,29 +47,19 @@ sub is_set {
 sub get_uint2 {
     my ( $data, $offset ) = @_;
 
-    my ( $bits_with_pading, $next_offset ) =
-      _get_bits_with_padding( $data, 8, $offset, 2 );
+    return _get_big_endian_octet_8bits( $data, $offset, 2 );
+}
 
-    my $r = unpack(
-        "C",
-        $bits_with_pading
-    );
+sub get_uint3 {
+    my ( $data, $offset ) = @_;
 
-    return wantarray ? ( $r, $next_offset ) : $r;
+    return _get_big_endian_octet_8bits( $data, $offset, 3 );
 }
 
 sub get_uint6 {
     my ( $data, $offset ) = @_;
 
-    my ( $bits_with_pading, $next_offset ) =
-      _get_bits_with_padding( $data, 8, $offset, 6 );
-
-    my $r = unpack(
-        "C",
-        $bits_with_pading
-    );
-
-    return wantarray ? ( $r, $next_offset ) : $r;
+    return _get_big_endian_octet_8bits( $data, $offset, 6 );
 }
 
 sub get_char6_pair {
@@ -97,6 +88,20 @@ sub get_uint16 {
     my ( $data, $offset ) = @_;
 
     return _get_big_endian_short_16bits( $data, $offset, 16 );
+}
+
+sub _get_big_endian_octet_8bits {
+    my ( $data, $offset, $nbits ) = @_;
+
+    my ( $bits_with_pading, $next_offset ) =
+      _get_bits_with_padding( $data, 8, $offset, $nbits );
+
+    my $r = unpack(
+        "C",
+        $bits_with_pading
+    );
+
+    return wantarray ? ( $r, $next_offset ) : $r;
 }
 
 sub _get_big_endian_short_16bits {

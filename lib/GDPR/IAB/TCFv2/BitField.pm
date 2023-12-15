@@ -10,7 +10,8 @@ use Carp                       qw<croak>;
 sub Parse {
     my ( $klass, %args ) = @_;
 
-    croak "missing 'data'" unless defined $args{data};
+    croak "missing 'data'"      unless defined $args{data};
+    croak "missing 'data_size'" unless defined $args{data_size};
     croak "missing 'max_id'"
       unless defined $args{max_id};
 
@@ -39,6 +40,12 @@ sub Parse {
     bless $self, $klass;
 
     return ( $self, $offset + $max_id );
+}
+
+sub max_id {
+    my $self = shift;
+
+    return $self->{max_id};
 }
 
 sub contains {
@@ -74,24 +81,6 @@ sub TO_JSON {
     };
 }
 
-sub _format_json_subsection2 {
-    my ( $self, $data, $max ) = @_;
-
-    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
-
-    if ( !!$self->{options}->{json}->{compact} ) {
-        return [
-            grep { $data->{$_} } 1 .. $max,
-        ];
-    }
-
-    my $verbose = !!$self->{options}->{json}->{verbose};
-
-    return $data if $verbose;
-
-    return { map { $_ => $true } grep { $data->{$_} } keys %{$data} };
-}
-
 1;
 __END__
 
@@ -106,22 +95,37 @@ GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield pa
     my $max_id_consent = << get 16 bits from $data offset 213 >>
 
     my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
-        data          => $data,
-        offset     => 230,                   # offset for vendor consents
-        max_id => $max_id_consent,
+        data      => substr($data, OFFSET),
+        data_size => length($data),
+        max_id    => $max_id_consent,
+        options   => { json => ... },
     );
 
-    if $bit_field->contains(284) { ... }
+    say "bit field contains id 284" if $bit_field->contains(284);
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receive 3 parameters: data (as sequence of bits), start bit offset and vendor bits required (max vendor id).
+Constructor C<Parse> receives an hash of 4 parameters: 
 
-Will die if any parameter is missing.
+=over
 
-Will die if data does not contain all bits required.
+=item *
 
-Will return an array of two elements: the object itself and the next offset.
+Key C<data> is the binary data
+
+=item *
+
+Key C<data_size> is the original binary data size
+
+=item *
+
+Key C<max_id> is the max id (used to validate the ranges if all data is between 1 and  C<max_id>)
+
+=item *
+
+Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
+
+=back
 
 =head1 METHODS
 
@@ -139,3 +143,11 @@ Returns the max vendor id.
 =head2 all
 
 Returns an array of all vendors mapped with the bit enabled.
+
+=head2 TO_JSON
+
+By default it returns an hashref mapping id to a boolean, that represent if the id is active or not in the bitfield.
+
+The json option C<verbose> controls if all ids between 1 to L</max_id> will be present on the C<json> or only the ones that are true.
+
+The json option C<compact> change the response, will return an arrayref of all ids active on the bitfield.

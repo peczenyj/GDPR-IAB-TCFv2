@@ -1,11 +1,8 @@
 name: perltidy
+
 on:
-  push:
-    branches:
-      - '*'
-    tags-ignore:
-      - '*'
-  pull_request:
+  - push
+
 jobs:
   perltidy:
     runs-on: ubuntu-latest

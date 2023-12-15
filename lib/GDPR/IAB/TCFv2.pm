@@ -12,46 +12,52 @@ use POSIX        qw<strftime>;
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint2
+  get_uint3
   get_uint6
   get_uint12
   get_uint16
   get_uint36
   get_char6_pair
 >;
-use GDPR::IAB::TCFv2::PublisherRestrictions;
+use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.084";
+our $VERSION = "0.100";
 
 use constant {
-    CONSENT_STRING_TCF2_SEPARATOR => '.',
-    CONSENT_STRING_TCF2_PREFIX    => 'C',
-    MIN_BYTE_SIZE                 => 29,
-    TCF_VERSION                   => 2,
-    ASSUMED_MAX_VENDOR_ID         => 0x7FFF,    # 32767 or (1 << 15) -1
-    MAX_SPECIAL_FEATURE_ID        => 12,
-    MAX_PURPOSE_ID                => 24,
-    DATE_FORMAT_ISO_8601          => '%Y-%m-%dT%H:%M:%SZ',
-
-    VERSION_OFFSET                       => 0,
-    CREATED_OFFSET                       => 6,
-    LAST_UPDATED_OFFSET                  => 42,
-    CMP_ID_OFFSET                        => 78,
-    CMP_VERSION_OFFSET                   => 90,
-    CONSENT_SCREEN_OFFSET                => 102,
-    CONSENT_LANGUAGE_OFFSET              => 108,
-    VENDOR_LIST_VERSION_OFFSET           => 120,
-    POLICY_VERSION_OFFSET                => 132,
-    SERVICE_SPECIFIC_OFFSET              => 138,
-    USE_NON_STANDARD_STACKS_OFFSET       => 139,
-    SPECIAL_FEATURE_OPT_IN_OFFSET        => 140,
-    PURPOSE_CONSENT_ALLOWED_OFFSET       => 152,
-    PURPOSE_LIT_ALLOWED_OFFSET           => 176,
-    PURPOSE_ONE_TREATMENT_OFFSET         => 200,
-    PUBLISHER_COUNTRY_CODE_OFFSET        => 201,
-    MAX_VENDOR_ID_CONSENT_OFFSET         => 213,
-    VENDOR_CONSENT_RANGE_ENCODING_OFFSET => 229,
-    VENDOR_CONSENT_OFFSET                => 230,
+    CONSENT_STRING_TCF_V2 => {
+        SEPARATOR     => quotemeta q<.>,
+        PREFIX        => q<C>,
+        MIN_BYTE_SIZE => 29,
+    },
+    EXPECTED_TCF_V2_VERSION => 2,
+    MAX_SPECIAL_FEATURE_ID  => 12,
+    MAX_PURPOSE_ID          => 24,
+    DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
+    SEGMENT_TYPES           => {
+        CORE         => 0,
+        PUBLISHER_TC => 3,
+    },
+    OFFSETS => {
+        SEGMENT_TYPE            => 0,
+        VERSION                 => 0,
+        CREATED                 => 6,
+        LAST_UPDATED            => 42,
+        CMP_ID                  => 78,
+        CMP_VERSION             => 90,
+        CONSENT_SCREEN          => 102,
+        CONSENT_LANGUAGE        => 108,
+        VENDOR_LIST_VERSION     => 120,
+        POLICY_VERSION          => 132,
+        SERVICE_SPECIFIC        => 138,
+        USE_NON_STANDARD_STACKS => 139,
+        SPECIAL_FEATURE_OPT_IN  => 140,
+        PURPOSE_CONSENT_ALLOWED => 152,
+        PURPOSE_LIT_ALLOWED     => 176,
+        PURPOSE_ONE_TREATMENT   => 200,
+        PUBLISHER_COUNTRY_CODE  => 201,
+        VENDOR_CONSENT          => 213,
+    },
 };
 
 use overload q<""> => \&tc_string;
@@ -88,57 +94,39 @@ sub Parse {
 
     croak 'missing gdpr consent string' unless $tc_string;
 
-    my $core_tc_string = _get_core_tc_string($tc_string);
+    my $segments = _decode_tc_string_segments($tc_string);
 
-    my $data      = unpack 'B*', _validate_and_decode_base64($core_tc_string);
-    my $data_size = length($data);
-
-    croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
-      if $data_size < 8 * MIN_BYTE_SIZE;
+    my $strict = !!$opts{strict};
 
     my %options = (
-        json => $opts{json} || {},
+        json   => $opts{json} || {},
+        strict => $strict,
     );
 
     $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
 
     my $self = {
-        data                           => $data,
-        options                        => \%options,
-        tc_string                      => $tc_string,
-        vendor_consents                => undef,
-        legitimate_interest_max_vendor => undef,
-        vendor_legitimate_interests    => undef,
-        publisher_restrictions         => undef,
+        core_data         => $segments->{core_data},
+        publisher_tc_data => $segments->{publisher_tc},
+        options           => \%options,
+        tc_string         => $tc_string,
+
+        vendor_consents             => undef,
+        vendor_legitimate_interests => undef,
+        publisher                   => undef,
     };
 
     bless $self, $klass;
 
-    croak "consent string is not tcf version @{[ TCF_VERSION ]}"
-      unless $self->version == TCF_VERSION;
+    croak "consent string is not tcf version @{[ EXPECTED_TCF_V2_VERSION ]}"
+      if $strict && $self->version != EXPECTED_TCF_V2_VERSION;
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    # parse vendor section
-    # parse vendor consent
+    my $next_offset = $self->_parse_vendor_section();
 
-    my $legitimate_interest_offset = $self->_parse_vendor_consents();
-
-    # parse vendor legitimate interest
-
-    my $pub_restrict_offset =
-      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
-
-    # parse publisher section
-
-    # parse publisher restrictions from section core string
-
-    $self->_parse_publisher_restrictions($pub_restrict_offset);
-
-    # TODO parse section disclosed vendors if available
-
-    # TODO parse section publisher_tc if available
+    $self->_parse_publisher_section($next_offset);
 
     return $self;
 }
@@ -152,13 +140,13 @@ sub tc_string {
 sub version {
     my $self = shift;
 
-    return scalar( get_uint6( $self->{data}, VERSION_OFFSET ) );
+    return scalar( get_uint6( $self->{core_data}, OFFSETS->{VERSION} ) );
 }
 
 sub created {
     my $self = shift;
 
-    my ( $seconds, $nanoseconds ) = $self->_get_epoch(CREATED_OFFSET);
+    my ( $seconds, $nanoseconds ) = $self->_get_epoch( OFFSETS->{CREATED} );
 
     return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
 }
@@ -166,7 +154,8 @@ sub created {
 sub last_updated {
     my $self = shift;
 
-    my ( $seconds, $nanoseconds ) = $self->_get_epoch(LAST_UPDATED_OFFSET);
+    my ( $seconds, $nanoseconds ) =
+      $self->_get_epoch( OFFSETS->{LAST_UPDATED} );
 
     return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
 }
@@ -174,7 +163,7 @@ sub last_updated {
 sub _get_epoch {
     my ( $self, $offset ) = @_;
 
-    my $deciseconds = scalar( get_uint36( $self->{data}, $offset ) );
+    my $deciseconds = scalar( get_uint36( $self->{core_data}, $offset ) );
 
     return (
         ( $deciseconds / 10 ),
@@ -185,49 +174,57 @@ sub _get_epoch {
 sub cmp_id {
     my $self = shift;
 
-    return scalar( get_uint12( $self->{data}, CMP_ID_OFFSET ) );
+    return scalar( get_uint12( $self->{core_data}, OFFSETS->{CMP_ID} ) );
 }
 
 sub cmp_version {
     my $self = shift;
 
-    return scalar( get_uint12( $self->{data}, CMP_VERSION_OFFSET ) );
+    return scalar( get_uint12( $self->{core_data}, OFFSETS->{CMP_VERSION} ) );
 }
 
 sub consent_screen {
     my $self = shift;
 
-    return scalar( get_uint6( $self->{data}, CONSENT_SCREEN_OFFSET ) );
+    return
+      scalar( get_uint6( $self->{core_data}, OFFSETS->{CONSENT_SCREEN} ) );
 }
 
 sub consent_language {
     my $self = shift;
 
-    return scalar( get_char6_pair( $self->{data}, CONSENT_LANGUAGE_OFFSET ) );
+    return
+      scalar(
+        get_char6_pair( $self->{core_data}, OFFSETS->{CONSENT_LANGUAGE} ) );
 }
 
 sub vendor_list_version {
     my $self = shift;
 
-    return scalar( get_uint12( $self->{data}, VENDOR_LIST_VERSION_OFFSET ) );
+    return
+      scalar(
+        get_uint12( $self->{core_data}, OFFSETS->{VENDOR_LIST_VERSION} ) );
 }
 
 sub policy_version {
     my $self = shift;
 
-    return scalar( get_uint6( $self->{data}, POLICY_VERSION_OFFSET ) );
+    return
+      scalar( get_uint6( $self->{core_data}, OFFSETS->{POLICY_VERSION} ) );
 }
 
 sub is_service_specific {
     my $self = shift;
 
-    return scalar( is_set( $self->{data}, SERVICE_SPECIFIC_OFFSET ) );
+    return scalar( is_set( $self->{core_data}, OFFSETS->{SERVICE_SPECIFIC} ) );
 }
 
 sub use_non_standard_stacks {
     my $self = shift;
 
-    return scalar( is_set( $self->{data}, USE_NON_STANDARD_STACKS_OFFSET ) );
+    return
+      scalar(
+        is_set( $self->{core_data}, OFFSETS->{USE_NON_STANDARD_STACKS} ) );
 }
 
 sub is_special_feature_opt_in {
@@ -243,9 +240,11 @@ sub is_special_feature_opt_in {
 sub _safe_is_special_feature_opt_in {
     my ( $self, $id ) = @_;
 
-    return
-      scalar(
-        is_set( $self->{data}, SPECIAL_FEATURE_OPT_IN_OFFSET + $id - 1 ) );
+    return scalar(
+        is_set(
+            $self->{core_data}, OFFSETS->{SPECIAL_FEATURE_OPT_IN} + $id - 1
+        )
+    );
 }
 
 sub is_purpose_consent_allowed {
@@ -259,9 +258,11 @@ sub is_purpose_consent_allowed {
 
 sub _safe_is_purpose_consent_allowed {
     my ( $self, $id ) = @_;
-    return
-      scalar(
-        is_set( $self->{data}, PURPOSE_CONSENT_ALLOWED_OFFSET + $id - 1 ) );
+    return scalar(
+        is_set(
+            $self->{core_data}, OFFSETS->{PURPOSE_CONSENT_ALLOWED} + $id - 1
+        )
+    );
 }
 
 sub is_purpose_legitimate_interest_allowed {
@@ -277,32 +278,38 @@ sub _safe_is_purpose_legitimate_interest_allowed {
     my ( $self, $id ) = @_;
 
     return
-      scalar( is_set( $self->{data}, PURPOSE_LIT_ALLOWED_OFFSET + $id - 1 ) );
+      scalar(
+        is_set( $self->{core_data}, OFFSETS->{PURPOSE_LIT_ALLOWED} + $id - 1 )
+      );
 }
 
 sub purpose_one_treatment {
     my $self = shift;
 
-    return scalar( is_set( $self->{data}, PURPOSE_ONE_TREATMENT_OFFSET ) );
+    return
+      scalar( is_set( $self->{core_data}, OFFSETS->{PURPOSE_ONE_TREATMENT} ) );
 }
 
 sub publisher_country_code {
     my $self = shift;
 
-    return
-      scalar( get_char6_pair( $self->{data}, PUBLISHER_COUNTRY_CODE_OFFSET ) );
+    return scalar(
+        get_char6_pair(
+            $self->{core_data}, OFFSETS->{PUBLISHER_COUNTRY_CODE}
+        )
+    );
 }
 
 sub max_vendor_id_consent {
     my $self = shift;
 
-    return scalar( get_uint16( $self->{data}, MAX_VENDOR_ID_CONSENT_OFFSET ) );
+    return $self->{vendor_consents}->max_id;
 }
 
 sub max_vendor_id_legitimate_interest {
     my $self = shift;
 
-    return $self->{legitimate_interest_max_vendor};
+    return $self->{vendor_legitimate_interests}->max_id;
 }
 
 sub vendor_consent {
@@ -320,8 +327,14 @@ sub vendor_legitimate_interest {
 sub check_publisher_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
-    return $self->{publisher_restrictions}
-      ->contains( $purpose_id, $restrict_type, $vendor );
+    return $self->{publisher}
+      ->check_restriction( $purpose_id, $restrict_type, $vendor );
+}
+
+sub publisher_tc {
+    my $self = shift;
+
+    return $self->{publisher}->publisher_tc;
 }
 
 sub _format_date {
@@ -410,106 +423,39 @@ sub TO_JSON {
             legitimate_interests =>
               $self->{vendor_legitimate_interests}->TO_JSON,
         },
-        publisher => {
-            restrictions => $self->{publisher_restrictions}->TO_JSON,
-        },
+        publisher => $self->{publisher}->TO_JSON,
     };
 }
 
-
-sub _parse_vendor_consents {
-    my $self = shift;
-
-    my ( $vendor_consents, $legitimate_interest_offset );
-
-    if ( $self->_is_vendor_consent_range_encoding ) {
-        ( $vendor_consents, $legitimate_interest_offset ) =
-          $self->_parse_range_section(
-            $self->max_vendor_id_consent,
-            VENDOR_CONSENT_OFFSET
-          );
-    }
-    else {
-        ( $vendor_consents, $legitimate_interest_offset ) =
-          $self->_parse_bitfield(
-            $self->max_vendor_id_consent,
-            VENDOR_CONSENT_OFFSET
-          );
-    }
-
-    $self->{vendor_consents} = $vendor_consents;
-
-    return $legitimate_interest_offset;
-}
-
-sub _parse_vendor_legitimate_interests {
-    my ( $self, $legitimate_interest_offset ) = @_;
-
-    my ($legitimate_interest_max_vendor,
-        $is_vendor_legitimate_interest_range_offset
-    ) = get_uint16( $self->{data}, $legitimate_interest_offset );
-
-    $self->{legitimate_interest_max_vendor} = $legitimate_interest_max_vendor;
-
-    my $data_size = length( $self->{data} );
-
-    croak
-      "invalid consent data: no legitimate interest start position (got $is_vendor_legitimate_interest_range_offset but $data_size)"
-      if $is_vendor_legitimate_interest_range_offset > $data_size;
-
-    my ($is_vendor_legitimate_interest_range,
-        $vendor_legitimate_interests_offset
-    ) = is_set( $self->{data}, $is_vendor_legitimate_interest_range_offset );
-
-    my ( $vendor_legitimate_interests, $pub_restrict_offset );
-
-    if ($is_vendor_legitimate_interest_range) {
-        ( $vendor_legitimate_interests, $pub_restrict_offset ) =
-          $self->_parse_range_section(
-            $self->max_vendor_id_legitimate_interest,
-            $vendor_legitimate_interests_offset
-          );
-    }
-    else {
-        ( $vendor_legitimate_interests, $pub_restrict_offset ) =
-          $self->_parse_bitfield(
-            $self->max_vendor_id_legitimate_interest,
-            $vendor_legitimate_interests_offset
-          );
-    }
-
-    $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
-
-    return $pub_restrict_offset;
-}
-
-sub _parse_publisher_restrictions {
-    my ( $self, $pub_restrict_offset ) = @_;
-
-    my $data =
-      substr( $self->{data}, $pub_restrict_offset, ASSUMED_MAX_VENDOR_ID );
-
-    my ( $publisher_restrictions, $relative_next_offset ) =
-      GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data      => $data,
-        data_size => length( $self->{data} ),
-        max_id    => ASSUMED_MAX_VENDOR_ID,
-        options   => $self->{options},
-      );
-
-    $self->{publisher_restrictions} = $publisher_restrictions;
-
-    return $pub_restrict_offset + $relative_next_offset;
-}
-
-sub _get_core_tc_string {
+sub _decode_tc_string_segments {
     my $tc_string = shift;
 
-    my $pos = index( $tc_string, CONSENT_STRING_TCF2_SEPARATOR );
+    my ( $core, @parts ) = split CONSENT_STRING_TCF_V2->{SEPARATOR},
+      $tc_string;
 
-    return $tc_string if $pos < 0;
+    my $core_data      = _validate_and_decode_base64($core);
+    my $core_data_size = length($core_data) / 8;
 
-    return substr( $tc_string, 0, $pos );
+    croak
+      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
+      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
+
+    my %segments;
+
+    foreach my $part (@parts) {
+        my $decoded = _validate_and_decode_base64($part);
+
+        my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
+
+        $segments{$segment_type} = $decoded;
+    }
+
+    my $publisher_tc = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
+
+    return {
+        core_data    => $core_data,
+        publisher_tc => $publisher_tc,
+    };
 }
 
 sub _validate_and_decode_base64 {
@@ -527,7 +473,7 @@ sub _validate_and_decode_base64 {
         \z
     }x;
 
-    return _decode_base64url($s);
+    return unpack 'B*', _decode_base64url($s);
 }
 
 sub _decode_base64url {
@@ -537,22 +483,106 @@ sub _decode_base64url {
     return decode_base64($s);
 }
 
-sub _is_vendor_consent_range_encoding {
+sub _parse_vendor_section {
     my $self = shift;
 
-    return
-      scalar( is_set( $self->{data}, VENDOR_CONSENT_RANGE_ENCODING_OFFSET ) );
+    # parse vendor consent
+
+    my $legitimate_interest_offset =
+      $self->_parse_vendor_consents( OFFSETS->{VENDOR_CONSENT} );
+
+    # parse vendor legitimate interest
+
+    my $pub_restrict_offset =
+      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+
+    return $pub_restrict_offset;
+}
+
+sub _parse_vendor_consents {
+    my ( $self, $vendor_consent_offset ) = @_;
+
+    my ( $vendor_consents, $legitimate_interest_offset ) =
+      $self->_parse_bitfield_or_range(
+        $vendor_consent_offset,
+      );
+
+    $self->{vendor_consents} = $vendor_consents;
+
+    return $legitimate_interest_offset;
+}
+
+sub _parse_vendor_legitimate_interests {
+    my ( $self, $legitimate_interest_offset ) = @_;
+
+    my ( $vendor_legitimate_interests, $pub_restrict_offset ) =
+      $self->_parse_bitfield_or_range(
+        $legitimate_interest_offset,
+      );
+
+    $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
+
+    return $pub_restrict_offset;
+}
+
+sub _parse_publisher_section {
+    my ( $self, $pub_restrict_offset ) = @_;
+
+    # parse public restrictions
+
+    my $core_data      = substr( $self->{core_data}, $pub_restrict_offset );
+    my $core_data_size = length( $self->{core_data} );
+
+    my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
+        core_data         => $core_data,
+        core_data_size    => $core_data_size,
+        publisher_tc_data => $self->{publisher_tc_data},
+        options           => $self->{options},
+    );
+
+    $self->{publisher} = $publisher;
+}
+
+sub _parse_bitfield_or_range {
+    my ( $self, $offset ) = @_;
+
+    my $something;
+
+    my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
+
+    my $is_range;
+
+    ( $is_range, $next_offset ) = is_set(
+        $self->{core_data},
+        $next_offset,
+    );
+
+    if ($is_range) {
+        ( $something, $next_offset ) = $self->_parse_range_section(
+            $max_id,
+            $next_offset,
+        );
+    }
+    else {
+        ( $something, $next_offset ) = $self->_parse_bitfield(
+            $max_id,
+            $next_offset,
+        );
+    }
+
+    return wantarray ? ( $something, $next_offset ) : $something;
 }
 
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data = substr( $self->{data}, $range_section_start_offset );
+    my $data      = substr( $self->{core_data}, $range_section_start_offset );
+    my $data_size = length( $self->{core_data} );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
-        data_size => length( $self->{data} ),
+        data_size => $data_size,
         offset    => 0,
         max_id    => $max_id,
         options   => $self->{options},
@@ -567,11 +597,12 @@ sub _parse_range_section {
 sub _parse_bitfield {
     my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
-    my $data = substr( $self->{data}, $bitfield_start_offset, $max_id );
+    my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
+    my $data_size = length( $self->{core_data} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
-        data_size => length( $self->{data} ),
+        data_size => $data_size,
         max_id    => $max_id,
         options   => $self->{options},
     );
@@ -586,7 +617,8 @@ sub looksLikeIsConsentVersion2 {
 
     return unless defined $gdpr_consent_string;
 
-    return rindex( $gdpr_consent_string, CONSENT_STRING_TCF2_PREFIX, 0 ) == 0;
+    return
+      rindex( $gdpr_consent_string, CONSENT_STRING_TCF_V2->{PREFIX}, 0 ) == 0;
 }
 
 1;
@@ -620,7 +652,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.084
+Version 0.100
 
 =head1 SYNOPSIS
 
@@ -707,9 +739,10 @@ or
             boolean_values => [ 0, 1 ],
             date_format    => '%Y%m%d',    # yyymmdd
         },
+        strict => 1,
     );
 
-Parse may receive an optional hash parameter C<json> with the following properties:
+Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
 
 =over
 
@@ -742,6 +775,10 @@ will be called with two arguments: epoch in seconds and nanoseconds. If omitted 
 except if the option C<use_epoch> is true.
 
 =back
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
 
 =head1 METHODS
 
@@ -929,6 +966,12 @@ For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
 
+=head2 publisher_tc
+
+If the consent string has a C<Publisher TC> section, we will decode this section as an instance of L<GDPR::IAB::TCFv2::PublisherTC>.
+
+Will return undefined if there is no C<Publisher TC> section.
+
 =head2 TO_JSON
 
 Will serialize the consent object into a hash reference. The objective is to be used by L<JSON> package.
@@ -945,7 +988,7 @@ With option C<convert_blessed>, the encoder will call this method.
     use GDPR::IAB::TCFv2;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA',
+        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA.argAC0gAAAAAAAAAAAA',
         json => {
             compact     => 1,
             date_format => sub { # can be omitted, with DateTimeX::TO_JSON
@@ -974,6 +1017,25 @@ Outputs:
         "cmp_id" : 3,
         "purpose_one_treatment" : false,
         "publisher" : {
+            "consents" : [
+                2,
+                4,
+                6,
+                8,
+                9,
+                10
+            ],
+            "legitimate_interests" : [
+                2,
+                4,
+                5,
+                7,
+                10
+            ],
+            "custom_purpose" : {
+                "consents" : [],
+                "legitimate_interests" : []
+            },
             "restrictions" : {}
         },
         "special_features_opt_in" : [],

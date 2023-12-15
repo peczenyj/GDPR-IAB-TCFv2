@@ -26,7 +26,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.084
+Version 0.100
 
 =head1 SYNOPSIS
 
@@ -113,9 +113,10 @@ or
             boolean_values => [ 0, 1 ],
             date_format    => '%Y%m%d',    # yyymmdd
         },
+        strict => 1,
     );
 
-Parse may receive an optional hash parameter C<json> with the following properties:
+Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
 
 =over
 
@@ -148,6 +149,10 @@ will be called with two arguments: epoch in seconds and nanoseconds. If omitted 
 except if the option C<use_epoch> is true.
 
 =back
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
 
 =head1 METHODS
 
@@ -335,6 +340,12 @@ For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
 
+=head2 publisher_tc
+
+If the consent string has a C<Publisher TC> section, we will decode this section as an instance of L<GDPR::IAB::TCFv2::PublisherTC>.
+
+Will return undefined if there is no C<Publisher TC> section.
+
 =head2 TO_JSON
 
 Will serialize the consent object into a hash reference. The objective is to be used by L<JSON> package.
@@ -351,7 +362,7 @@ With option C<convert_blessed>, the encoder will call this method.
     use GDPR::IAB::TCFv2;
 
     my $consent = GDPR::IAB::TCFv2->Parse(
-        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA',
+        'COyiILmOyiILmADACHENAPCAAAAAAAAAAAAAE5QBgALgAqgD8AQACSwEygJyAAAAAA.argAC0gAAAAAAAAAAAA',
         json => {
             compact     => 1,
             date_format => sub { # can be omitted, with DateTimeX::TO_JSON
@@ -380,6 +391,25 @@ Outputs:
         "cmp_id" : 3,
         "purpose_one_treatment" : false,
         "publisher" : {
+            "consents" : [
+                2,
+                4,
+                6,
+                8,
+                9,
+                10
+            ],
+            "legitimate_interests" : [
+                2,
+                4,
+                5,
+                7,
+                10
+            ],
+            "custom_purpose" : {
+                "consents" : [],
+                "legitimate_interests" : []
+            },
             "restrictions" : {}
         },
         "special_features_opt_in" : [],

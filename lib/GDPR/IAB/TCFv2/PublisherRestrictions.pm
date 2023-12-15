@@ -6,6 +6,7 @@ use Carp qw<croak>;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint2
+  get_uint3
   get_uint6
   get_uint12
   get_uint16
@@ -13,13 +14,14 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_char6_pair
 >;
 
+use constant ASSUMED_MAX_VENDOR_ID => 0x7FFF;    # 32767 or (1 << 15) -1
+
+
 sub Parse {
     my ( $klass, %args ) = @_;
 
     croak "missing 'data'"      unless defined $args{data};
     croak "missing 'data_size'" unless defined $args{data_size};
-    croak "missing 'max_id'"
-      unless defined $args{max_id};
 
     croak "missing 'options'"      unless defined $args{options};
     croak "missing 'options.json'" unless defined $args{options}->{json};
@@ -27,7 +29,7 @@ sub Parse {
     my $data      = $args{data};
     my $data_size = $args{data_size};
     my $offset    = 0;
-    my $max_id    = $args{max_id};
+    my $max_id    = ASSUMED_MAX_VENDOR_ID;
     my $options   = $args{options};
 
     my ( $num_restrictions, $next_offset ) = get_uint12( $data, $offset );
@@ -46,7 +48,7 @@ sub Parse {
             data      => $data,
             data_size => $data_size,
             offset    => $next_offset,
-            max_id    => $max_id,
+            max_id    => ASSUMED_MAX_VENDOR_ID,
             options   => $options,
           );
 
@@ -61,10 +63,10 @@ sub Parse {
 
     bless $self, $klass;
 
-    return wantarray ? ( $self, $next_offset ) : $self;
+    return $self;
 }
 
-sub contains {
+sub check_restriction {
     my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
 
     return 0
@@ -107,32 +109,45 @@ GDPR::IAB::TCFv2::PublisherRestrictions - Transparency & Consent String version 
 
 =head1 SYNOPSIS
 
-    my ($publisher_restrictions, $next_offset) = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data => $self->{data},
-        offset => $pub_restrict_offset,
-        max_id =>ASSUMED_MAX_VENDOR_ID,
-        options => $self->{options},
+    my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+        data      => substr($self->{data}, OFFSET ),
+        data_size => length($self->{data}),
+        options => { json => ... },
     );
 
-    die "there is publisher restriction on purpose id 1, type 0 on vendor 284"
-        if $range->contains(1, 0, 284);
+    say "there is publisher restriction on purpose id 1, type 0 on vendor 284"
+        if $publisher_restrictions->check_restriction(1, 0, 284);
 
 =head1 CONSTRUCTOR
 
-Receive 1 parameters: restrictions. Hashref.
+Constructor C<Parse> receives an hash of 3 parameters: 
 
-Will die if it is undefined.
+=over
+
+=item *
+
+Key C<data> is the binary data
+
+=item *
+
+Key C<data_size> is the original binary data size
+
+=item *
+
+Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
+
+=back
 
 =head1 METHODS
 
-=head2 contains
+=head2 check_restriction
 
 Return true for a given combination of purpose id, restriction type and vendor 
 
     my $purpose_id = 1;
     my $restriction_type = 0;
     my $vendor = 284;
-    $ok = $range->contains($purpose_id, $restriction_type, $vendor);
+    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
 
 =head2 TO_JSON
 
