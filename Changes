@@ -1,3 +1,4 @@
+0.100
   - parse publisher tc section if available
   - add strict mode (disabled by default) to validate the consent string version
 

@@ -1,11 +1,8 @@
 name: macos
+
 on:
-  push:
-    branches:
-      - '*'
-    tags-ignore:
-      - '*'
-  pull_request:
+  - push
+
 jobs:
   perl:
     runs-on: macOS-latest
