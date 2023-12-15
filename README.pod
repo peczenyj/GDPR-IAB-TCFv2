@@ -113,9 +113,10 @@ or
             boolean_values => [ 0, 1 ],
             date_format    => '%Y%m%d',    # yyymmdd
         },
+        strict => 1,
     );
 
-Parse may receive an optional hash parameter C<json> with the following properties:
+Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
 
 =over
 
@@ -148,6 +149,10 @@ will be called with two arguments: epoch in seconds and nanoseconds. If omitted 
 except if the option C<use_epoch> is true.
 
 =back
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
 
 =head1 METHODS
 

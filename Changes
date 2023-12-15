@@ -1,3 +1,5 @@
+  - add strict mode (disabled by default) to validate the consent string version
+
 0.084
   - fix a bug while parsing valid consent strings range-based, see https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/20
 

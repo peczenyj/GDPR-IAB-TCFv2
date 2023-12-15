@@ -389,12 +389,21 @@ subtest "invalid tcf consent string candidates" => sub {
     }
     qr/missing gdpr consent string/, 'empty consent string should throw error';
 
+    lives_ok {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            "BOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA");
+
+        is $consent->version, 1, "tcf v1";
+
+    }
+    'valid tcf v1 consent string should now throw error without strict flag';
+
     throws_ok {
         GDPR::IAB::TCFv2->Parse(
-            "BOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA");
+            "BOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA", strict => 1 );
     }
     qr/consent string is not tcf version 2/,
-      'valid tcf v1 consent string should throw error (deprecated)';
+      'valid tcf v1 consent string should throw error with strict flag';
 
     throws_ok {
         GDPR::IAB::TCFv2->Parse("Clc");
@@ -402,12 +411,19 @@ subtest "invalid tcf consent string candidates" => sub {
     qr/vendor consent strings are at least 29 bytes long/,
       'short (less than 29 bytes) tcf v2 consent string should throw error';
 
+    lives_ok {
+        my $consent = GDPR::IAB::TCFv2->Parse(
+            "DOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA", strict => 0 );
+        is $consent->version, 3, "tcf v3";
+    }
+    'possible tcf v3 consent string should not throw error without strict flag';
+
     throws_ok {
         GDPR::IAB::TCFv2->Parse(
-            "DOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA");
+            "DOEFEAyOEFEAyAHABDENAI4AAAB9vABAASAAAAAAAAAA", strict => 1 );
     }
     qr/consent string is not tcf version 2/,
-      'possible tcf v3 consent string should throw error';
+      'possible tcf v3 consent string should throw error with strict flag';
 
     throws_ok {
         GDPR::IAB::TCFv2->Parse(

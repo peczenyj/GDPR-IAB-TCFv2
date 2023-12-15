@@ -26,7 +26,7 @@ our $VERSION = "0.084";
 use constant {
     CONSENT_STRING_TCF2_SEPARATOR => '.',
     CONSENT_STRING_TCF2_PREFIX    => 'C',
-    MIN_BYTE_SIZE                 => 29,
+    TCF_V2_MIN_BYTE_SIZE          => 29,
     TCF_VERSION                   => 2,
     ASSUMED_MAX_VENDOR_ID         => 0x7FFF,    # 32767 or (1 << 15) -1
     MAX_SPECIAL_FEATURE_ID        => 12,
@@ -90,14 +90,13 @@ sub Parse {
 
     my $core_tc_string = _get_core_tc_string($tc_string);
 
-    my $data      = unpack 'B*', _validate_and_decode_base64($core_tc_string);
-    my $data_size = length($data);
+    my ( $data, $data_size ) = _validate_and_decode_base64($core_tc_string);
 
-    croak "vendor consent strings are at least @{[ MIN_BYTE_SIZE ]} bytes long"
-      if $data_size < 8 * MIN_BYTE_SIZE;
+    my $strict = !!$opts{strict};
 
     my %options = (
-        json => $opts{json} || {},
+        json   => $opts{json} || {},
+        strict => $strict,
     );
 
     $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
@@ -116,7 +115,7 @@ sub Parse {
     bless $self, $klass;
 
     croak "consent string is not tcf version @{[ TCF_VERSION ]}"
-      unless $self->version == TCF_VERSION;
+      if $strict && $self->version != TCF_VERSION;
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
@@ -534,7 +533,14 @@ sub _validate_and_decode_base64 {
         \z
     }x;
 
-    return _decode_base64url($s);
+    my $data      = unpack 'B*', _decode_base64url($s);
+    my $data_size = length($data);
+
+    croak
+      "vendor consent strings are at least @{[ TCF_V2_MIN_BYTE_SIZE ]} bytes long"
+      if $data_size < 8 * TCF_V2_MIN_BYTE_SIZE;
+
+    return ( $data, $data_size );
 }
 
 sub _decode_base64url {
@@ -714,9 +720,10 @@ or
             boolean_values => [ 0, 1 ],
             date_format    => '%Y%m%d',    # yyymmdd
         },
+        strict => 1,
     );
 
-Parse may receive an optional hash parameter C<json> with the following properties:
+Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
 
 =over
 
@@ -749,6 +756,10 @@ will be called with two arguments: epoch in seconds and nanoseconds. If omitted 
 except if the option C<use_epoch> is true.
 
 =back
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
 
 =head1 METHODS
 
