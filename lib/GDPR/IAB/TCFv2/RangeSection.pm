@@ -29,6 +29,14 @@ sub Parse {
       "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
       if $data_size < 31;
 
+    my %cache;
+
+    if ( exists $options->{prefetch} ) {
+        my $vendor_id = $options->{prefetch};
+
+        $cache{$vendor_id} = 0;
+    }
+
     my ( $num_entries, $next_offset ) = get_uint12( $data, $offset );
 
     my @ranges;
@@ -41,6 +49,7 @@ sub Parse {
             $next_offset,
             $max_id,
             $options,
+            \%cache,
         );
 
         push @ranges, $range;
@@ -50,6 +59,7 @@ sub Parse {
         ranges  => \@ranges,
         max_id  => $max_id,
         options => $options,
+        cache   => \%cache,
     };
 
     bless $self, $klass;
@@ -58,7 +68,7 @@ sub Parse {
 }
 
 sub _parse_range {
-    my ( $data, $data_size, $offset, $max_id, $options ) = @_;
+    my ( $data, $data_size, $offset, $max_id, $options, $cache ) = @_;
 
     croak
       "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
@@ -82,6 +92,10 @@ sub _parse_range {
 
         croak "start $start can't be bigger than end $end" if $start > $end;
 
+        foreach my $id ( keys %{$cache} ) {
+            $cache->{$id} = 1 if $start <= $id && $id <= $end;
+        }
+
         return [ $start, $end ],
           $next_offset;
     }
@@ -93,6 +107,10 @@ sub _parse_range {
     croak
       "bit $offset range entry exclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
       if 1 > $vendor_id || $vendor_id > $max_id;
+
+    foreach my $id ( keys %{$cache} ) {
+        $cache->{$id} = 1 if $id == $vendor_id;
+    }
 
     return [ $vendor_id, $vendor_id ], $next_offset;
 }
@@ -108,6 +126,8 @@ sub contains {
 
     croak "invalid vendor id $id: must be positive integer bigger than 0"
       if $id < 1;
+
+    return $self->{cache}->{$id} if exists $self->{cache}->{$id};
 
     return if $id > $self->{max_id};
 

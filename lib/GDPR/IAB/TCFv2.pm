@@ -105,6 +105,7 @@ sub Parse {
 
     $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
+    $options{prefetch} = $opts{prefetch} if exists $opts{prefetch};
 
     my $self = {
         core_data         => $segments->{core_data},
