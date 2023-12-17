@@ -137,16 +137,16 @@ Return true for a given combination of purpose id, restriction type and vendor_i
     my $purpose_id = 1;
     my $restriction_type = 0;
     my $vendor_id = 284;
-    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor_id);
+    $ok = $publisher->check_restriction($purpose_id, $restriction_type, $vendor_id);
 
 =head2 restrictions
 
-Return a map of purpose id => restriction type for a given vendor id
+Return a hashref of purpose => { restriction type => bool } for a given vendor id.
 
 Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
 
-    my $restrictions = $range->restrictions(32);
-    # returns {  7 => 1 }
+    my $restrictions = $publisher->restrictions(32);
+    # returns {  7 => { 1 => 1 } }
 
 =head2 publisher_tc
 

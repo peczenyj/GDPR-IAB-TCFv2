@@ -164,7 +164,7 @@ subtest "bitfield" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         my $publisher_tc = $consent->publisher_tc;
 
@@ -450,7 +450,7 @@ subtest "range" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         my $publisher_tc = $consent->publisher_tc;
 
@@ -515,7 +515,7 @@ subtest "range" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         done_testing;
       };
@@ -549,11 +549,11 @@ subtest "check publisher restriction" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         $restrictions = $consent->publisher_restrictions(32);
-        is_deeply $restrictions, { 7 => 1 },
-          "should return the restriction purpose id => restriction type map";
+        is_deeply $restrictions, { 7 => { 1 => 1 } },
+          "should return the restriction purpose id => restriction map type map";
 
         done_testing;
     };
@@ -597,11 +597,13 @@ subtest "check publisher restriction" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         $restrictions = $consent->publisher_restrictions(32);
-        is_deeply $restrictions, { 1 => 0, 2 => 0, 7 => 0, 10 => 0 },
-          "should return the restriction purpose id => restriction type map";
+        is_deeply $restrictions,
+          { 1 => { 0 => 1 }, 2 => { 0 => 1, 1 => 1 }, 7 => { 0 => 1, 1 => 1 },
+            10 => { 0 => 1, 1 => 1 } },
+          "should return the restriction purpose id => restriction map type map";
 
 
         done_testing;
@@ -625,7 +627,7 @@ subtest "check publisher restriction" => sub {
 
         my $restrictions = $consent->publisher_restrictions(284);
         is_deeply $restrictions, {},
-          "should return the restriction purpose id => restriction type map";
+          "should return the restriction purpose id => restriction map type map";
 
         done_testing;
     };

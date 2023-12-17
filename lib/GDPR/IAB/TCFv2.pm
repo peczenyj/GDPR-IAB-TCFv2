@@ -1018,7 +1018,7 @@ In case a vendor has declared flexibility for a purpose and there is no legal ba
 
 =head2 publisher_restrictions
 
-Similar to L</check_publisher_restriction> but return an hashref of purpose => restriction type for a given vendor (if any).
+Similar to L</check_publisher_restriction> but return an hashref of purpose => { restriction type => bool } for a given vendor (if any).
 
 =head2 publisher_tc
 
