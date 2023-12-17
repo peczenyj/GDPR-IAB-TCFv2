@@ -325,6 +325,13 @@ It true, there is a publisher restriction of certain type, for a given purpose i
     # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
     my $ok = $instance->check_publisher_restriction(1, 0, 284);
 
+or
+
+    my $ok = $instance->check_publisher_restriction(
+        purpose_id       => 1, 
+        restriction_type => 0,  
+        vendor_id        => 284);
+
 Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
 
 =over
@@ -356,6 +363,10 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 publisher_restrictions
+
+Similar to L</check_publisher_restriction> but return an hashref of purpose => { restriction type => bool } for a given vendor.
 
 =head2 publisher_tc
 
