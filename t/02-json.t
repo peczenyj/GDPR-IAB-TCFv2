@@ -9,160 +9,199 @@ use GDPR::IAB::TCFv2;
 # use DateTime;
 # use DateTimeX::TO_JSON formatter => 'DateTime::Format::RFC3339';
 
-subtest
-  "should convert data to json using compact flag and 0/1 as booleans" => sub {
-    subtest "should convert data to json using yyyymmdd as date format" =>
+subtest "bitfield" => sub {
+    subtest
+      "should convert data to json using compact flag and 0/1 as booleans" =>
       sub {
-        my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
-            json => {
-                verbose        => 0,
-                compact        => 1,
-                use_epoch      => 0,
-                boolean_values => [ 0, 1 ],
-                date_format    => '%Y%m%d',    # yyymmdd
-            },
-        );
+        subtest "should convert data to json using yyyymmdd as date format" =>
+          sub {
+            my $consent = GDPR::IAB::TCFv2->Parse(
+                'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
+                json => {
+                    verbose        => 0,
+                    compact        => 1,
+                    use_epoch      => 0,
+                    boolean_values => [ 0, 1 ],
+                    date_format    => '%Y%m%d',    # yyymmdd
+                },
+            );
 
 
-        my $got      = $consent->TO_JSON();
-        my $expected = _fixture_compact(
-            created      => 20081207,
-            last_updated => 20120110,
-        );
-        is_deeply $got, $expected, "must return the json hashref";
+            my $got      = $consent->TO_JSON();
+            my $expected = _fixture_bitfield_compact(
+                created      => 20081207,
+                last_updated => 20120110,
+            );
+            is_deeply $got, $expected, "must return the json hashref";
+
+            done_testing;
+          };
+
+        subtest "should convert data to json using epoch date format" => sub {
+            my $consent = GDPR::IAB::TCFv2->Parse(
+                'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
+                json => {
+                    verbose        => 0,
+                    compact        => 1,
+                    use_epoch      => 1,
+                    boolean_values => [ 0, 1 ],
+                },
+            );
+
+
+            my $got      = $consent->TO_JSON();
+            my $expected = _fixture_bitfield_compact(
+                created      => 1228644257,
+                last_updated => 1326215413,
+            );
+
+            is_deeply $got, $expected, "must return the json hashref";
+
+            done_testing;
+        };
 
         done_testing;
       };
 
-    subtest "should convert data to json using epoch date format" => sub {
-        my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
-            json => {
-                verbose        => 0,
-                compact        => 1,
-                use_epoch      => 1,
-                boolean_values => [ 0, 1 ],
-            },
-        );
+    subtest
+      "should convert data to json using default (non-compact) and 0/1 as booleans"
+      => sub {
 
-
-        my $got      = $consent->TO_JSON();
-        my $expected = _fixture_compact(
-            created      => 1228644257,
-            last_updated => 1326215413,
-        );
-
-        is_deeply $got, $expected, "must return the json hashref";
-
-        done_testing;
-    };
-
-    done_testing;
-  };
-
-subtest
-  "should convert data to json using default (non-compact) and 0/1 as booleans"
-  => sub {
-
-    subtest "default non verbose, date as iso 8601" => sub {
-        my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
-            json => {
-                verbose        => 0,
-                compact        => 0,
-                use_epoch      => 0,
-                boolean_values => [ 0, 1 ],
-            },
-        );
-
-        ok $consent->vendor_consent(27);
-
-        my $got      = $consent->TO_JSON();
-        my $expected = _fixture_default();
-        is_deeply $got, $expected, "must return the json hashref";
-
-        done_testing;
-    };
-
-    subtest "default non verbose, date as iso 8601" => sub {
-        my $consent = GDPR::IAB::TCFv2->Parse(
-            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
-            json => {
-                verbose        => 1,
-                compact        => 0,
-                use_epoch      => 0,
-                boolean_values => [ 0, 1 ],
-            },
-        );
-
-        ok $consent->vendor_consent(27);
-
-        my $got      = $consent->TO_JSON();
-        my $expected = _fixture_verbose();
-        is_deeply $got, $expected, "must return the json hashref";
-
-        done_testing;
-    };
-
-    done_testing;
-  };
-
-
-subtest "publisher section" => sub {
-    my $consent = GDPR::IAB::TCFv2->Parse(
-        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA',
-        json => {
-            verbose        => 0,
-            compact        => 1,
-            use_epoch      => 0,
-            boolean_values => [ 0, 1 ],
-        },
-    );
-
-    my $got = $consent->TO_JSON;
-    my $expected =
-      { "publisher" => { "restrictions" => { "7" => { "32" => 1 } } } };
-
-    is_deeply $got->{publisher}, $expected->{publisher},
-      "must return the same publisher restriction section";
-
-    done_testing;
-};
-subtest "publisher section with publisher_tc" => sub {
-    subtest "without custom purposes" => sub {
-        my $consent = GDPR::IAB::TCFv2->Parse(
-            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
-            json => {
-                verbose        => 0,
-                compact        => 1,
-                use_epoch      => 0,
-                boolean_values => [ 0, 1 ],
-            },
-        );
-
-        my $got      = $consent->TO_JSON;
-        my $expected = {
-            "publisher" => {
-                "consents"             => [ 2, 4, 6, 8, 9, 10 ],
-                "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
-                "custom_purposes"      => {
-                    "consents"             => [],
-                    "legitimate_interests" => [],
+        subtest "default non verbose, date as iso 8601" => sub {
+            my $consent = GDPR::IAB::TCFv2->Parse(
+                'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
+                json => {
+                    verbose        => 0,
+                    compact        => 0,
+                    use_epoch      => 0,
+                    boolean_values => [ 0, 1 ],
                 },
-                "restrictions" => { "7" => { "32" => 1 } }
-            }
+            );
+
+            ok $consent->vendor_consent(27);
+
+            my $got      = $consent->TO_JSON();
+            my $expected = _fixture_bitfield_default();
+            is_deeply $got, $expected, "must return the json hashref";
+
+            done_testing;
         };
 
-        is_deeply $got->{publisher}, $expected->{publisher},
-          "must return the same publisher restriction section";
+        subtest "default verbose, date as iso 8601" => sub {
+            my $consent = GDPR::IAB::TCFv2->Parse(
+                'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
+                json => {
+                    verbose        => 1,
+                    compact        => 0,
+                    use_epoch      => 0,
+                    boolean_values => [ 0, 1 ],
+                },
+            );
+
+            ok $consent->vendor_consent(27);
+
+            my $got      = $consent->TO_JSON();
+            my $expected = _fixture_bitfield_verbose();
+            is_deeply $got, $expected, "must return the json hashref";
+
+            done_testing;
+        };
+
+        done_testing;
+      };
+
+    subtest "publisher section" => sub {
+        subtest "publisher section without publisher_tc" => sub {
+            my $consent = GDPR::IAB::TCFv2->Parse(
+                'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA',
+                json => {
+                    verbose        => 0,
+                    compact        => 1,
+                    use_epoch      => 0,
+                    boolean_values => [ 0, 1 ],
+                },
+            );
+
+            my $got = $consent->TO_JSON;
+            my $expected =
+              { "publisher" => { "restrictions" => { "7" => { "32" => 1 } } }
+              };
+
+            is_deeply $got->{publisher}, $expected->{publisher},
+              "must return the same publisher restriction section";
+
+            done_testing;
+        };
+        subtest "publisher section with publisher_tc" => sub {
+            subtest "without custom purposes" => sub {
+                my $consent = GDPR::IAB::TCFv2->Parse(
+                    'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA',
+                    json => {
+                        verbose        => 0,
+                        compact        => 1,
+                        use_epoch      => 0,
+                        boolean_values => [ 0, 1 ],
+                    },
+                );
+
+                my $got      = $consent->TO_JSON;
+                my $expected = {
+                    "publisher" => {
+                        "consents"             => [ 2, 4, 6, 8, 9, 10 ],
+                        "legitimate_interests" => [ 2, 4, 5, 7, 10 ],
+                        "custom_purposes"      => {
+                            "consents"             => [],
+                            "legitimate_interests" => [],
+                        },
+                        "restrictions" => { "7" => { "32" => 1 } }
+                    }
+                };
+
+                is_deeply $got->{publisher}, $expected->{publisher},
+                  "must return the same publisher restriction section";
+
+                done_testing;
+            };
+
+            subtest "with custom purposes" => sub {
+                my $consent = GDPR::IAB::TCFv2->Parse(
+                    'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.YAAAAAAAAXA',
+                    json => {
+                        verbose        => 0,
+                        compact        => 1,
+                        use_epoch      => 0,
+                        boolean_values => [ 0, 1 ],
+                    },
+                );
+
+                my $got      = $consent->TO_JSON;
+                my $expected = {
+                    "publisher" => {
+                        "consents"             => [],
+                        "legitimate_interests" => [],
+                        "custom_purposes"      => {
+                            "consents"             => [ 1, 2 ],
+                            "legitimate_interests" => [1],
+                        },
+                        "restrictions" => { "7" => { "32" => 1 } }
+                    }
+                };
+
+                is_deeply $got->{publisher}, $expected->{publisher},
+                  "must return the same publisher restriction section";
+
+                done_testing;
+            };
+
+            done_testing;
+        };
 
         done_testing;
     };
 
-    subtest "with custom purposes" => sub {
+    subtest "TO_JSON method should return the same hashref " => sub {
         my $consent = GDPR::IAB::TCFv2->Parse(
-            'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.YAAAAAAAAXA',
+            'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
             json => {
                 verbose        => 0,
                 compact        => 1,
@@ -171,50 +210,22 @@ subtest "publisher section with publisher_tc" => sub {
             },
         );
 
-        my $got      = $consent->TO_JSON;
-        my $expected = {
-            "publisher" => {
-                "consents"             => [],
-                "legitimate_interests" => [],
-                "custom_purposes"      => {
-                    "consents"             => [ 1, 2 ],
-                    "legitimate_interests" => [1],
-                },
-                "restrictions" => { "7" => { "32" => 1 } }
-            }
-        };
 
-        is_deeply $got->{publisher}, $expected->{publisher},
-          "must return the same publisher restriction section";
+        my $got1 = $consent->TO_JSON();
+        my $got2 = $consent->TO_JSON();
+
+        is_deeply $got1, $got2, "must return the same hashref";
 
         done_testing;
     };
 
     done_testing;
-};
-subtest "TO_JSON method should return the same hashref " => sub {
-    my $consent = GDPR::IAB::TCFv2->Parse(
-        'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA',
-        json => {
-            verbose        => 0,
-            compact        => 1,
-            use_epoch      => 0,
-            boolean_values => [ 0, 1 ],
-        },
-    );
 
-
-    my $got1 = $consent->TO_JSON();
-    my $got2 = $consent->TO_JSON();
-
-    is_deeply $got1, $got2, "must return the same hashref";
-
-    done_testing;
 };
 
 done_testing;
 
-sub _fixture_compact {
+sub _fixture_bitfield_compact {
     my (%extra) = @_;
 
     return {
@@ -332,7 +343,7 @@ sub _fixture_compact {
     };
 }
 
-sub _fixture_default {
+sub _fixture_bitfield_default {
     my (%extra) = @_;
 
     return {
@@ -450,7 +461,7 @@ sub _fixture_default {
     };
 }
 
-sub _fixture_verbose {
+sub _fixture_bitfield_verbose {
     my (%extra) = @_;
 
     return {
