@@ -601,8 +601,9 @@ subtest "check publisher restriction" => sub {
 
         $restrictions = $consent->publisher_restrictions(32);
         is_deeply $restrictions,
-          { 1 => { 0 => 1 }, 2 => { 0 => 1, 1 => 1 }, 7 => { 0 => 1, 1 => 1 },
-            10 => { 0 => 1, 1 => 1 } },
+          { 1  => { 0 => 1 }, 2 => { 0 => 1, 1 => 1 }, 7 => { 0 => 1, 1 => 1 },
+            10 => { 0 => 1, 1 => 1 }
+          },
           "should return the restriction purpose id => restriction map type map";
 
 
