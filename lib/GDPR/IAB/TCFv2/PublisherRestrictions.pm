@@ -181,7 +181,7 @@ Return true for a given combination of purpose id, restriction type and vendor
 
 =head2 restrictions
 
-Return a hashref of purpose => { restriction type => bool } for a given vendor id.
+Return a hashref of purpose => { restriction type => bool } for a given vendor id.
 
 Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
 
