@@ -595,12 +595,14 @@ subtest "check publisher restriction" => sub {
         ok $consent->check_publisher_restriction( 2,  1, 32 );
         ok !$consent->check_publisher_restriction( 2, 1, 42 );
 
+        use Test::Differences;
+
         my $restrictions = $consent->publisher_restrictions(284);
-        is_deeply $restrictions, {},
+        eq_or_diff $restrictions, {},
           "should return the restriction purpose id => restriction type map";
 
         $restrictions = $consent->publisher_restrictions(32);
-        is_deeply $restrictions, { 1 => 0, 2 => 0, 7 => 0, 10 => 0 },
+        eq_or_diff $restrictions, { 1 => 0, 2 => 0, 7 => 0, 10 => 0 },
           "should return the restriction purpose id => restriction type map";
 
 
