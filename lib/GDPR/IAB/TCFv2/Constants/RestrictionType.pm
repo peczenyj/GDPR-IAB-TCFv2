@@ -1,21 +1,27 @@
 package GDPR::IAB::TCFv2::Constants::RestrictionType;
 use strict;
 use warnings;
-use Scalar::Util qw<dualvar>;
 
 require Exporter;
 use base qw<Exporter>;
 
 use constant {
-    NotAllowed     => dualvar( 0, "Purpose Flatly Not Allowed by Publisher" ),
-    RequireConsent => dualvar( 1, "Require Consent" ),
-    RequireLegitimateInterest => dualvar( 2, "Require Legitimate Interest" ),
+    NotAllowed                => 0,
+    RequireConsent            => 1,
+    RequireLegitimateInterest => 2,
+};
+
+use constant RestrictionTypeDescription => {
+    NotAllowed                => "Purpose Flatly Not Allowed by Publisher",
+    RequireConsent            =>, "Require Consent",
+    RequireLegitimateInterest => "Require Legitimate Interest",
 };
 
 our @EXPORT_OK = qw<
   NotAllowed
   RequireConsent
   RequireLegitimateInterest
+  RestrictionTypeDescription
 >;
 
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
@@ -37,15 +43,15 @@ GDPR::IAB::TCFv2::Constants::RestrictionType - TCF v2.2 publisher restriction ty
 
     use feature 'say';
     
-    say "Restriction type id is ". (0+NotAllowed), ", and it means " . NotAllowed;
+    say "Restriction type id is ", NotAllowed, ", and it means " , RestrictionTypeDescription->{NotAllowed};
     # Output:
     # Restriction type id is 0, and it means Purpose Flatly Not Allowed by Publisher
 
 =head1 CONSTANTS
 
-All constants are C<dualvar> (see L<Scalar::Util>).
+All constants are integers.
 
-Returns a scalar that has the C<id> in a numeric context and the C<description> in a string context.
+To find the description of a given id you can use the hashref L</RestrictionTypeDescription>
 
 =head2  NotAllowed
 
@@ -58,6 +64,10 @@ Restriction type id 1: Require Consent (if Vendor has declared the Purpose IDs l
 =head2 RequireLegitimateInterest
 
 Restriction type id 2: Require Legitimate Interest (if Vendor has declared the Purpose IDs legal basis as Consent and flexible)
+
+=head2 RestrictionTypeDescription
+
+Returns a hashref with a mapping between all restriction types and their description.
 
 =head1 NOTE
 
