@@ -333,10 +333,22 @@ sub vendor_legitimate_interest {
 }
 
 sub check_publisher_restriction {
-    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+    my $self = shift;
+
+    my ( $purpose_id, $restriction_type, $vendor_id );
+
+    if ( scalar(@_) == 6 ) {
+        my (%opts) = @_;
+
+        $purpose_id       = $opts{purpose_id};
+        $restriction_type = $opts{restriction_type};
+        $vendor_id        = $opts{vendor_id};
+    }
+
+    ( $purpose_id, $restriction_type, $vendor_id ) = @_;
 
     return $self->{publisher}
-      ->check_restriction( $purpose_id, $restrict_type, $vendor );
+      ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
 }
 
 sub publisher_tc {
@@ -501,10 +513,10 @@ sub _parse_vendor_section {
 
     # parse vendor legitimate interest
 
-    my $pub_restrict_offset =
+    my $pub_restriction_offset =
       $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
 
-    return $pub_restrict_offset;
+    return $pub_restriction_offset;
 }
 
 sub _parse_vendor_consents {
@@ -523,22 +535,22 @@ sub _parse_vendor_consents {
 sub _parse_vendor_legitimate_interests {
     my ( $self, $legitimate_interest_offset ) = @_;
 
-    my ( $vendor_legitimate_interests, $pub_restrict_offset ) =
+    my ( $vendor_legitimate_interests, $pub_restriction_offset ) =
       $self->_parse_bitfield_or_range(
         $legitimate_interest_offset,
       );
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
-    return $pub_restrict_offset;
+    return $pub_restriction_offset;
 }
 
 sub _parse_publisher_section {
-    my ( $self, $pub_restrict_offset ) = @_;
+    my ( $self, $pub_restriction_offset ) = @_;
 
     # parse public restrictions
 
-    my $core_data      = substr( $self->{core_data}, $pub_restrict_offset );
+    my $core_data      = substr( $self->{core_data}, $pub_restriction_offset );
     my $core_data_size = length( $self->{core_data} );
 
     my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
@@ -958,6 +970,13 @@ It true, there is a publisher restriction of certain type, for a given purpose i
     # return true if there is publisher restriction to vendor 284 regarding purpose id 1 
     # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
     my $ok = $instance->check_publisher_restriction(1, 0, 284);
+
+or
+
+    my $ok = $instance->check_publisher_restriction(
+        purpose_id       => 1, 
+        restriction_type => 0,  
+        vendor_id        => 284);
 
 Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
 

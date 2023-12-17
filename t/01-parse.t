@@ -154,7 +154,11 @@ subtest "bitfield" => sub {
         };
 
         ok !$consent->check_publisher_restriction( 1, 0, 284 ),
-          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher'";
+          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher' when called with positional parameters";
+
+        ok !$consent->check_publisher_restriction( purpose_id => 1,
+            restriction_type => 0, vendor_id => 284 ),
+          "should have no publisher restriction to vendor 284 regarding purpose id 1 of type 0 'Purpose Flatly Not Allowed by Publisher' when called with named parameters";
 
         my $publisher_tc = $consent->publisher_tc;
 

@@ -67,13 +67,22 @@ sub Parse {
 }
 
 sub check_restriction {
-    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+    my $self = shift;
+
+    my $nargs = scalar(@_);
+
+    croak "missing arguments: purpose id, restriction type and vendor id"
+      if $nargs == 0;
+    croak "missing arguments: restriction type and vendor id" if $nargs == 1;
+    croak "missing argument: vendor id"                       if $nargs == 2;
+
+    my ( $purpose_id, $restriction_type, $vendor_id ) = @_;
 
     return 0
-      unless exists $self->{restrictions}->{$purpose_id}->{$restrict_type};
+      unless exists $self->{restrictions}->{$purpose_id}->{$restriction_type};
 
-    return $self->{restrictions}->{$purpose_id}->{$restrict_type}
-      ->contains($vendor);
+    return $self->{restrictions}->{$purpose_id}->{$restriction_type}
+      ->contains($vendor_id);
 }
 
 sub TO_JSON {
@@ -86,11 +95,11 @@ sub TO_JSON {
 
         my %purpose_restrictions;
 
-        foreach my $restrict_type ( keys %{$restriction_map} ) {
-            my $vendors = $restriction_map->{$restrict_type}->all;
+        foreach my $restriction_type ( keys %{$restriction_map} ) {
+            my $vendors = $restriction_map->{$restriction_type}->all;
 
             foreach my $vendor ( @{$vendors} ) {
-                $purpose_restrictions{$vendor} = int($restrict_type);
+                $purpose_restrictions{$vendor} = int($restriction_type);
             }
         }
 
@@ -147,7 +156,7 @@ Return true for a given combination of purpose id, restriction type and vendor
     my $purpose_id = 1;
     my $restriction_type = 0;
     my $vendor = 284;
-    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
+    my $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
 
 =head2 TO_JSON
 
