@@ -22,7 +22,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.100";
+our $VERSION = "0.200";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -105,6 +105,14 @@ sub Parse {
 
     $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
+
+    if ( exists $opts{prefetch} ) {
+        my $prefetch = $opts{prefetch};
+
+        $prefetch = [$prefetch] if ref($prefetch) ne ref( [] );
+
+        $options{prefetch} = $prefetch;
+    }
 
     my $self = {
         core_data         => $segments->{core_data},
@@ -325,10 +333,28 @@ sub vendor_legitimate_interest {
 }
 
 sub check_publisher_restriction {
-    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+    my $self = shift;
+
+    my ( $purpose_id, $restriction_type, $vendor_id );
+
+    if ( scalar(@_) == 6 ) {
+        my (%opts) = @_;
+
+        $purpose_id       = $opts{purpose_id};
+        $restriction_type = $opts{restriction_type};
+        $vendor_id        = $opts{vendor_id};
+    }
+
+    ( $purpose_id, $restriction_type, $vendor_id ) = @_;
 
     return $self->{publisher}
-      ->check_restriction( $purpose_id, $restrict_type, $vendor );
+      ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+}
+
+sub publisher_restrictions {
+    my ( $self, $vendor_id ) = @_;
+
+    return $self->{publisher}->restrictions($vendor_id);
 }
 
 sub publisher_tc {
@@ -493,10 +519,10 @@ sub _parse_vendor_section {
 
     # parse vendor legitimate interest
 
-    my $pub_restrict_offset =
+    my $pub_restriction_offset =
       $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
 
-    return $pub_restrict_offset;
+    return $pub_restriction_offset;
 }
 
 sub _parse_vendor_consents {
@@ -515,22 +541,22 @@ sub _parse_vendor_consents {
 sub _parse_vendor_legitimate_interests {
     my ( $self, $legitimate_interest_offset ) = @_;
 
-    my ( $vendor_legitimate_interests, $pub_restrict_offset ) =
+    my ( $vendor_legitimate_interests, $pub_restriction_offset ) =
       $self->_parse_bitfield_or_range(
         $legitimate_interest_offset,
       );
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
-    return $pub_restrict_offset;
+    return $pub_restriction_offset;
 }
 
 sub _parse_publisher_section {
-    my ( $self, $pub_restrict_offset ) = @_;
+    my ( $self, $pub_restriction_offset ) = @_;
 
     # parse public restrictions
 
-    my $core_data      = substr( $self->{core_data}, $pub_restrict_offset );
+    my $core_data      = substr( $self->{core_data}, $pub_restriction_offset );
     my $core_data_size = length( $self->{core_data} );
 
     my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
@@ -652,7 +678,7 @@ GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser
 
 =head1 VERSION
 
-Version 0.100
+Version 0.200
 
 =head1 SYNOPSIS
 
@@ -740,11 +766,30 @@ or
             date_format    => '%Y%m%d',    # yyymmdd
         },
         strict => 1,
+        prefetch => 284,
     );
 
-Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
+Parse may receive an optional hash with the following parameters:
 
 =over
+
+=item *
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
+
+=item *
+
+The C<prefetch> option receives one (as scalar) or more (as arrayref) vendor ids. 
+
+This is useful when parsing a range based consent string, since we need to visit all ranges to find a particular id.
+
+=item *
+
+C<json> is hashref with the following properties used to customize the json format:
+
+=over 
 
 =item *
 
@@ -776,9 +821,7 @@ except if the option C<use_epoch> is true.
 
 =back
 
-On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
-
-The C<strict> mode is disabled by default.
+=back
 
 =head1 METHODS
 
@@ -934,6 +977,13 @@ It true, there is a publisher restriction of certain type, for a given purpose i
     # with restriction type 0 'Purpose Flatly Not Allowed by Publisher'
     my $ok = $instance->check_publisher_restriction(1, 0, 284);
 
+or
+
+    my $ok = $instance->check_publisher_restriction(
+        purpose_id       => 1, 
+        restriction_type => 0,  
+        vendor_id        => 284);
+
 Version 2.0 of the Framework introduced the ability for publishers to signal restrictions on how vendors may process personal data. Restrictions can be of two types:
 
 =over
@@ -965,6 +1015,10 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 publisher_restrictions
+
+Similar to L</check_publisher_restriction> but return an hashref of purpose => { restriction type => bool } for a given vendor.
 
 =head2 publisher_tc
 

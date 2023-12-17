@@ -1,3 +1,11 @@
+0.200
+  - refactor constants, stop use dualvars
+  - validate parameters on method check_publisher_restriction
+  - add method publisher_restrictions by vendor id
+  - add prefetch option to cache vendor ids when the consent string is range based. 
+It is 2x faster check consent on a prefetched vendor than a regular one if the consent is range based.
+Without increase the Parsing time.
+
 0.100
   - parse publisher tc section if available
   - add strict mode (disabled by default) to validate the consent string version

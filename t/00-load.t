@@ -42,9 +42,9 @@ subtest "check interfaces" => sub {
       @role_decoder_methods, qw<all>;
 
     can_ok 'GDPR::IAB::TCFv2::PublisherRestrictions', @role_base_methods,
-      qw<check_restriction>;
+      qw<check_restriction restrictions>;
     can_ok 'GDPR::IAB::TCFv2::Publisher', @role_base_methods,
-      qw<check_restriction>;
+      qw<check_restriction restrictions>;
     can_ok 'GDPR::IAB::TCFv2::PublisherTC', @role_base_methods,
       qw<num_custom_purposes
       is_purpose_consent_allowed

@@ -66,14 +66,44 @@ sub Parse {
     return $self;
 }
 
+sub restrictions {
+    my ( $self, $vendor_id ) = @_;
+
+    my %restrictions;
+
+    foreach my $purpose_id ( keys %{ $self->{restrictions} } ) {
+        foreach my $restriction_type (
+            keys %{ $self->{restrictions}->{$purpose_id} } )
+        {
+            if ( $self->{restrictions}->{$purpose_id}->{$restriction_type}
+                ->contains($vendor_id) )
+            {
+                $restrictions{$purpose_id} ||= {};
+                $restrictions{$purpose_id}->{$restriction_type} = 1;
+            }
+        }
+    }
+
+    return \%restrictions;
+}
+
 sub check_restriction {
-    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+    my $self = shift;
+
+    my $nargs = scalar(@_);
+
+    croak "missing arguments: purpose id, restriction type and vendor id"
+      if $nargs == 0;
+    croak "missing arguments: restriction type and vendor id" if $nargs == 1;
+    croak "missing argument: vendor id"                       if $nargs == 2;
+
+    my ( $purpose_id, $restriction_type, $vendor_id ) = @_;
 
     return 0
-      unless exists $self->{restrictions}->{$purpose_id}->{$restrict_type};
+      unless exists $self->{restrictions}->{$purpose_id}->{$restriction_type};
 
-    return $self->{restrictions}->{$purpose_id}->{$restrict_type}
-      ->contains($vendor);
+    return $self->{restrictions}->{$purpose_id}->{$restriction_type}
+      ->contains($vendor_id);
 }
 
 sub TO_JSON {
@@ -86,11 +116,11 @@ sub TO_JSON {
 
         my %purpose_restrictions;
 
-        foreach my $restrict_type ( keys %{$restriction_map} ) {
-            my $vendors = $restriction_map->{$restrict_type}->all;
+        foreach my $restriction_type ( keys %{$restriction_map} ) {
+            my $vendors = $restriction_map->{$restriction_type}->all;
 
             foreach my $vendor ( @{$vendors} ) {
-                $purpose_restrictions{$vendor} = int($restrict_type);
+                $purpose_restrictions{$vendor} = int($restriction_type);
             }
         }
 
@@ -146,8 +176,17 @@ Return true for a given combination of purpose id, restriction type and vendor
 
     my $purpose_id = 1;
     my $restriction_type = 0;
-    my $vendor = 284;
-    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
+    my $vendor_id = 284;
+    my $ok = $object->check_restriction($purpose_id, $restriction_type, $vendor_id);
+
+=head2 restrictions
+
+Return a hashref of purpose => { restriction type => bool } for a given vendor id.
+
+Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
+
+    my $restrictions = $object->restrictions(32);
+    # returns { 7 => { 1 => 1 } }
 
 =head2 TO_JSON
 
