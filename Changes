@@ -1,3 +1,4 @@
+0.200
   - refactor constants, stop use dualvars
   - validate parameters on method check_publisher_restriction
   - add method publisher_restrictions by vendor id
