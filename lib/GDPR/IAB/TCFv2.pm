@@ -105,7 +105,14 @@ sub Parse {
 
     $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
     $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
-    $options{prefetch} = $opts{prefetch} if exists $opts{prefetch};
+
+    if ( exists $opts{prefetch} ) {
+        my $prefetch = $opts{prefetch};
+
+        $prefetch = [$prefetch] if ref($prefetch) ne ref( [] );
+
+        $options{prefetch} = $prefetch;
+    }
 
     my $self = {
         core_data         => $segments->{core_data},
@@ -741,11 +748,30 @@ or
             date_format    => '%Y%m%d',    # yyymmdd
         },
         strict => 1,
+        prefetch => 284,
     );
 
-Parse may receive an optional hash of parameters: C<strict> (boolean) and C<json> (hashref with the following properties):
+Parse may receive an optional hash with the following parameters:
 
 =over
+
+=item *
+
+On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
+
+The C<strict> mode is disabled by default.
+
+=item *
+
+The C<prefetch> option receives one (as scalar) or more (as arrayref) vendor ids. 
+
+This is useful when parsing a range based consent string, since we need to visit all ranges to find a particular id.
+
+=item *
+
+C<json> is hashref with the following properties used to customize the json format:
+
+=over 
 
 =item *
 
@@ -777,9 +803,7 @@ except if the option C<use_epoch> is true.
 
 =back
 
-On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
-
-The C<strict> mode is disabled by default.
+=back
 
 =head1 METHODS
 
