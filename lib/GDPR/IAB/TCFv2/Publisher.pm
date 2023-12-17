@@ -51,10 +51,16 @@ sub Parse {
 }
 
 sub check_restriction {
-    my ( $self, $purpose_id, $restrict_type, $vendor ) = @_;
+    my ( $self, $purpose_id, $restriction_type, $vendor_id ) = @_;
 
     return $self->{restrictions}
-      ->check_restriction( $purpose_id, $restrict_type, $vendor );
+      ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+}
+
+sub restrictions {
+    my ( $self, $vendor_id ) = @_;
+
+    return $self->{restrictions}->restrictions($vendor_id);
 }
 
 sub publisher_tc {
@@ -95,7 +101,7 @@ Combines the creation of L<GDPR::IAB::TCFv2::PublisherRestrictions> and L<GDPR::
         options           => { json => ... },
     );
 
-    say "there is publisher restriction on purpose id 1, type 0 on vendor 284"
+    say "there is publisher restriction on purpose id 1, type 0 on vendor_id 284"
         if $publisher->check_restriction(1, 0, 284);
 
 =head1 CONSTRUCTOR
@@ -126,12 +132,21 @@ Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to
 
 =head2 check_restriction
 
-Return true for a given combination of purpose id, restriction type and vendor 
+Return true for a given combination of purpose id, restriction type and vendor_id 
 
     my $purpose_id = 1;
     my $restriction_type = 0;
-    my $vendor = 284;
-    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
+    my $vendor_id = 284;
+    $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor_id);
+
+=head2 restrictions
+
+Return a map of purpose id => restriction type for a given vendor id
+
+Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
+
+    my $restrictions = $range->restrictions(32);
+    # returns {  7 => 1 }
 
 =head2 publisher_tc
 
@@ -155,7 +170,7 @@ Returns a hashref with the following format:
                 # 0 - Not Allowed
                 # 1 - Require Consent
                 # 2 - Require Legitimate Interest
-                '[vendor id]' => 1,
+                '[vendor_id id]' => 1,
             },
         }
     }

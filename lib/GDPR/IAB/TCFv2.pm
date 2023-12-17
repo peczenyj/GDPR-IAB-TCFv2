@@ -351,6 +351,12 @@ sub check_publisher_restriction {
       ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
 }
 
+sub publisher_restrictions {
+    my ( $self, $vendor_id ) = @_;
+
+    return $self->{publisher}->restrictions($vendor_id);
+}
+
 sub publisher_tc {
     my $self = shift;
 
@@ -1009,6 +1015,10 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 publisher_restrictions
+
+Similar to L</check_publisher_restriction> but return an hashref of purpose => restriction type for a given vendor (if any).
 
 =head2 publisher_tc
 

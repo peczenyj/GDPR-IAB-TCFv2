@@ -66,6 +66,26 @@ sub Parse {
     return $self;
 }
 
+sub restrictions {
+    my ( $self, $vendor_id ) = @_;
+
+    my %restrictions;
+
+    foreach my $purpose_id ( keys %{ $self->{restrictions} } ) {
+        foreach my $restriction_type (
+            keys %{ $self->{restrictions}->{$purpose_id} } )
+        {
+            if ( $self->{restrictions}->{$purpose_id}->{$restriction_type}
+                ->contains($vendor_id) )
+            {
+                $restrictions{$purpose_id} = $restriction_type;
+            }
+        }
+    }
+
+    return \%restrictions;
+}
+
 sub check_restriction {
     my $self = shift;
 
@@ -155,8 +175,17 @@ Return true for a given combination of purpose id, restriction type and vendor
 
     my $purpose_id = 1;
     my $restriction_type = 0;
-    my $vendor = 284;
-    my $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor);
+    my $vendor_id = 284;
+    my $ok = $range->check_restriction($purpose_id, $restriction_type, $vendor_id);
+
+=head2 restrictions
+
+Return a map of purpose id => restriction type for a given vendor id
+
+Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
+
+    my $restrictions = $range->restrictions(32);
+    # returns {  7 => 1 }
 
 =head2 TO_JSON
 
