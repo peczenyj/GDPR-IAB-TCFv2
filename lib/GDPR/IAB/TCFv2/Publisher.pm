@@ -146,7 +146,7 @@ Return a hashref of purpose => { restriction type => bool } for a given vendor i
 Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this.
 
     my $restrictions = $publisher->restrictions(32);
-    # returns {  7 => { 1 => 1 } }
+    # returns { 7 => { 1 => 1 } }
 
 =head2 publisher_tc
 
