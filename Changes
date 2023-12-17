@@ -1,3 +1,7 @@
+  - validate parameters on method check_publisher_restriction
+  - add method publisher_restrictions by vendor id
+  - add prefetch option to cache vendor ids when the consent string is range based
+
 0.100
   - parse publisher tc section if available
   - add strict mode (disabled by default) to validate the consent string version
