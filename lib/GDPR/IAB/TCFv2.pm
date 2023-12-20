@@ -22,7 +22,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.200";
+our $VERSION = "0.201";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -61,31 +61,6 @@ use constant {
 };
 
 use overload q<""> => \&tc_string;
-
-INIT {
-    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
-    {
-        no warnings q<redefine>;
-
-        *_decode_base64url = $native_decode_base64url;
-    }
-
-    eval {
-        require JSON;
-
-        if ( my $native_json_true = JSON->can("true") ) {
-            no warnings q<redefine>;
-
-            *_json_true = $native_json_true;
-        }
-
-        if ( my $native_json_false = JSON->can("false") ) {
-            no warnings q<redefine>;
-
-            *_json_false = $native_json_false;
-        }
-    };
-}
 
 # ABSTRACT: gdpr iab tcf v2 consent string parser
 
@@ -647,6 +622,32 @@ sub looksLikeIsConsentVersion2 {
       rindex( $gdpr_consent_string, CONSENT_STRING_TCF_V2->{PREFIX}, 0 ) == 0;
 }
 
+BEGIN {
+    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
+    {
+        no warnings q<redefine>;
+
+        *_decode_base64url = $native_decode_base64url;
+    }
+
+    eval {
+        require JSON;
+
+        if ( my $native_json_true = JSON->can("true") ) {
+            no warnings q<redefine>;
+
+            *_json_true = $native_json_true;
+        }
+
+        if ( my $native_json_false = JSON->can("false") ) {
+            no warnings q<redefine>;
+
+            *_json_false = $native_json_false;
+        }
+    };
+}
+
+
 1;
 __END__
 
@@ -675,10 +676,6 @@ __END__
 =head1 NAME
 
 GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
-
-=head1 VERSION
-
-Version 0.200
 
 =head1 SYNOPSIS
 

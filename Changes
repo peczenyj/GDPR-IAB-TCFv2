@@ -1,3 +1,6 @@
+0.201
+  - change subroutine redefinition from INIT to BEGIN to avoid warnings (Tiago)
+
 0.200
   - refactor constants, stop use dualvars
   - validate parameters on method check_publisher_restriction

@@ -5,13 +5,8 @@ use warnings;
 use Carp qw<croak>;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
-  get_uint2
   get_uint3
   get_uint6
-  get_uint12
-  get_uint16
-  get_uint36
-  get_char6_pair
 >;
 
 use constant {
