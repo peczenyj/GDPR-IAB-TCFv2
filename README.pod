@@ -24,10 +24,6 @@
 
 GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
 
-=head1 VERSION
-
-Version 0.200
-
 =head1 SYNOPSIS
 
 The purpose of this package is to parse Transparency & Consent String (TC String) as defined by IAB version 2.
