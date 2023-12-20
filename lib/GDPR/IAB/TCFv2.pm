@@ -62,31 +62,6 @@ use constant {
 
 use overload q<""> => \&tc_string;
 
-INIT {
-    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
-    {
-        no warnings q<redefine>;
-
-        *_decode_base64url = $native_decode_base64url;
-    }
-
-    eval {
-        require JSON;
-
-        if ( my $native_json_true = JSON->can("true") ) {
-            no warnings q<redefine>;
-
-            *_json_true = $native_json_true;
-        }
-
-        if ( my $native_json_false = JSON->can("false") ) {
-            no warnings q<redefine>;
-
-            *_json_false = $native_json_false;
-        }
-    };
-}
-
 # ABSTRACT: gdpr iab tcf v2 consent string parser
 
 sub Parse {
@@ -646,6 +621,32 @@ sub looksLikeIsConsentVersion2 {
     return
       rindex( $gdpr_consent_string, CONSENT_STRING_TCF_V2->{PREFIX}, 0 ) == 0;
 }
+
+BEGIN {
+    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
+    {
+        no warnings q<redefine>;
+
+        *_decode_base64url = $native_decode_base64url;
+    }
+
+    eval {
+        require JSON;
+
+        if ( my $native_json_true = JSON->can("true") ) {
+            no warnings q<redefine>;
+
+            *_json_true = $native_json_true;
+        }
+
+        if ( my $native_json_false = JSON->can("false") ) {
+            no warnings q<redefine>;
+
+            *_json_false = $native_json_false;
+        }
+    };
+}
+
 
 1;
 __END__
