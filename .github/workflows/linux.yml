@@ -22,6 +22,8 @@ jobs:
         with:
           perl-version: ${{ matrix.perl }}
       - run: perl -V
+      - run: cpanm -v
+      - run: cpanm File::ShareDir::Install Test::CheckManifest Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod
       - run: cpanm --installdeps .
       - name: Run Tests
         run: prove -lr t
