@@ -516,7 +516,7 @@ sub _parse_vendor_consents {
 sub _parse_vendor_legitimate_interests {
     my ( $self, $legitimate_interest_offset ) = @_;
 
-    my $data_size = length($self->{core_data});
+    my $data_size = length( $self->{core_data} );
 
     my ( $vendor_legitimate_interests, $pub_restriction_offset ) =
       $self->_parse_bitfield_or_range(
@@ -525,8 +525,9 @@ sub _parse_vendor_legitimate_interests {
             my $legitimate_interest_start = shift;
 
             croak "invalid consent data: no legitimate interest start position"
-                if $legitimate_interest_start >= $data_size;
-        });
+              if $legitimate_interest_start >= $data_size;
+        }
+      );
 
     $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
