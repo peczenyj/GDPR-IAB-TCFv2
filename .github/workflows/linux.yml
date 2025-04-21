@@ -23,8 +23,13 @@ jobs:
           perl-version: ${{ matrix.perl }}
       - run: perl -V
       - run: cpanm --installdeps .
-      - run: cpanm -n TAP::Formatter::GitHubActions
-      - run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
+      - name: Run Tests
+        run: prove -lr t
+      - name: Run tests (with tap formatter github actions)
+        if: ${{ matrix.coverage }}
+        run: |
+          cpanm -n TAP::Formatter::GitHubActions
+          prove --merge --formatter TAP::Formatter::GitHubActions -l t
       - name: Run tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
