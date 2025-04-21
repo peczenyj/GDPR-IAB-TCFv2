@@ -8,13 +8,12 @@ jobs:
     runs-on: macOS-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Perl
-        run: brew install perl
-      - name: perl -V
-        run: perl -V
-      - name: Install Dependencies
-        run: |
-          curl -L https://cpanmin.us | perl - --installdeps .
-          curl -L https://cpanmin.us | perl - -n TAP::Formatter::GitHubActions
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: "5.40"
+      - run: perl -V
+      - run: cpanm --installdeps .
+      - run: cpanm -n TAP::Formatter::GitHubActions
       - name: Run Tests
         run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
+
