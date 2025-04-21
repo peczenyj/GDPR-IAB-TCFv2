@@ -11,10 +11,10 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         perl-version:
-          - '5.8'
-          - '5.12'
+          - '5.8-slim-buster'
+          - '5.12-slim-buster'
         include:
-          - perl-version: '5.38'
+          - perl-version: '5.40'
             coverage: true
     container: 
       image: perl:${{ matrix.perl-version }}
