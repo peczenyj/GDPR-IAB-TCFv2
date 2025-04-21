@@ -1,43 +1,30 @@
+---
 name: linux
 
 on:
   - push
 
 jobs:
-  perl:
+  build:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        perl-version:
-          - '5.8-slim-buster'
-          - '5.12-slim-buster'
+        perl: ["5.8", "5.12"]
         include:
-          - perl-version: '5.40'
+          - perl: '5.40'
             coverage: true
-    container: 
-      image: perl:${{ matrix.perl-version }}
+    name: Perl ${{ matrix.perl }} on ubuntu
     steps:
       - uses: actions/checkout@v4
-      - name: Install git
-        run: "apt-get update && apt-get install -y git curl"
-      - name: Configure git
-        run: git config --system --add safe.directory '*'
-      - name: perl -V
-        run: perl -V
-      - name: Install Dependencies
-        run: |
-          curl -sL https://cpanmin.us/ | perl - -nq --with-develop --installdeps .
-      - name: Fix ExtUtils::MakeMaker (for Perl 5.16 and 5.18)
-        run: cpanm -n App::cpanminus ExtUtils::MakeMaker
-      - name: Run Tests
-        run: prove -lr t
-      - name: Run tests (with tap formatter github actions)
-        if: ${{ matrix.coverage }}
-        run: |
-          cpanm -n TAP::Formatter::GitHubActions
-          prove --merge --formatter TAP::Formatter::GitHubActions -l t
+      - name: Set up perl
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: ${{ matrix.perl }}
+      - run: perl -V
+      - run: cpanm --installdeps .
+      - run: cpanm -n TAP::Formatter::GitHubActions
+      - run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
       - name: Run tests (with coverage)
         if: ${{ matrix.coverage }}
         env:
