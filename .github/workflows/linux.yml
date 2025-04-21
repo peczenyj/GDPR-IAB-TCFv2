@@ -20,6 +20,8 @@ jobs:
       image: perl:${{ matrix.perl-version }}
     steps:
       - uses: actions/checkout@v3
+      - name: Install git
+        run: "apt-get update && apt-get install -y git"
       - name: Configure git
         run: git config --system --add safe.directory '*'
       - name: perl -V
