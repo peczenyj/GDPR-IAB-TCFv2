@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        perl: ["5.8", "5.12"]
+        perl: ["5.12.2"]
         include:
           - perl: '5.40'
             coverage: true
