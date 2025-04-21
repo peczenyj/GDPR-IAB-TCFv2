@@ -11,15 +11,17 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         perl-version:
-          - '5.8'
-          - '5.12'
+          - '5.8-slim-buster'
+          - '5.12-slim-buster'
         include:
-          - perl-version: '5.38'
+          - perl-version: '5.40'
             coverage: true
     container: 
       image: perl:${{ matrix.perl-version }}
     steps:
       - uses: actions/checkout@v3
+      - name: Install git
+        run: "apt-get update && apt-get install -y git curl"
       - name: Configure git
         run: git config --system --add safe.directory '*'
       - name: perl -V

@@ -11,16 +11,13 @@ jobs:
         run: |
           git config --global core.autocrlf false
           git config --global core.eol lf
-      - uses: actions/checkout@v3
-      - name: Set up Perl
-        run: |
-          choco install strawberryperl
-          echo "C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      - name: perl -V
-        run: perl -V
-      - name: Install Dependencies
-        run: |
-          curl -L https://cpanmin.us | perl - --installdeps .
-          curl -L https://cpanmin.us | perl - -n TAP::Formatter::GitHubActions
+      - uses: actions/checkout@v4
+      - uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: "5.32"
+          distribution: strawberry
+      - run: perl -V
+      - run: cpanm --installdeps .
+      - run: cpanm -n TAP::Formatter::GitHubActions
       - name: Run Tests
         run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
