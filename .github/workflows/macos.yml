@@ -1,3 +1,4 @@
+---
 name: macos
 
 on:
@@ -16,4 +17,3 @@ jobs:
       - run: cpanm -n TAP::Formatter::GitHubActions
       - name: Run Tests
         run: prove --merge --formatter TAP::Formatter::GitHubActions -l t
-

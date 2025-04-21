@@ -1,6 +1,7 @@
+---
 name: perlcritic
 
-on: 
+on:
   - push
 
 jobs:
