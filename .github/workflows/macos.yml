@@ -7,7 +7,7 @@ jobs:
   perl:
     runs-on: macOS-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Perl
         run: brew install perl
       - name: perl -V
