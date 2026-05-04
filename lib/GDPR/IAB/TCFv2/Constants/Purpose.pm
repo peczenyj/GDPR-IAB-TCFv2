@@ -15,24 +15,23 @@ use constant {
     AdPerformance            => 7,
     ContentPerformance       => 8,
     MarketResearch           => 9,
-    DevelopImprove           => 10,
-    SelectContent            => 11,
+    DevelopImprove                => 10,
+    UseLimitedDataToSelectContent => 11,
 };
 
 use constant PurposeDescription => {
     InfoStorageAccess        => "Store and/or access information on a device",
     BasicAdserving           => "Use limited data to select advertising",
-    PersonalizationProfile   => "Create profiles for personalised advertising",
-    PersonalizationSelection =>
-      "Use profiles to select personalised advertising",
-    ContentProfile     => "Create profiles to personalise content",
-    ContentSelection   => "Use profiles to select personalised content",
-    AdPerformance      => "Measure advertising performance",
-    ContentPerformance => "Measure content performance",
-    MarketResearch     =>
+    PersonalizationProfile   => "Create a personalised ads profile",
+    PersonalizationSelection => "Select personalised ads",
+    ContentProfile           => "Create a personalised content profile",
+    ContentSelection         => "Select personalised content",
+    AdPerformance            => "Measure advertising performance",
+    ContentPerformance       => "Measure content performance",
+    MarketResearch           =>
       "Understand audiences through statistics or combinations of data from different sources",
-    DevelopImprove => "Develop and improve services",
-    SelectContent  => "Use limited data to select content",
+    DevelopImprove                => "Develop and improve services",
+    UseLimitedDataToSelectContent => "Use limited data to select content",
 };
 
 our @EXPORT_OK = qw<
@@ -46,7 +45,7 @@ our @EXPORT_OK = qw<
   ContentPerformance
   MarketResearch
   DevelopImprove
-  SelectContent
+  UseLimitedDataToSelectContent
   PurposeDescription
 >;
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
@@ -56,7 +55,7 @@ our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 __END__
 =head1 NAME
 
-GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.2 purposes
+GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.3 purposes
 
 =head1 SYNOPSIS
 
@@ -121,7 +120,7 @@ A large producer of watercolour paints wants to carry out an online advertising 
 
 =head2  PersonalizationProfile
 
-Purpose id 3: Create profiles for personalised advertising
+Purpose id 3: Create a personalised ads profile
 
 Information about your activity on this service (such as forms you submit, content you look at) can be stored and combined with other information about you (for example, information from your previous activity on this service and other websites or apps) or similar users. This is then used to build or improve a profile about you (that might include possible interests and personal aspects). Your profile can be used (also later) to present advertising that appears more relevant based on your possible interests by this and other entities.
 
@@ -141,9 +140,7 @@ An apparel company wishes to promote its new line of high-end baby clothes. It g
 
 =head2  PersonalizationSelection
 
-Purpose id 4: Use profiles to select personalised advertising 
-
-Advertising presented to you on this service can be based on your advertising profiles, which can reflect your activity on this service or other websites or apps (like the forms you submit, content you look at), possible interests and personal aspects.
+Purpose id 4: Select personalised ads
 
 Illustrations:
 
@@ -161,7 +158,7 @@ A profile created for personalised advertising in relation to a person having se
 
 =head2  ContentProfile
 	
-Purpose id 5: Create profiles to personalise content
+Purpose id 5: Create a personalised content profile
 
 Information about your activity on this service (for instance, forms you submit, non-advertising content you look at) can be stored and combined with other information about you (such as your previous activity on this service or other websites or apps) or similar users. This is then used to build or improve a profile about you (which might for example include possible interests and personal aspects). Your profile can be used (also later) to present content that appears more relevant based on your possible interests, such as by adapting the order in which content is shown to you, so that it is even easier for you to find content that matches your interests.
 
@@ -181,7 +178,7 @@ You have viewed three videos on space exploration across different TV apps. An u
 
 =head2  ContentSelection
 	
-Purpose id 6: Use profiles to select personalised content
+Purpose id 6: Select personalised content
 
 Content presented to you on this service can be based on your content personalisation profiles, which can reflect your activity on this or other services (for instance, the forms you submit, content you look at), possible interests and personal aspects, such as by adapting the order in which content is shown to you, so that it is even easier for you to find (non-advertising) content that matches your interests.
 
@@ -279,7 +276,7 @@ An advertiser is looking for a way to display ads on a new type of consumer devi
 
 =back
 
-=head2  SelectContent
+=head2  UseLimitedDataToSelectContent
 
 Purpose id 11: Use limited data to select content.
 
