@@ -996,6 +996,20 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
 
+    say "vendor 284 was disclosed" if $consent->disclosed_vendor(284);
+
+    # Validator usage
+    use GDPR::IAB::TCFv2::Validator;
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 284,
+        consent_purpose_ids => [ InfoStorageAccess ],
+    );
+
+    my $result = $validator->validate($consent);
+    say "Validation ok" if $result;
+    say "Validation failed: $result" unless $result;
+
     # Geolocation exported by GDPR::IAB::TCFv2::Constants::SpecialFeature
     say "user is opt in for special feature 'Geolocation (id 1)'" 
         if $consent->is_special_feature_opt_in(Geolocation);

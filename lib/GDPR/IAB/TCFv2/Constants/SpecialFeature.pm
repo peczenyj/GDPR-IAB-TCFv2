@@ -29,7 +29,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::Constants::SpecialFeature - TCF v2.2 special features
+GDPR::IAB::TCFv2::Constants::SpecialFeature - TCF v2.3 special features
 
 =head1 SYNOPSIS
 
