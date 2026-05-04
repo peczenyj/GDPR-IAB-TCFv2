@@ -58,17 +58,49 @@ sub _run_validation {
 
     my @reasons;
 
-    # Check Disclosed Vendors if segment exists and requested
+    $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@reasons );
+    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+
+    $self->_check_consent_purposes(
+        $tc, $vendor_id, $strict, \@reasons,
+        $stop_on_first
+    );
+    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+
+    $self->_check_li_purposes(
+        $tc, $vendor_id, $strict, \@reasons,
+        $stop_on_first
+    );
+    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+
+    $self->_check_flexible_purposes(
+        $tc, $vendor_id, $strict, \@reasons,
+        $stop_on_first
+    );
+
+    if (@reasons) {
+        return $self->_make_result( 0, \@reasons );
+    }
+
+    return $self->_make_result( 1, [] );
+}
+
+sub _check_disclosed {
+    my ( $self, $tc, $vendor_id, $check_disclosed, $reasons ) = @_;
+
     if ($check_disclosed) {
         if ( defined $tc->{disclosed_vendors_data} ) {
             unless ( $tc->disclosed_vendor($vendor_id) ) {
-                push @reasons, "vendor $vendor_id not disclosed";
-                return $self->_make_result( 0, \@reasons ) if $stop_on_first;
+                push @{$reasons}, "vendor $vendor_id not disclosed";
             }
         }
     }
+    return;
+}
 
-    # Check Consent Purposes
+sub _check_consent_purposes {
+    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
+
     foreach my $pid ( @{ $self->{consent_purpose_ids} } ) {
         unless (
             $tc->is_vendor_consent_allowed(
@@ -76,13 +108,17 @@ sub _run_validation {
             )
           )
         {
-            push @reasons,
+            push @{$reasons},
               "vendor $vendor_id not allowed for purpose $pid (consent)";
-            return $self->_make_result( 0, \@reasons ) if $stop_on_first;
+            return if $stop_on_first;
         }
     }
+    return;
+}
 
-    # Check Legitimate Interest Purposes
+sub _check_li_purposes {
+    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
+
     foreach my $pid ( @{ $self->{legitimate_interest_purpose_ids} } ) {
         unless (
             $tc->is_vendor_legitimate_interest_allowed(
@@ -90,13 +126,17 @@ sub _run_validation {
             )
           )
         {
-            push @reasons,
+            push @{$reasons},
               "vendor $vendor_id not allowed for purpose $pid (legitimate interest)";
-            return $self->_make_result( 0, \@reasons ) if $stop_on_first;
+            return if $stop_on_first;
         }
     }
+    return;
+}
 
-    # Check Flexible Purposes
+sub _check_flexible_purposes {
+    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
+
     foreach my $flex ( @{ $self->{flexible_purpose_ids} } ) {
         my ( $pid, $default_is_li );
         if ( ref($flex) eq 'HASH' ) {
@@ -114,18 +154,14 @@ sub _run_validation {
             )
           )
         {
-            push @reasons,
+            push @{$reasons},
               "vendor $vendor_id not allowed for flexible purpose $pid";
-            return $self->_make_result( 0, \@reasons ) if $stop_on_first;
+            return if $stop_on_first;
         }
     }
-
-    if (@reasons) {
-        return $self->_make_result( 0, \@reasons );
-    }
-
-    return $self->_make_result( 1, [] );
+    return;
 }
+
 
 sub _make_result {
     my ( $self, $ok, $reasons ) = @_;
