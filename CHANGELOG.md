@@ -1,4 +1,7 @@
 ## What's Changed
+* Merge Phase 4 updates
+* style: fix perltidy alignment in BitField.pm
+* docs: update changelog for Phase 4
 * Merge Phase 3 updates
 * style: fix perltidy alignment in Purpose.pm
 * docs: update changelog for Phase 3
@@ -16,14 +19,19 @@
 * Merge updated Golden File
 * Merge TO_JSON alignment
 * Merge test fix
+* Merge updated Golden File
+* Merge test fix
 * Fix test expectation for aligned TO_JSON
 * Merge updated Golden File
 * Update Golden File for TCF v2.3
 * Merge TO_JSON alignment
+* Merge TO_JSON alignment
 * Align TO_JSON output
+* Resolve conflict with complexity fix
 * Merge complexity fix
 * Merge complexity fix
 * Refactor Validator to reduce complexity (fix perlcritic)
+* Phase 5: Implement CMP Validation and integrate with Validator
 * Move benchmark to bench/ folder
 * Phase 4: Performance Optimizations
 * Phase 3: Alignment & Cleanup
