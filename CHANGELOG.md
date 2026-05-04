@@ -1,3 +1,13 @@
+## What's Changed
+* update doc
+* Add Golden File Test System baseline
+* Phase 0: Core Logic Expansion (Fixed linting & tidy)
+* Phase 0: Core Logic Expansion (Fixed linting & tidy)
+* Phase 0: Core Logic Expansion
+* fix yaml lint issues
+* normalize macos
+* update changelog
+
 ## What's Changed in v0.203
 * update changelog
 * bump version to v0.203

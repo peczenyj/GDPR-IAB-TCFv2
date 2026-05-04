@@ -27,7 +27,7 @@ to render it in a terminal:
 
     git clone --origin upstream git://github.com/peczenyj/GDPR-IAB-TCFv2.git
     cd GDPR-IAB-TCFv2
-    git checkout main
+    git checkout devel
 
 =item 2. Install build dependencies
 
@@ -37,7 +37,7 @@ Not required for doc patches.
 
 =item 3. Make your fix/feature
 
-    git checkout -b <my-patch> main
+    git checkout -b <my-patch> devel
 
     # edit files and add modification
 
@@ -76,19 +76,19 @@ Redo from step 3.
 
 =item * Bump C<$VERSION>
 
-    git checkout main
+    git checkout devel
     # Bump version number
     $EDITOR lib/GDPR/IAB/TCFv2.pm
     # Update changelog
-    $EDITOR Changes
-    # update readme
-    pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md
+    git cliff -o CHANGELOG.md
+    # update pod documentation
+    # (README.pod is maintained directly)
     git add .
     git commit
 
 =item * Release
 
-    git checkout main
+    git checkout devel
     perl Makefile.PL
     make
     make test
