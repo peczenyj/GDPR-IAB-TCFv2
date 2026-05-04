@@ -733,4 +733,92 @@ subtest "check if looks like tcf v2 consent string" => sub {
     done_testing;
 };
 
+subtest "multi-purpose and vendor explicit methods" => sub {
+    my $tc_string =
+      'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
+    my $consent = GDPR::IAB::TCFv2->Parse($tc_string);
+
+    subtest "is_purpose_consent_allowed with multiple IDs" => sub {
+        ok $consent->is_purpose_consent_allowed( 1, 3 ),
+          "purposes 1 and 3 are allowed";
+        ok !$consent->is_purpose_consent_allowed( 1, 2 ),
+          "purpose 2 is not allowed, so (1, 2) is false";
+        throws_ok { $consent->is_purpose_consent_allowed() }
+        qr/method is_purpose_consent_allowed requires at least one argument/,
+          "throws if no arguments";
+    };
+
+    subtest "is_purpose_legitimate_interest_allowed with multiple IDs" => sub {
+        ok $consent->is_purpose_legitimate_interest_allowed( 3, 4 ),
+          "purposes 3 and 4 are allowed";
+        ok !$consent->is_purpose_legitimate_interest_allowed( 3, 1 ),
+          "purpose 1 is not allowed, so (3, 1) is false";
+        throws_ok { $consent->is_purpose_legitimate_interest_allowed() }
+        qr/method is_purpose_legitimate_interest_allowed requires at least one argument/,
+          "throws if no arguments";
+    };
+
+    subtest "is_vendor_consent_allowed" => sub {
+
+        # Weborama (284) is not in this string (max vendor 115)
+        ok !$consent->is_vendor_consent_allowed( 284, 1 ),
+          "vendor 284 is not in consent list";
+
+        # Vendor 2 is in consent list, purpose 1 is allowed
+        ok $consent->is_vendor_consent_allowed( 2, 1 ),
+          "vendor 2, purpose 1 allowed";
+
+        # Vendor 2, purposes 1 and 3 allowed
+        ok $consent->is_vendor_consent_allowed( 2, 1, 3 ),
+          "vendor 2, purposes 1 and 3 allowed";
+
+        # Vendor 2, purpose 2 NOT allowed
+        ok !$consent->is_vendor_consent_allowed( 2, 2 ),
+          "vendor 2, purpose 2 NOT allowed";
+    };
+
+    subtest "is_vendor_legitimate_interest_allowed" => sub {
+
+        # Vendor 9 is in LI list, purpose 3 is allowed
+        ok $consent->is_vendor_legitimate_interest_allowed( 9, 3 ),
+          "vendor 9, purpose 3 allowed";
+
+        # Vendor 9, purpose 1 NOT allowed
+        ok !$consent->is_vendor_legitimate_interest_allowed( 9, 1 ),
+          "vendor 9, purpose 1 NOT allowed";
+    };
+
+    subtest "is_vendor_allowed_for_any_basis" => sub {
+
+        # Vendor 2 (Consent)
+        ok $consent->is_vendor_allowed_for_any_basis( 2, 1 ),
+          "vendor 2 allowed for purpose 1 (via consent)";
+
+        # Vendor 9 (LI)
+        ok $consent->is_vendor_allowed_for_any_basis( 9, 3 ),
+          "vendor 9 allowed for purpose 3 (via LI)";
+
+        # Vendor 1000 (Neither)
+        ok !$consent->is_vendor_allowed_for_any_basis( 1000, 1 ),
+          "vendor 1000 not allowed";
+    };
+
+    subtest "vendor methods with publisher restrictions" => sub {
+        my $tc_restricted =
+          'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+        my $c = GDPR::IAB::TCFv2->Parse($tc_restricted);
+
+        # Type 1 restriction for vendor 32 on purpose 7 means MUST use Consent.
+        # So is_vendor_legitimate_interest_allowed(32, 7) must be false.
+        ok !$c->is_vendor_legitimate_interest_allowed( 32, 7 ),
+          "vendor 32, purpose 7: restricted Type 1 (Require Consent) -> LI allowed is false";
+
+# In this string, vendor 32 and purpose 7 consent bits are 0, so it should be false.
+        ok !$c->is_vendor_consent_allowed( 32, 7 ),
+          "vendor 32, purpose 7: consent bit is 0 -> consent allowed is false";
+    };
+
+    done_testing;
+};
+
 done_testing;

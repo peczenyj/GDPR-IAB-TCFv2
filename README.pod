@@ -1,3 +1,4 @@
+
 =pod
 
 =encoding utf8
@@ -259,16 +260,24 @@ See also: L<GDPR::IAB::TCFv2::Constants::SpecialFeature>.
 If true means Consent.
 
 The user's consent value for each Purpose established on the legal basis of consent.
+Accepts one or more Purpose IDs. Returns true if all Purposes have consent.
 
     my $ok = $instance->is_purpose_consent_allowed(1);
+    my $all_ok = $instance->is_purpose_consent_allowed(1, 2, 3);
+
+Throws an exception if no arguments are provided or if an ID is invalid.
 
 See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
 =head2 is_purpose_legitimate_interest_allowed
 
 The user's consent value for each Purpose established on the legal basis of legitimate interest.
+Accepts one or more Purpose IDs. Returns true if all Purposes have legitimate interest.
 
     my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+    my $all_ok = $instance->is_purpose_legitimate_interest_allowed(1, 2, 3);
+
+Throws an exception if no arguments are provided or if an ID is invalid.
 
 See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
@@ -312,6 +321,30 @@ If true, legitimate interest established.
 The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
+
+=head2 is_vendor_consent_allowed
+
+Check if a vendor has consent for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_consent_allowed(284, 1, 2, 3)) {
+        # ...
+    }
+
+=head2 is_vendor_legitimate_interest_allowed
+
+Check if a vendor has legitimate interest for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_legitimate_interest_allowed(284, 2, 4)) {
+        # ...
+    }
+
+=head2 is_vendor_allowed_for_any_basis
+
+Check if a vendor has either consent or legitimate interest for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_allowed_for_any_basis(284, 1, 2)) {
+        # ...
+    }
 
 =head2 check_publisher_restriction
 
@@ -359,6 +392,14 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 is_vendor_allowed_for_flexible_purpose
+
+Check if a vendor is allowed for a flexible purpose, given a default legal basis (true if Legitimate Interest, false if Consent).
+
+    if ($consent->is_vendor_allowed_for_flexible_purpose(284, 2, 1)) {
+        # vendor 284, purpose 2, default is LI
+    }
 
 =head2 publisher_restrictions
 
