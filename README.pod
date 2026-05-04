@@ -515,6 +515,49 @@ using L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. This behaviour can be 
 
 Will check if a given tc string starts with a literal C<C>.
 
+=head1 VALIDATOR
+
+C<GDPR::IAB::TCFv2::Validator> provides a high-level interface for validating TC Strings against specific business and compliance rules.
+
+    use GDPR::IAB::TCFv2::Validator;
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 284,
+        consent_purpose_ids             => [1, 3],
+        legitimate_interest_purpose_ids => [2, 4],
+        cmp_validator                   => { file => 't/corpus/cmp-list.json' }
+    );
+
+    my $result = $validator->validate($tc_string);
+
+    if ($result) {
+        print "Valid compliance string\n";
+    } else {
+        print "Failure reasons:\n", $result->reasons, "\n";
+    }
+
+See L<GDPR::IAB::TCFv2::Validator> for details.
+
+=head1 CMP VALIDATION
+
+C<GDPR::IAB::TCFv2::CMPValidator> validates Consent Management Platform (CMP) IDs against the IAB TCF Registry.
+
+    use GDPR::IAB::TCFv2::CMPValidator;
+
+    my $v = GDPR::IAB::TCFv2::CMPValidator->new(
+        file => 't/corpus/cmp-list.json'
+    );
+
+    if ($v->is_valid(21)) {
+        print "CMP 21 is valid and not deleted\n";
+    }
+
+=head2 IMPORTANT: REFRESH POLICY
+
+The library B<does not automatically refresh> the CMP list from the IAB. It is the responsibility of the calling application to fetch and reload the list (e.g., via a cron job or manual update method) to ensure compliance with the latest IAB registry.
+
+See L<GDPR::IAB::TCFv2::CMPValidator> for details.
+
 =head1 SEE ALSO
 
 The original documentation of the L<TCF v2 from IAB documentation|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md>.
@@ -555,5 +598,6 @@ ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-=cut
 
+
+=cut

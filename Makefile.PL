@@ -12,6 +12,9 @@ WriteMakefile(
         'Test::More'      => 0.94,
         'Test::Pod'       => 0,
     },
+    PREREQ_PM => {
+        'Time::Piece' => 0,
+    },
     (   eval { ExtUtils::MakeMaker->VERSION(6.46) }
         ? ( META_MERGE => {
                 'meta-spec'    => { version => 2 },
@@ -30,7 +33,8 @@ WriteMakefile(
                     },
                 },
                 recommends => {
-                    'JSON' => 0,
+                    'JSON'       => 0,
+                    'HTTP::Tiny' => 0,
                 },
                 x_authority => 'cpan:PACMAN',
             }
