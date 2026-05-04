@@ -1,3 +1,19 @@
+## What's Changed
+* Merge Phase 0 updates
+* update documentation
+* update doc
+* Fix test expectation for aligned TO_JSON
+* Update Golden File for TCF v2.3
+* Align TO_JSON output
+* Phase 1: TCF v2.3 & Segment Robustness
+* Add Golden File Test System baseline
+* Phase 0: Core Logic Expansion (Fixed linting & tidy)
+* Phase 0: Core Logic Expansion (Fixed linting & tidy)
+* Phase 0: Core Logic Expansion
+* fix yaml lint issues
+* normalize macos
+* update changelog
+
 ## What's Changed in v0.203
 * update changelog
 * bump version to v0.203
