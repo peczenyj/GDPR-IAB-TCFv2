@@ -198,8 +198,3 @@ Returns the epoch of the C<lastUpdated> field in the registry.
 =back
 
 =cut
-
-
-=back
-
-=cut
