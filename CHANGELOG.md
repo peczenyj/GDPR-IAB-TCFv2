@@ -1,4 +1,7 @@
 ## What's Changed
+* Merge Phase 3 updates
+* style: fix perltidy alignment in Purpose.pm
+* docs: update changelog for Phase 3
 * Merge Phase 2 updates
 * docs: update changelog for Phase 2
 * Merge Phase 1 updates
@@ -10,13 +13,19 @@
 * Merge updated Golden File
 * Merge TO_JSON alignment
 * Merge test fix
+* Merge updated Golden File
+* Merge TO_JSON alignment
+* Merge test fix
 * Fix test expectation for aligned TO_JSON
 * Merge updated Golden File
 * Update Golden File for TCF v2.3
 * Merge TO_JSON alignment
 * Align TO_JSON output
 * Merge complexity fix
+* Merge complexity fix
 * Refactor Validator to reduce complexity (fix perlcritic)
+* Move benchmark to bench/ folder
+* Phase 4: Performance Optimizations
 * Phase 3: Alignment & Cleanup
 * Phase 2: The Validator Interface
 * Phase 1: TCF v2.3 & Segment Robustness
