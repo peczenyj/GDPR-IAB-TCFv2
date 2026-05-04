@@ -1,16 +1,23 @@
 ## What's Changed
+* Merge Phase 2 updates
+* docs: update changelog for Phase 2
 * Merge Phase 1 updates
 * docs: update changelog for Phase 1
 * Merge Phase 0 updates
 * update documentation
 * update doc
 * Merge test fix
+* Merge updated Golden File
+* Merge TO_JSON alignment
+* Merge test fix
 * Fix test expectation for aligned TO_JSON
 * Merge updated Golden File
 * Update Golden File for TCF v2.3
 * Merge TO_JSON alignment
 * Align TO_JSON output
+* Merge complexity fix
 * Refactor Validator to reduce complexity (fix perlcritic)
+* Phase 3: Alignment & Cleanup
 * Phase 2: The Validator Interface
 * Phase 1: TCF v2.3 & Segment Robustness
 * Add Golden File Test System baseline
