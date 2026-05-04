@@ -255,11 +255,14 @@ sub _safe_is_purpose_consent_allowed {
 sub is_purpose_legitimate_interest_allowed {
     my ( $self, @ids ) = @_;
 
-    $self->_validate_purpose_ids( 'is_purpose_legitimate_interest_allowed',
-        @ids );
+    $self->_validate_purpose_ids(
+        'is_purpose_legitimate_interest_allowed',
+        @ids
+    );
 
     foreach my $id (@ids) {
-        return 0 unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
+        return 0
+          unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
     }
 
     return 1;
@@ -412,7 +415,8 @@ sub is_vendor_legitimate_interest_allowed {
           );
 
         return 0
-          unless $self->_safe_is_purpose_legitimate_interest_allowed($purpose_id);
+          unless $self->_safe_is_purpose_legitimate_interest_allowed(
+            $purpose_id);
     }
 
     return 1;
@@ -461,8 +465,10 @@ sub is_vendor_allowed_for_flexible_purpose {
         )
       )
     {
-        return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id,
-            %opts );
+        return $self->is_vendor_consent_allowed(
+            $vendor_id, $purpose_id,
+            %opts
+        );
     }
 
     if ($self->check_publisher_restriction(
@@ -470,8 +476,10 @@ sub is_vendor_allowed_for_flexible_purpose {
         )
       )
     {
-        return $self->is_vendor_legitimate_interest_allowed( $vendor_id,
-            $purpose_id, %opts );
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
     }
 
     if ($self->check_publisher_restriction(
@@ -483,8 +491,10 @@ sub is_vendor_allowed_for_flexible_purpose {
     }
 
     if ($default_is_li) {
-        return $self->is_vendor_legitimate_interest_allowed( $vendor_id,
-            $purpose_id, %opts );
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
     }
 
     return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
