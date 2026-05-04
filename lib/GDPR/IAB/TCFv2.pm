@@ -21,6 +21,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 >;
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
+use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
 our $VERSION = "0.203";
 
@@ -336,6 +337,77 @@ sub publisher_tc {
     my $self = shift;
 
     return $self->{publisher}->publisher_tc;
+}
+
+sub is_vendor_consent_allowed {
+    my ( $self, $vendor_id, $purpose_id, %opts ) = @_;
+
+    return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    return 0 if $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id );
+    return 0 if $self->check_publisher_restriction( $purpose_id, RequireLegitimateInterest, $vendor_id );
+
+    return 0 unless $self->_safe_is_purpose_consent_allowed($purpose_id);
+    return 0 unless $self->vendor_consent($vendor_id);
+
+    return 1;
+}
+
+sub is_vendor_legitimate_interest_allowed {
+    my ( $self, $vendor_id, $purpose_id, %opts ) = @_;
+
+    return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    return 0 if $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id );
+    return 0 if $self->check_publisher_restriction( $purpose_id, RequireConsent, $vendor_id );
+
+    return 0 unless $self->_safe_is_purpose_legitimate_interest_allowed($purpose_id);
+    return 0 unless $self->vendor_legitimate_interest($vendor_id);
+
+    return 1;
+}
+
+sub is_vendor_allowed_for_flexible_purpose {
+    my ( $self, $vendor_id, $purpose_id, $default_is_li, %opts ) = @_;
+
+    return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    if ( $self->check_publisher_restriction( $purpose_id, RequireConsent, $vendor_id ) ) {
+        return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
+    }
+
+    if ( $self->check_publisher_restriction( $purpose_id, RequireLegitimateInterest, $vendor_id ) ) {
+        return $self->is_vendor_legitimate_interest_allowed( $vendor_id, $purpose_id, %opts );
+    }
+
+    if ( $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id ) ) {
+        return 0;
+    }
+
+    if ($default_is_li) {
+        return $self->is_vendor_legitimate_interest_allowed( $vendor_id, $purpose_id, %opts );
+    }
+
+    return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
+}
+
+sub _check_purpose_id {
+    my ( $self, $id, %opts ) = @_;
+
+    my $strict =
+      exists $opts{strict} ? $opts{strict} : $self->{options}->{strict};
+
+    if ( $id < 1 || $id > MAX_PURPOSE_ID ) {
+        if ($strict) {
+            croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+        }
+        else {
+            warn "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 sub _format_date {
