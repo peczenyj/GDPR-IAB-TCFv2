@@ -36,8 +36,10 @@ use constant {
     MAX_PURPOSE_ID          => 24,
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
     SEGMENT_TYPES           => {
-        CORE         => 0,
-        PUBLISHER_TC => 3,
+        CORE              => 0,
+        DISCLOSED_VENDORS => 1,
+        ALLOWED_VENDORS   => 2,
+        PUBLISHER_TC      => 3,
     },
     OFFSETS => {
         SEGMENT_TYPE            => 0,
@@ -91,14 +93,18 @@ sub Parse {
     }
 
     my $self = {
-        core_data         => $segments->{core_data},
-        publisher_tc_data => $segments->{publisher_tc},
-        options           => \%options,
-        tc_string         => $tc_string,
+        core_data              => $segments->{core_data},
+        disclosed_vendors_data => $segments->{disclosed_vendors},
+        allowed_vendors_data   => $segments->{allowed_vendors},
+        publisher_tc_data      => $segments->{publisher_tc},
+        options                => \%options,
+        tc_string              => $tc_string,
 
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
         publisher                   => undef,
+        disclosed_vendors           => undef,
+        allowed_vendors             => undef,
     };
 
     bless $self, $klass;
@@ -111,6 +117,9 @@ sub Parse {
     my $next_offset = $self->_parse_vendor_section();
 
     $self->_parse_publisher_section($next_offset);
+
+    $self->_parse_disclosed_vendors();
+    $self->_parse_allowed_vendors();
 
     return $self;
 }
@@ -308,6 +317,22 @@ sub vendor_legitimate_interest {
     return $self->{vendor_legitimate_interests}->contains($id);
 }
 
+sub disclosed_vendor {
+    my ( $self, $id ) = @_;
+
+    return 0 unless defined $self->{disclosed_vendors};
+
+    return $self->{disclosed_vendors}->contains($id);
+}
+
+sub allowed_vendor {
+    my ( $self, $id ) = @_;
+
+    return 0 unless defined $self->{allowed_vendors};
+
+    return $self->{allowed_vendors}->contains($id);
+}
+
 sub check_publisher_restriction {
     my $self = shift;
 
@@ -495,6 +520,12 @@ sub TO_JSON {
             consents             => $self->{vendor_consents}->TO_JSON,
             legitimate_interests =>
               $self->{vendor_legitimate_interests}->TO_JSON,
+            disclosed => $self->{disclosed_vendors}
+            ? $self->{disclosed_vendors}->TO_JSON
+            : undef,
+            allowed => $self->{allowed_vendors}
+            ? $self->{allowed_vendors}->TO_JSON
+            : undef,
         },
         publisher => $self->{publisher}->TO_JSON,
     };
@@ -520,14 +551,17 @@ sub _decode_tc_string_segments {
 
         my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
 
+        croak "duplicate segment type $segment_type"
+          if exists $segments{$segment_type};
+
         $segments{$segment_type} = $decoded;
     }
 
-    my $publisher_tc = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
-
     return {
-        core_data    => $core_data,
-        publisher_tc => $publisher_tc,
+        core_data         => $core_data,
+        disclosed_vendors => $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} },
+        allowed_vendors   => $segments{ SEGMENT_TYPES->{ALLOWED_VENDORS} },
+        publisher_tc      => $segments{ SEGMENT_TYPES->{PUBLISHER_TC} },
     };
 }
 
@@ -622,6 +656,57 @@ sub _parse_publisher_section {
     );
 
     $self->{publisher} = $publisher;
+}
+
+sub _parse_disclosed_vendors {
+    my $self = shift;
+
+    return unless defined $self->{disclosed_vendors_data};
+
+    $self->{disclosed_vendors} =
+      $self->_parse_vendor_bitfield_or_range( $self->{disclosed_vendors_data} );
+}
+
+sub _parse_allowed_vendors {
+    my $self = shift;
+
+    return unless defined $self->{allowed_vendors_data};
+
+    $self->{allowed_vendors} =
+      $self->_parse_vendor_bitfield_or_range( $self->{allowed_vendors_data} );
+}
+
+sub _parse_vendor_bitfield_or_range {
+    my ( $self, $data ) = @_;
+
+    my $offset = 3;    # segment type
+
+    my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
+
+    my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
+
+    my $something;
+    if ($is_range) {
+        my $data_size = length($data);
+        ( $something, ) = GDPR::IAB::TCFv2::RangeSection->Parse(
+            data      => substr( $data, $bf_offset ),
+            data_size => $data_size,
+            offset    => 0,
+            max_id    => $max_id,
+            options   => $self->{options},
+        );
+    }
+    else {
+        my $data_size = length($data);
+        ( $something, ) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => substr( $data, $bf_offset, $max_id ),
+            data_size => $data_size,
+            max_id    => $max_id,
+            options   => $self->{options},
+        );
+    }
+
+    return $something;
 }
 
 sub _parse_bitfield_or_range {
