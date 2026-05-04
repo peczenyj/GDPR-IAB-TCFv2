@@ -44,12 +44,10 @@ subtest "TO_JSON with v2.3" => sub {
     my $json = $consent->TO_JSON;
     ok exists $json->{vendor}->{disclosed},
       'disclosed vendors should be in TO_JSON';
-    ok exists $json->{vendor}->{allowed},
-      'allowed vendors should be in TO_JSON';
+    ok !exists $json->{vendor}->{allowed},
+      'allowed vendors should NOT be in TO_JSON (missing segment)';
     ok defined $json->{vendor}->{disclosed},
       'disclosed vendors should be defined';
-    ok !defined $json->{vendor}->{allowed},
-      'allowed vendors should be undef (missing segment)';
 };
 
 done_testing;
