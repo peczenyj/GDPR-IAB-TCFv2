@@ -172,7 +172,9 @@ sub TO_JSON {
     }
 
     foreach my $range ( @{ $self->{ranges} } ) {
-        %map = ( %map, map { $_ => $true } $range->[0] .. $range->[1] );
+        for my $id ( $range->[0] .. $range->[1] ) {
+            $map{$id} = $true;
+        }
     }
 
     return \%map;

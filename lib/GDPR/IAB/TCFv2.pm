@@ -520,12 +520,16 @@ sub TO_JSON {
             consents             => $self->{vendor_consents}->TO_JSON,
             legitimate_interests =>
               $self->{vendor_legitimate_interests}->TO_JSON,
-            disclosed => $self->{disclosed_vendors}
-            ? $self->{disclosed_vendors}->TO_JSON
-            : undef,
-            allowed => $self->{allowed_vendors}
-            ? $self->{allowed_vendors}->TO_JSON
-            : undef,
+            (
+                $self->{disclosed_vendors}
+                ? ( disclosed => $self->{disclosed_vendors}->TO_JSON )
+                : ()
+            ),
+            (
+                $self->{allowed_vendors}
+                ? ( allowed => $self->{allowed_vendors}->TO_JSON )
+                : ()
+            ),
         },
         publisher => $self->{publisher}->TO_JSON,
     };
