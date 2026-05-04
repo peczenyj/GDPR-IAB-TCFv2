@@ -6,15 +6,15 @@ require Exporter;
 use base qw<Exporter>;
 
 use constant {
-    InfoStorageAccess        => 1,
-    BasicAdserving           => 2,
-    PersonalizationProfile   => 3,
-    PersonalizationSelection => 4,
-    ContentProfile           => 5,
-    ContentSelection         => 6,
-    AdPerformance            => 7,
-    ContentPerformance       => 8,
-    MarketResearch           => 9,
+    InfoStorageAccess             => 1,
+    BasicAdserving                => 2,
+    PersonalizationProfile        => 3,
+    PersonalizationSelection      => 4,
+    ContentProfile                => 5,
+    ContentSelection              => 6,
+    AdPerformance                 => 7,
+    ContentPerformance            => 8,
+    MarketResearch                => 9,
     DevelopImprove                => 10,
     UseLimitedDataToSelectContent => 11,
 };

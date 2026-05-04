@@ -77,7 +77,8 @@ sub TO_JSON {
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
     if ( !!$self->{options}->{json}->{verbose} ) {
-        return { map { $_ => substr( $data, $_ - 1, 1 ) eq '1' ? $true : $false }
+        return {
+            map { $_ => substr( $data, $_ - 1, 1 ) eq '1' ? $true : $false }
               1 .. $self->{max_id} };
     }
 
