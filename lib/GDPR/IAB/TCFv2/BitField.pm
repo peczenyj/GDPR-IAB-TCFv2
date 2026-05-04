@@ -62,23 +62,33 @@ sub contains {
 sub TO_JSON {
     my $self = shift;
 
-    my @data = split //, $self->{data};
+    my $data = $self->{data};
 
     if ( !!$self->{options}->{json}->{compact} ) {
-        return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
+        my @ids;
+        my $pos = index( $data, '1' );
+        while ( $pos != -1 ) {
+            push @ids, $pos + 1;
+            $pos = index( $data, '1', $pos + 1 );
+        }
+        return \@ids;
     }
 
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
     if ( !!$self->{options}->{json}->{verbose} ) {
-        return { map { $_ => $data[ $_ - 1 ] ? $true : $false }
+        return { map { $_ => substr( $data, $_ - 1, 1 ) eq '1' ? $true : $false }
               1 .. $self->{max_id} };
     }
 
-    return {
-        map  { $_ => $true }
-        grep { $data[ $_ - 1 ] } 1 .. $self->{max_id}
-    };
+    my %map;
+    my $pos = index( $data, '1' );
+    while ( $pos != -1 ) {
+        $map{ $pos + 1 } = $true;
+        $pos = index( $data, '1', $pos + 1 );
+    }
+
+    return \%map;
 }
 
 1;
