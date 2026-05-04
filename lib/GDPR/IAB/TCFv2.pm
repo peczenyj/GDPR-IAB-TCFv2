@@ -5,7 +5,7 @@ use warnings;
 use integer;
 use bytes;
 
-use Carp         qw<croak>;
+use Carp         qw<carp croak>;
 use MIME::Base64 qw<decode_base64>;
 use POSIX        qw<strftime>;
 
@@ -344,8 +344,16 @@ sub is_vendor_consent_allowed {
 
     return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
 
-    return 0 if $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id );
-    return 0 if $self->check_publisher_restriction( $purpose_id, RequireLegitimateInterest, $vendor_id );
+    return 0
+      if $self->check_publisher_restriction(
+        $purpose_id, NotAllowed,
+        $vendor_id
+      );
+    return 0
+      if $self->check_publisher_restriction(
+        $purpose_id,
+        RequireLegitimateInterest, $vendor_id
+      );
 
     return 0 unless $self->_safe_is_purpose_consent_allowed($purpose_id);
     return 0 unless $self->vendor_consent($vendor_id);
@@ -358,10 +366,19 @@ sub is_vendor_legitimate_interest_allowed {
 
     return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
 
-    return 0 if $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id );
-    return 0 if $self->check_publisher_restriction( $purpose_id, RequireConsent, $vendor_id );
+    return 0
+      if $self->check_publisher_restriction(
+        $purpose_id, NotAllowed,
+        $vendor_id
+      );
+    return 0
+      if $self->check_publisher_restriction(
+        $purpose_id, RequireConsent,
+        $vendor_id
+      );
 
-    return 0 unless $self->_safe_is_purpose_legitimate_interest_allowed($purpose_id);
+    return 0
+      unless $self->_safe_is_purpose_legitimate_interest_allowed($purpose_id);
     return 0 unless $self->vendor_legitimate_interest($vendor_id);
 
     return 1;
@@ -372,20 +389,41 @@ sub is_vendor_allowed_for_flexible_purpose {
 
     return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
 
-    if ( $self->check_publisher_restriction( $purpose_id, RequireConsent, $vendor_id ) ) {
-        return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
+    if ($self->check_publisher_restriction(
+            $purpose_id, RequireConsent, $vendor_id
+        )
+      )
+    {
+        return $self->is_vendor_consent_allowed(
+            $vendor_id, $purpose_id,
+            %opts
+        );
     }
 
-    if ( $self->check_publisher_restriction( $purpose_id, RequireLegitimateInterest, $vendor_id ) ) {
-        return $self->is_vendor_legitimate_interest_allowed( $vendor_id, $purpose_id, %opts );
+    if ($self->check_publisher_restriction(
+            $purpose_id, RequireLegitimateInterest, $vendor_id
+        )
+      )
+    {
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
     }
 
-    if ( $self->check_publisher_restriction( $purpose_id, NotAllowed, $vendor_id ) ) {
+    if ($self->check_publisher_restriction(
+            $purpose_id, NotAllowed, $vendor_id
+        )
+      )
+    {
         return 0;
     }
 
     if ($default_is_li) {
-        return $self->is_vendor_legitimate_interest_allowed( $vendor_id, $purpose_id, %opts );
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
     }
 
     return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
@@ -399,10 +437,12 @@ sub _check_purpose_id {
 
     if ( $id < 1 || $id > MAX_PURPOSE_ID ) {
         if ($strict) {
-            croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+            croak
+              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
         }
         else {
-            warn "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+            carp
+              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
             return 0;
         }
     }
