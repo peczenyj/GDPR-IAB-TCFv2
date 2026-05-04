@@ -1,3 +1,11 @@
+## Unreleased
+* Add support for TCF v2.3 (Disclosed Vendors and Allowed Vendors segments)
+* Add `GDPR::IAB::TCFv2::Validator` for automated policy enforcement
+* Add `is_vendor_consent_allowed`, `is_vendor_legitimate_interest_allowed`, and `is_vendor_allowed_for_flexible_purpose` to core object
+* Fix bug: croak on duplicate segment types in TC string
+* Performance: Optimize `TO_JSON` for `BitField` and `RangeSection` (up to 55x faster for compact mode)
+* Alignment: Update Purpose names and descriptions to TCF v2.3
+
 ## What's Changed in v0.203
 * update changelog
 * bump version to v0.203
