@@ -49,7 +49,7 @@ sub run_dump {
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
-        'help|h'             => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
+        'help|h' => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
     ) or pod2usage( -sections => 'SUBCOMMANDS/dump' );
 
     my @inputs;

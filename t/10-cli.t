@@ -10,6 +10,7 @@ my $tc_string =
 
 # Use $^X to ensure we use the same perl interpreter
 my $perl = $^X;
+my $devnull = ( $^O eq 'MSWin32' ) ? 'NUL' : '/dev/null';
 
 # Test basic dump (JSON Line)
 my $output = `$perl -Ilib $bin dump $tc_string`;
@@ -35,18 +36,11 @@ ok( $array_json, "Output is valid JSON array" );
 is( ref($array_json),     'ARRAY', "Root is an array" );
 is( scalar(@$array_json), 2,       "Array contains two elements" );
 
-# Test STDIN (using Perl to avoid shell-specific echo issues)
-my $stdin_output = `\"$perl\" -Ilib $bin dump <<EOF
-$tc_string
-EOF
-`;
+# Test STDIN (using Perl to avoid shell-specific echo/heredoc issues)
+my $stdin_output =
+  `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
 
-# Fallback for Windows if heredoc fails in backticks
-if ( !$stdin_output ) {
-    $stdin_output = `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
-}
-
-my $stdin_json   = eval { decode_json($stdin_output) };
+my $stdin_json = eval { decode_json($stdin_output) };
 ok( $stdin_json, "Parsed from STDIN correctly" )
   or diag("Output was: $stdin_output");
 is( $stdin_json->{version}, 2, "Parsed version from STDIN is correct" );
@@ -55,18 +49,19 @@ is( $stdin_json->{version}, 2, "Parsed version from STDIN is correct" );
 my $invalid_str = "INVALID_STRING_XYZ";
 
 # 1. Default Error JSON
-my $err_output = `$perl -Ilib $bin dump $invalid_str 2>/dev/null`;
+my $err_output = `$perl -Ilib $bin dump $invalid_str 2>$devnull`;
 my $err_json   = eval { decode_json($err_output) };
 ok( $err_json, "Invalid string produces JSON error object" );
-is( $err_json->{success}, JSON::PP::false, "Error object success is false" );
+is( $err_json->{success},   JSON::PP::false, "Error object success is false" );
 is( $err_json->{tc_string}, $invalid_str, "Error object includes raw string" );
 
 # 2. --ignore-errors
-my $ignore_output = `$perl -Ilib $bin dump --ignore-errors $invalid_str 2>/dev/null`;
+my $ignore_output =
+  `$perl -Ilib $bin dump --ignore-errors $invalid_str 2>$devnull`;
 is( $ignore_output, "", "--ignore-errors produces no output for bad string" );
 
 # 3. --fail-fast
-my $ff_output = `$perl -Ilib $bin dump --fail-fast $invalid_str 2>/dev/null`;
+my $ff_output = `$perl -Ilib $bin dump --fail-fast $invalid_str 2>$devnull`;
 ok( $? != 0, "--fail-fast exits with non-zero code" );
 
 # 4. --errors-to-stderr
