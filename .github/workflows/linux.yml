@@ -26,7 +26,7 @@ jobs:
       - run: cpanm File::ShareDir::Install Test::CheckManifest Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod
       - name: Install Author Test Dependencies
         if: ${{ matrix.coverage }}
-        run: cpanm -n Test::Perl::Critic Test::Perl::Tidy
+        run: cpanm -n Test::Perl::Critic Test::PerlTidy
       - run: cpanm --installdeps .
       - name: Run Tests
         run: prove -lr t

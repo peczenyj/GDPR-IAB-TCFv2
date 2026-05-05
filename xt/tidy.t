@@ -2,8 +2,8 @@ use strict;
 use warnings;
 use Test::More;
 
-eval "use Test::Perl::Tidy";
-plan skip_all => "Test::Perl::Tidy required for tidying" if $@;
+eval "use Test::PerlTidy";
+plan skip_all => "Test::PerlTidy required for tidying" if $@;
 
 run_tests(
     path       => '.',
