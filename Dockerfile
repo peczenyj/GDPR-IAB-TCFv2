@@ -46,7 +46,7 @@ ENV PERL5LIB=/usr/local/lib/perl5/site_perl/5.40.0:/usr/local/share/perl5/site_p
 ENV PATH="/usr/local/bin:${PATH}"
 
 # Smoke test (iabtcfv2 --help exits with 1)
-RUN iabtcfv2 --help || [ $? -eq 1 ]
+RUN iabtcfv2 --help; if [ $? -ne 1 ]; then exit 1; else exit 0; fi
 
 ENTRYPOINT ["iabtcfv2"]
 CMD ["--help"]

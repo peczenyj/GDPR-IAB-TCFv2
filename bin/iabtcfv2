@@ -34,16 +34,16 @@ if ( $global_opts{help} ) {
     my $topic = $ARGV[0];
     if ( $topic && $topic eq 'dump' ) {
         pod2usage(
-            -input    => $script_path, -exitval => 0, -verbose => 99,
+            -input    => $script_path, -exitval => 1, -verbose => 99,
             -sections => "DUMP"
         );
     }
     pod2usage(
-        -input    => $script_path, -exitval => 0, -verbose => 99,
+        -input    => $script_path, -exitval => 1, -verbose => 99,
         -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
     );
 }
-pod2usage( -input => $script_path, -exitval => 0, -verbose => 2 )
+pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
   if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
@@ -53,18 +53,18 @@ if ( $subcommand eq 'dump' ) {
 }
 elsif ( $subcommand eq 'validate' ) {
     warn "The 'validate' subcommand is not yet implemented.\n";
-    exit EXIT_SUCCESS;
+    exit EXIT_PARSE_ERROR;
 }
 elsif ( $subcommand eq 'help' ) {
     my $topic = shift @ARGV;
     if ( $topic && $topic eq 'dump' ) {
         pod2usage(
-            -input    => $script_path, -exitval => 0, -verbose => 99,
+            -input    => $script_path, -exitval => 1, -verbose => 99,
             -sections => "DUMP"
         );
     }
     pod2usage(
-        -input    => $script_path, -exitval => 0, -verbose => 99,
+        -input    => $script_path, -exitval => 1, -verbose => 99,
         -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
     );
 }
@@ -99,7 +99,7 @@ sub run_dump {
         'quiet|q'            => \$opts{'quiet'},
         'help|h'             => sub {
             pod2usage(
-                -input    => $script_path, -exitval => 0, -verbose => 99,
+                -input    => $script_path, -exitval => 1, -verbose => 99,
                 -sections => "DUMP"
             );
         },
