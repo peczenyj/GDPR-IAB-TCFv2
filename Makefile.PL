@@ -26,6 +26,8 @@ WriteMakefile(
                           'https://github.com/peczenyj/GDPR-IAB-TCFv2.git',
                         web => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
                     },
+                    x_security_policy =>
+                      'https://github.com/peczenyj/GDPR-IAB-TCFv2/blob/devel/SECURITY.md',
                     bugtracker => {
                         web =>
                           'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'
