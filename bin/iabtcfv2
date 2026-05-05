@@ -98,6 +98,7 @@ sub run_dump {
         }
     }
 
+
     if ( $opts{'json-array'} ) {
         print "\n]\n";
     }
