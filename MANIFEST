@@ -1,6 +1,5 @@
 bin/iabtcf-dump
 CHANGELOG.md
-Changes
 CODE_OF_CONDUCT.md
 CONTRIBUTING.pod
 lib/GDPR/IAB/TCFv2/BitField.pm
@@ -21,5 +20,7 @@ t/00-load.t
 t/01-parse.t
 t/02-json-bitfield.t
 t/03-json-range.t
+t/10-cli-dump.t
 t/90-bugs.t
 t/99-pod.t
+TODO.md
