@@ -14,7 +14,7 @@ GetOptions(
     'man'    => \$global_opts{man},
 ) or pod2usage(2);
 
-pod2usage(1) if $global_opts{help};
+pod2usage(1)                              if $global_opts{help};
 pod2usage( -exitval => 0, -verbose => 2 ) if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
