@@ -9,7 +9,7 @@ my $tc_string =
   'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
 
 # Use $^X to ensure we use the same perl interpreter
-my $perl = $^X;
+my $perl    = $^X;
 my $devnull = ( $^O eq 'MSWin32' ) ? 'NUL' : '/dev/null';
 
 # Test basic dump (JSON Line)
@@ -37,8 +37,7 @@ is( ref($array_json),     'ARRAY', "Root is an array" );
 is( scalar(@$array_json), 2,       "Array contains two elements" );
 
 # Test STDIN (using Perl to avoid shell-specific echo/heredoc issues)
-my $stdin_output =
-  `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
+my $stdin_output = `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
 
 my $stdin_json = eval { decode_json($stdin_output) };
 ok( $stdin_json, "Parsed from STDIN correctly" )
