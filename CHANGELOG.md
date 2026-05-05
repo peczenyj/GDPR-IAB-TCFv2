@@ -1,12 +1,8 @@
-## [unreleased]
-
-### Documentation
-
-- Add Docker usage instructions and refine contributor guidelines
+## [0.330] - 2026-05-05
 
 ### Other
 
-- Merge v0.320 updates
+- Unified Docker Distribution (iabtcfv2) 
 
 ## [0.320] - 2026-05-05
 
@@ -17,10 +13,6 @@
 ### Documentation
 
 - Improve CLI help system with subcommand-specific documentation
-
-### Features
-
-- Implement automated docker distribution (isolated)
 
 ### Other
 
