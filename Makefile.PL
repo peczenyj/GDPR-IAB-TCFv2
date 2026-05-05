@@ -7,7 +7,9 @@ WriteMakefile(
     ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
     VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
     MIN_PERL_VERSION => 5.008,
+    EXE_FILES        => ['bin/iabtcfv2'],
     TEST_REQUIRES    => {
+        'JSON::PP'        => 0,
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,
         'Test::Pod'       => 0,
@@ -16,6 +18,7 @@ WriteMakefile(
         ? ( META_MERGE => {
                 'meta-spec'    => { version => 2 },
                 dynamic_config => 0,
+                provides       => _get_provides(),
                 resources      => {
                     homepage   => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
                     repository => {
@@ -24,13 +27,17 @@ WriteMakefile(
                           'https://github.com/peczenyj/GDPR-IAB-TCFv2.git',
                         web => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
                     },
+                    x_security_policy =>
+                      'https://github.com/peczenyj/GDPR-IAB-TCFv2/blob/devel/SECURITY.md',
                     bugtracker => {
                         web =>
                           'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'
                     },
                 },
                 recommends => {
-                    'JSON' => 0,
+                    'JSON'               => 0,
+                    'JSON::XS'           => 0,
+                    'DateTimeX::TO_JSON' => 0,
                 },
                 x_authority => 'cpan:PACMAN',
             }
@@ -38,3 +45,35 @@ WriteMakefile(
         : ()
     ),
 );
+
+sub _get_provides {
+    use File::Find;
+    my %provides;
+    find(
+        {   wanted => sub {
+                return unless /\.pm$/;
+                my $file   = $File::Find::name;
+                my $module = $file;
+                $module =~ s|^lib/||;
+                $module =~ s|/|::|g;
+                $module =~ s|\.pm$||;
+                my $v = MM->parse_version($file);
+                $provides{$module} = { file => $file, version => $v || "0" };
+            },
+            no_chdir => 1
+        },
+        "lib"
+    );
+    return \%provides;
+}
+
+sub MY::postamble {
+    return <<'EOF';
+lint:
+	perlcritic -profile .perlcriticrc lib bin t xt
+
+tidy:
+	perltidy -b -pro=.perltidyrc $$(find lib bin t xt -name "*.pm" -o -name "*.t" -o -name "iabtcfv2")
+EOF
+}
+
