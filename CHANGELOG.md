@@ -1,3 +1,22 @@
+## [0.350] - 2026-05-05
+
+### Documentation
+
+- Update changelog for Phase 1
+
+### Features
+
+- Add --version and -V options to CLI
+
+### Other
+
+- Merge feat/phase-1-tcf-v23-segments into devel
+- Merge Phase 0 updates
+- Fix test expectation for aligned TO_JSON
+- Update Golden File for TCF v2.3
+- Align TO_JSON output
+- Phase 1: TCF v2.3 & Segment Robustness
+
 ## [0.340] - 2026-05-05
 
 ### Other

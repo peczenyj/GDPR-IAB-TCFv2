@@ -137,8 +137,10 @@ subtest 'Help System' => sub {
 
     # 4. Version
     my $version_output = `$perl -Ilib $bin --version`;
-    like( $version_output, qr/iabtcfv2 version \d+\.\d+/,
-        "Version output is correct" );
+    like(
+        $version_output, qr/iabtcfv2 version \d+\.\d+/,
+        "Version output is correct"
+    );
     my $short_version_output = `$perl -Ilib $bin -V`;
     is( $short_version_output, $version_output, "-V is alias for --version" );
 };
