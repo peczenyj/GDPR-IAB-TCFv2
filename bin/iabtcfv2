@@ -1,0 +1,142 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(GetOptionsFromArray :config pass_through);
+use Pod::Usage;
+use JSON::PP;
+use GDPR::IAB::TCFv2;
+
+my %global_opts;
+GetOptions(
+    'help|h' => \$global_opts{help},
+    'man'    => \$global_opts{man},
+) or pod2usage(2);
+
+pod2usage(1) if $global_opts{help};
+pod2usage( -exitval => 0, -verbose => 2 ) if $global_opts{man};
+
+my $subcommand = shift @ARGV || 'help';
+
+if ( $subcommand eq 'dump' ) {
+    run_dump(@ARGV);
+}
+elsif ( $subcommand eq 'help' ) {
+    pod2usage(1);
+}
+else {
+    warn "Unknown subcommand: $subcommand\n";
+    pod2usage(1);
+}
+
+sub run_dump {
+    my @args = @_;
+    my %opts = (
+        pretty => 0,
+        array  => 0,
+    );
+
+    GetOptionsFromArray(
+        \@args,
+        'pretty' => \$opts{pretty},
+        'array'  => \$opts{array},
+        'help|h' => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
+    ) or pod2usage( -sections => 'SUBCOMMANDS/dump' );
+
+    my @inputs;
+    if (@args) {
+        @inputs = @args;
+    }
+    else {
+        while ( my $line = <STDIN> ) {
+            chomp $line;
+            next unless $line =~ /\S/;
+            push @inputs, $line;
+        }
+    }
+
+    my $json = JSON::PP->new->utf8;
+    $json->pretty(1)->indent_length(4) if $opts{pretty};
+
+    my @results;
+    foreach my $str (@inputs) {
+        eval {
+            my $tcf = GDPR::IAB::TCFv2->Parse($str);
+            if ( $opts{array} ) {
+                push @results, $tcf->TO_JSON;
+            }
+            else {
+                print $json->encode( $tcf->TO_JSON ) . "\n";
+            }
+        };
+        if ($@) {
+            warn "Failed to parse TC string '$str': $@\n";
+        }
+    }
+
+    if ( $opts{array} ) {
+        print $json->encode( \@results ) . "\n";
+    }
+}
+
+__END__
+
+=head1 NAME
+
+iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings
+
+=head1 SYNOPSIS
+
+iabtcfv2 [options] <subcommand> [subcommand-options]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>, B<-h>
+
+Print a brief help message and exits.
+
+=item B<--man>
+
+Prints the manual page and exits.
+
+=back
+
+=head1 SUBCOMMANDS
+
+=head2 dump
+
+Parses TC strings and outputs them as JSON.
+
+=head3 Options
+
+=over 4
+
+=item B<--pretty>
+
+Output human-readable, indented JSON.
+
+=item B<--array>
+
+Output a single JSON array containing all parsed objects.
+
+=back
+
+=head3 Examples
+
+    # Dump a string to JSON line
+    iabtcfv2 dump CPi...AAA
+
+    # Dump multiple strings to a pretty-printed JSON array
+    iabtcfv2 dump --pretty --array CPi...AAA CPj...BBB
+
+    # Read from STDIN
+    cat strings.txt | iabtcfv2 dump
+
+=head1 DESCRIPTION
+
+B<iabtcfv2> is a command-line interface for the GDPR::IAB::TCFv2 library.
+
+=cut
