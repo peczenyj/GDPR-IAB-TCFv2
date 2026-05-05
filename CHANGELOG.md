@@ -1,317 +1,617 @@
-## What's Changed
-* Merge Phase 1 updates
-* docs: update changelog for Phase 1
-* Merge Phase 0 updates
-* update documentation
-* update doc
-* Merge test fix
-* Fix test expectation for aligned TO_JSON
-* Merge updated Golden File
-* Update Golden File for TCF v2.3
-* Merge TO_JSON alignment
-* Align TO_JSON output
-* Refactor Validator to reduce complexity (fix perlcritic)
-* Phase 2: The Validator Interface
-* Phase 1: TCF v2.3 & Segment Robustness
-* Add Golden File Test System baseline
-* Phase 0: Core Logic Expansion (Fixed linting & tidy)
-* Phase 0: Core Logic Expansion (Fixed linting & tidy)
-* Phase 0: Core Logic Expansion
-* fix yaml lint issues
-* normalize macos
-* update changelog
+## [0.360] - 2026-05-05
 
-## What's Changed in v0.203
-* update changelog
-* bump version to v0.203
-* try fix workflow linux last try
-* try fix workflow linux
-* fix tests with tap
-* try refactor linux tests
-* run perltidy on code
-* fix perl tidy issue
-* Merge remote-tracking branch 'refs/remotes/origin/devel' into devel
-* Update windows.yml
-* Update linux.yml
-* Update linux.yml
-* Update linux.yml
+### Other
 
-**Full Changelog**: https://github.com///compare/v0.202...v0.203
+- Merge devel into Phase 2 and resolve CHANGELOG conflict
 
-## What's Changed in v0.202
-* bump version
-* bump version
-* improve error message
-* Update CONTRIBUTING.pod
-* Update CONTRIBUTING.pod
-* Merge tag 'v0.201' into devel
+## [0.350] - 2026-05-05
 
-**Full Changelog**: https://github.com///compare/v0.201...v0.202
+### Features
 
-## What's Changed in v0.201
-* Merge branch 'release/0.201'
-* promote new version
-* bump version
-* change how we redefine subroutines
-* small fixes
-* Merge tag 'v0.200' into devel
+- Add --version and -V options to CLI
 
-**Full Changelog**: https://github.com///compare/v0.200...v0.201
+### Other
 
-## What's Changed in v0.200
-* Merge branch 'release/0.200'
-* fix manifest
-* update manifest
-* promote new version
-* fix issue #25
-* add missing changes
-* Refactor publisher restrictions
-* increase tests
-* Add range section cache
-* Merge tag 'v0.100' into devel
+- Merge feat/phase-1-tcf-v23-segments into devel
 
-**Full Changelog**: https://github.com///compare/v0.100...v0.200
+## [0.340] - 2026-05-05
 
-## What's Changed in v0.100
-* Merge branch 'release/0.100'
-* tidy file
-* fix workflows
-* update manifest
-* promote new version
-* remove unused code
-* Add support to publisher tc
-* prepare code to decode other sections
-* refactor code, regroup logic
-* fetch other sections of the tcstring
-* group publisher section
-* group constants
-* add strict mode
-* refactor code: group vendor section
-* Merge tag 'v0.084' into devel
+### Other
 
-**Full Changelog**: https://github.com///compare/v0.084...v0.100
+- Merge feat/phase-0-core-logic into devel
 
-## What's Changed in v0.084
-* Merge branch 'release/0.084'
-* update manifest
-* promote new version
-* bump version
-* Fix but index out of bonds while parsing range based consent strings
-* Merge tag 'vv0.083' into devel
+## [0.330] - 2026-05-05
 
-**Full Changelog**: https://github.com///compare/vv0.083...v0.084
+### Bug Fixes
 
-## What's Changed in vv0.083
-* Merge branch 'release/v0.083'
-* update manifest
-* bump version
-* fix pod 2
-* fix pod
-* Revert "try fix links"
-* Revert "try 2"
-* try 2
-* try fix links
-* Merge branch 'devel' of github.com:peczenyj/GDPR-IAB-TCFv2 into devel
-* Refactor bitfield & others
-* restrict bitfield data
-* reset readme
-* Merge branch 'devel' of github.com:peczenyj/GDPR-IAB-TCFv2 into devel
-* Update README.pod
-* format changes
-* increase performance on range section
-* fix changes
+- Allow non-standard semver in Docker tags
 
-**Full Changelog**: https://github.com///compare/v0.082...vv0.083
+### Other
 
-## What's Changed in v0.082
-* fix perltidy
-* bump version to 0.082
-* update changes
-* add small refactor on safe functions
-* Revert "refactor purposes and special feature opt in internals"
-* refactor purposes and special feature opt in internals
-* rename options
-* start refactor
-* remove useless method
-* update changes
-* update changes
-* increase TO_JSON performance by 17% on bitfields and 70% on range based
-* add new tests
-* update changelog
-* fix example in pod
-* fix pod
-* fix issue #17
-* rename property
-* fix pod
-* change bitutils to return the offset of the next piece of information
-* fix typo in exception, add more bit check
-* improve bitutils to also return next offset in array context via wantarray
-* fix pod json fields
+- Unified Docker Distribution (iabtcfv2) 
+
+## [0.320] - 2026-05-05
+
+### Bug Fixes
+
+- Resolve subroutine name mismatch and incorrect parameter passing in CLI
+
+### Documentation
+
+- Improve CLI help system with subcommand-specific documentation
+
+### Other
+
+- Centralized Quality Checks (xt/ & Makefile) 
+
+## [0.310] - 2026-05-05
+
+### Features
+
+- Implement unified subcommand-based CLI and bump version to 0.310
+
+## [0.300] - 2026-05-05
+
+### Bug Fixes
+
+- Fix yaml lint issues
+
+### Documentation
+
+- Update changelog for Phase 2
+- Update changelog for Phase 1
+
+### Other
+
+- Independent iabtcf-dump CLI utility 
+- Merge Phase 1 updates
+- Merge Phase 0 updates
+- Update documentation
+- Update doc
+- Merge test fix
+- Fix test expectation for aligned TO_JSON
+- Merge updated Golden File
+- Update Golden File for TCF v2.3
+- Merge TO_JSON alignment
+- Align TO_JSON output
+- Refactor Validator to reduce complexity (fix perlcritic)
+- Phase 2: The Validator Interface
+- Phase 1: TCF v2.3 & Segment Robustness
+- Add Golden File Test System baseline
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion
+- Normalize macos
+- Update changelog
+
+## [0.203] - 2025-04-21
+
+### Bug Fixes
+
+- Fix tests with tap
+- Fix perl tidy issue
+
+### Other
+
+- Update changelog
+- Bump version to v0.203
+- Try fix workflow linux last try
+- Try fix workflow linux
+- Try refactor linux tests
+- Run perltidy on code
+- Merge remote-tracking branch 'refs/remotes/origin/devel' into devel
+- Update windows.yml
+
+try fix windows
+- Update linux.yml
+
+install git and curl
+- Update linux.yml
+
+force install linux in older versions
+- Update linux.yml
+
+try fix images
+
+## [0.202] - 2025-04-21
+
+### Other
+
+- Bump version
+- Bump version
+- Improve error message
+- Update CONTRIBUTING.pod
+
+fix branch again
+- Update CONTRIBUTING.pod
+
+fix branch again
+- Merge tag 'v0.201' into devel
+
+Tagged for release. v0.201
+
+## [0.201] - 2023-12-20
+
+### Other
+
+- Merge branch 'release/0.201'
+- Promote new version
+- Bump version
+- Change how we redefine subroutines
+- Small fixes
+- Merge tag 'v0.200' into devel
+
+Tagged for release. v0.200
+
+## [0.200] - 2023-12-17
+
+### Bug Fixes
+
+- Fix manifest
+- Fix issue #25
+
+### Other
+
+- Merge branch 'release/0.200'
+- Update manifest
+- Promote new version
+- Add missing changes
+- Refactor publisher restrictions 
+
+* add named parameters on check_publisher_restriction method
+
+* add new method
+
+* improve test
+
+* Revert "improve test"
+
+This reverts commit ae7274e49ad0b767b158beadd9ce73e07a5eb836.
+
 * fix format
 
-**Full Changelog**: https://github.com///compare/v0.081...v0.082
-
-## What's Changed in v0.081
-* bump version
-* start to fix issue #17
 * fix pod
 
-**Full Changelog**: https://github.com///compare/v0.08...v0.081
+* Update Publisher.pm
 
-## What's Changed in v0.08
-* update manifest
-* bump version
-* finish TO_JSON method
-* add tests and small refactors in code
+Remove char
+
+* Update PublisherRestrictions.pm
+
+Remove char
+
+* tidy test
+
+* remove bad chars
+
+* try remove all bad chars
+- Increase tests
+- Add range section cache 
+
+* add initial code
+
+* reorg code
+
+* rename test
+
+* add unit tests
+
+* add pod
+
+* update readme
+- Merge tag 'v0.100' into devel
+
+Tagged for release. v0.100
+
+## [0.100] - 2023-12-15
+
+### Bug Fixes
+
+- Fix workflows
+
+### Other
+
+- Merge branch 'release/0.100'
+- Tidy file
+- Update manifest
+- Promote new version
+- Remove unused code
+- Add support to publisher tc 
+
+* add code to handle publisher tc, start to implement #13
+
 * add missing changes
-* add TO_JSON and tc_string method
-* add TO_JSON method
-* remove = character from base64 validation, since the url version does not have it
-* substitute hardcoded numeric offsets by constants
-* Update issue templates
-* Create CODE_OF_CONDUCT.md
-* fix makefile
-* add missing function on perldoc
-* Update TCFv2.pm
-* Update README.pod
-* Update perlcritic.yml
-* Update perlcritic.yml
-* Update perlcritic.yml
-* Create perlcritic.yml
-* Update TCFv2.pm
-* Delete .appveyor.yml
-* Update README.pod
-* Rename macos.yaml to macos.yml
-* Update linux.yml
-* Update linux.yml
-* Update linux.yml
-* Create macos.yaml
-* Create windows.yml
-* Create perltidy.yml
-* Update TCFv2.pm
-* Update README.pod
-* Update README.pod
-* Update linux.yml
-* Update linux.yml
-* Update linux.yml
-* Update linux.yml
-* add test pod and fix small typos
-* explain changes
-* fix typo
-* fix pod and readme
-* add version on changes file
 
-**Full Changelog**: https://github.com///compare/v0.07...v0.08
+* some refactor
 
-## What's Changed in v0.07
-* simplify code
-* remove usage of // operation
-* fix unit tests again
-* Revert "fix unit test"
+* add example
+
+* update pod
+
+* add unit tests
+
+* add unit tests
+
+* force read the first segment as core string
+
+* verify unit tests
+
+* narrow unit test
+
+* narrow unit test 2
+
+* continue search
+
 * fix unit test
-* update manifest
-* fix type validation
-* bump version
-* Merge branch 'main' of github.com:peczenyj/GDPR-IAB-TCFv2
-* Update TCFv2.pm
-* Update README.pod
-* update changelog
-* update readme
-* fix pod
-* add publisher restriction check and fix issue #11
-* check if string is a base64 url encoded string before parse it and fix issue #3
+- Prepare code to decode other sections
+- Fetch other sections of the tcstring
+- Group publisher section
+- Group constants
+- Add strict mode
+- Merge tag 'v0.084' into devel
 
-**Full Changelog**: https://github.com///compare/v0.06...v0.07
+Tagged for release. v0.084
 
-## What's Changed in v0.06
-* update docs
-* bump version to 0.06
-* update changes
-* add wantarray on created and last_updated methods
-* add coveralls badge
-* Update linux.yml
-* add badge
-* add appveyor
-* push new constants and docs
-* Merge branch 'main' of github.com:peczenyj/GDPR-IAB-TCFv2
-* Update linux.yml
-* add new readme
-* update readme
-* add special features as constants
-* add purposes constants, fix issue #2
-* simplify ctor
-* add comments
-* add small changes in code
+### Refactor
 
-**Full Changelog**: https://github.com///compare/v0.051...v0.06
+- Refactor code, regroup logic
+- Refactor code: group vendor section
 
-## What's Changed in v0.051
-* release version 0.051
-* fix readme
-* fix readme
-* fix branch name
-* fix pod
-* fix contributing file
+## [0.084] - 2023-12-14
 
-**Full Changelog**: https://github.com///compare/v0.05...v0.051
+### Other
 
-## What's Changed in v0.05
-* add missing changes
+- Merge branch 'release/0.084'
+- Update manifest
+- Promote new version
+- Bump version
+- Fix but index out of bonds while parsing range based consent strings 
 
-**Full Changelog**: https://github.com///compare/v0.0.5...v0.05
+* add unit test to trigger bug #20 
 
-## What's Changed in v0.0.5
-* bump version
-* try to force mininum perl 5.8
-* try make it work on perl 5.8
-* fix module format
-* try even older version
-* try again
-* test no min perl
-* fix test matrix
-* small refactors
-* try fix markdown format
-* fix manifest
-* fix issue #9 by trying to use MIME::Base64->can("decode_base64url")  or use a fallback
+* add fix
 
-**Full Changelog**: https://github.com///compare/v0.0.4...v0.0.5
+* add changes file
+- Merge tag 'vv0.083' into devel
 
-## What's Changed in v0.0.4
-* add manifest
-* add contributing file
-* add changelog
-* update version
-* fix issue #8
-* fix dependency
+Tagged for release. vv0.083
 
-**Full Changelog**: https://github.com///compare/v0.0.3...v0.0.4
+## [0.083] - 2023-12-13
 
-## What's Changed in v0.0.3
-* add manifest
-* improve doc
-* complete pod documentation
-* add full support to vendor consent and vendor legitimate interest, ias bitfield or range sections. fix issue #1
-* complete code, add support to bitfields
-* add more methods
+### Bug Fixes
 
-**Full Changelog**: https://github.com///compare/v0.0.2...v0.0.3
+- Fix pod 2
+- Fix pod
+- Fix changes
 
-## What's Changed in v0.0.2
-* update code, add skip
-* rename readme
-* improve documentation
-* skip .github dir
-* update license
-* add github meta
+### Other
 
-**Full Changelog**: https://github.com///compare/v0.0.1...v0.0.2
+- Merge branch 'release/v0.083'
+- Update manifest
+- Bump version
+- Revert "try fix links"
 
-## What's Changed in v0.0.1
-* add github workflow
-* add makefile.pl
-* add *.bak on .gitignore
-* remove .bak
-* add some properties and tests
-* Initial commit
+This reverts commit e5fb435f3d78beb07ef44b434282724c4f0270ec.
+- Revert "try 2"
+
+This reverts commit dca6f2f25344bbd226f8ef79780414f57b378f1a.
+- Try 2
+- Try fix links
+- Merge branch 'devel' of github.com:peczenyj/GDPR-IAB-TCFv2 into devel
+- Refactor bitfield & others 
+
+* increase performance in 17% on TO_JSON method when it is bitfield by limit data size
+
+* small refactor on range section
+
+* continue refactor on bitfield, range section and publisher restriction
+
+* refactor offsets
+
+* add changes
+
+* refactor offset / data_size
+
+* verify if offset exists on range section Parse method
+
+* fix tidy
+
+* restrict bitfield data
+
+* tidy code
+- Restrict bitfield data
+- Reset readme
+- Merge branch 'devel' of github.com:peczenyj/GDPR-IAB-TCFv2 into devel
+- Update README.pod
+
+Try fix link to method
+- Format changes
+- Increase performance on range section 
+
+performance improvement on range objects
+
+## [0.082] - 2023-12-12
+
+### Bug Fixes
+
+- Fix perltidy
+- Fix example in pod
+- Fix pod
+- Fix issue #17
+- Fix pod
+- Fix typo in exception, add more bit check
+- Fix pod json fields
+- Fix format
+
+### Other
+
+- Bump version to 0.082
+- Update changes
+- Add small refactor on safe functions
+- Revert "refactor purposes and special feature opt in internals"
+
+This reverts commit af62cf3873f673bcc0f790a2523a036042ec34d6.
+- Rename options
+- Start refactor
+- Remove useless method
+- Update changes
+- Update changes
+- Increase TO_JSON performance by 17% on bitfields and 70% on range based
+- Add new tests
+- Update changelog
+- Rename property
+- Change bitutils to return the offset of the next piece of information
+- Improve bitutils to also return next offset in array context via wantarray
+
+### Refactor
+
+- Refactor purposes and special feature opt in internals
+
+## [0.081] - 2023-12-11
+
+### Bug Fixes
+
+- Fix pod
+
+### Other
+
+- Bump version
+- Start to fix issue #17
+
+## [0.08] - 2023-12-10
+
+### Bug Fixes
+
+- Fix makefile
+- Fix typo
+- Fix pod and readme
+
+### Other
+
+- Update manifest
+- Bump version
+- Finish TO_JSON method
+- Add tests and small refactors in code
+- Add missing changes
+- Add TO_JSON and tc_string method
+- Add TO_JSON method
+- Remove = character from base64 validation, since the url version does not have it
+- Substitute hardcoded numeric offsets by constants
+- Update issue templates
+- Create CODE_OF_CONDUCT.md
+
+add coc
+- Add missing function on perldoc
+- Update TCFv2.pm
+
+add badges
+- Update README.pod
+
+add new bagdes
+- Update perlcritic.yml
+
+retry perlcritic
+- Update perlcritic.yml
+
+try different approach
+- Update perlcritic.yml
+
+try again
+- Create perlcritic.yml
+- Update TCFv2.pm
+
+update badges
+- Delete .appveyor.yml
+
+remove appveyor
+- Update README.pod
+
+update badges
+- Rename macos.yaml to macos.yml
+
+rename file
+- Update linux.yml
+
+fix 2
+- Update linux.yml
+
+fix linux
+- Update linux.yml
+
+improve linux tests
+- Create macos.yaml
+
+add tests on macos
+- Create windows.yml
+
+add tests on windows
+- Create perltidy.yml
+
+add perldity
+- Update TCFv2.pm
+
+fix typo in badges
+- Update README.pod
+
+fix pod
+- Update README.pod
+
+fix typo
+- Update linux.yml
+
+try fix git config
+- Update linux.yml
+
+add coveralls repo token on secret
+- Update linux.yml
+- Update linux.yml
+
+update action
+- Add test pod and fix small typos
+- Explain changes
+- Add version on changes file
+
+## [0.07] - 2023-12-07
+
+### Bug Fixes
+
+- Fix unit tests again
+- Fix unit test
+- Fix type validation
+- Fix pod
+
+### Other
+
+- Simplify code
+- Remove usage of // operation
+- Revert "fix unit test"
+
+This reverts commit c56400f41b1f71f516d999786ec88f1144945f48.
+- Update manifest
+- Bump version
+- Merge branch 'main' of github.com:peczenyj/GDPR-IAB-TCFv2
+- Update TCFv2.pm
+
+Fix pod
+- Update README.pod
+
+Fix pod
+- Update changelog
+- Update readme
+- Add publisher restriction check and fix issue #11
+- Check if string is a base64 url encoded string before parse it and fix issue #3
+
+## [0.06] - 2023-12-06
+
+### Other
+
+- Update docs
+- Bump version to 0.06
+- Update changes
+- Add wantarray on created and last_updated methods
+- Add coveralls badge
+- Update linux.yml
+
+add coveralls
+- Add badge
+- Add appveyor
+- Push new constants and docs
+- Merge branch 'main' of github.com:peczenyj/GDPR-IAB-TCFv2
+- Update linux.yml
+
+rename
+- Add new readme
+- Update readme
+- Add special features as constants
+- Add purposes constants, fix issue #2
+- Simplify ctor
+- Add comments
+- Add small changes in code
+
+## [0.051] - 2023-12-05
+
+### Bug Fixes
+
+- Fix readme
+- Fix readme
+- Fix branch name
+- Fix pod
+- Fix contributing file
+
+### Other
+
+- Release version 0.051
+
+## [0.05] - 2023-12-05
+
+### Other
+
+- Add missing changes
+
+## [0.0.5] - 2023-12-05
+
+### Bug Fixes
+
+- Fix module format
+- Fix test matrix
+- Fix manifest
+- Fix issue #9 by trying to use MIME::Base64->can("decode_base64url")  or use a fallback
+
+### Other
+
+- Bump version
+- Try to force mininum perl 5.8
+- Try make it work on perl 5.8
+- Try even older version
+- Try again
+- Small refactors
+- Try fix markdown format
+
+## [0.0.4] - 2023-12-04
+
+### Bug Fixes
+
+- Fix issue #8
+- Fix dependency
+
+### Other
+
+- Add manifest
+- Add contributing file
+- Add changelog
+- Update version
+
+## [0.0.3] - 2023-12-04
+
+### Other
+
+- Add manifest
+- Improve doc
+- Complete pod documentation
+- Add full support to vendor consent and vendor legitimate interest, ias bitfield or range sections. fix issue #1
+- Complete code, add support to bitfields
+- Add more methods
+
+## [0.0.2] - 2023-12-03
+
+### Other
+
+- Update code, add skip
+- Rename readme
+- Improve documentation
+- Skip .github dir
+- Update license
+- Add github meta
+
+## [0.0.1] - 2023-12-02
+
+### Other
+
+- Add github workflow
+- Add makefile.pl
+- Add *.bak on .gitignore
+- Remove .bak
+- Add some properties and tests
+- Initial commit
 
 <!-- generated by git-cliff -->
