@@ -64,7 +64,7 @@ sub run_dump {
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
-        'help|h'             => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
+        'help|h' => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
     ) or pod2usage( -sections => 'SUBCOMMANDS/dump' );
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
@@ -118,11 +118,13 @@ sub _process_string {
     };
     if ( my $err = $@ ) {
         if ( $o->{'fail-fast'} ) {
-            warn "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n";
+            warn
+              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n";
             exit EXIT_PARSE_ERROR;
         }
 
-        warn "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
+        warn
+          "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
           unless $o->{'quiet'};
 
         return if $o->{'ignore-errors'};
