@@ -1,18 +1,8 @@
-## [unreleased]
-
-### Bug Fixes
-
-- Robust JSON backend check and tidy Makefile.PL
-- Resolve JSON::XS compatibility issues in CLI and tests
-- Correct module name Test::PerlTidy in CI and tests
-
-### Features
-
-- Implement author tests (xt/) and centralize CI quality checks
+## [0.320] - 2026-05-05
 
 ### Other
 
-- Update .perlcriticrc
+- Centralized Quality Checks (xt/ & Makefile) 
 
 ## [0.310] - 2026-05-05
 
