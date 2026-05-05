@@ -46,18 +46,20 @@ WriteMakefile(
 sub _get_provides {
     use File::Find;
     my %provides;
-    find({
-        wanted => sub {
-            return unless /\.pm$/;
-            my $file = $File::Find::name;
-            my $module = $file;
-            $module =~ s|^lib/||;
-            $module =~ s|/|::|g;
-            $module =~ s|\.pm$||;
-            my $v = MM->parse_version($file);
-            $provides{$module} = { file => $file, version => $v || "0" };
+    find(
+        {   wanted => sub {
+                return unless /\.pm$/;
+                my $file   = $File::Find::name;
+                my $module = $file;
+                $module =~ s|^lib/||;
+                $module =~ s|/|::|g;
+                $module =~ s|\.pm$||;
+                my $v = MM->parse_version($file);
+                $provides{$module} = { file => $file, version => $v || "0" };
+            },
+            no_chdir => 1
         },
-        no_chdir => 1
-    }, "lib");
+        "lib"
+    );
     return \%provides;
 }
