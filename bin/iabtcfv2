@@ -21,10 +21,20 @@ my %global_opts;
 GetOptions(
     'help|h' => \$global_opts{help},
     'man'    => \$global_opts{man},
-) or pod2usage(2);
+  )
+  or pod2usage( -input => $0, -exitval => 2, -verbose => 99,
+    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 
-pod2usage(1)                              if $global_opts{help};
-pod2usage( -exitval => 0, -verbose => 2 ) if $global_opts{man};
+if ( $global_opts{help} ) {
+    my $topic = $ARGV[0];
+    if ( $topic && $topic eq 'dump' ) {
+        pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+            -sections => "DUMP.*" );
+    }
+    pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
+}
+pod2usage( -input => $0, -exitval => 0, -verbose => 2 ) if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
 
@@ -36,11 +46,18 @@ elsif ( $subcommand eq 'validate' ) {
     exit EXIT_SUCCESS;
 }
 elsif ( $subcommand eq 'help' ) {
-    pod2usage(1);
+    my $topic = shift @ARGV;
+    if ( $topic && $topic eq 'dump' ) {
+        pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+            -sections => "DUMP" );
+    }
+    pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 }
 else {
     warn "Unknown subcommand: $subcommand\n";
-    pod2usage(1);
+    pod2usage( -input => $0, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 }
 
 sub run_dump {
@@ -64,8 +81,13 @@ sub run_dump {
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
-        'help|h' => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
-    ) or pod2usage( -sections => 'SUBCOMMANDS/dump' );
+        'help|h'             => sub {
+            pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+                -sections => "DUMP.*" );
+        },
+      )
+      or pod2usage( -input => $0, -exitval => 2, -verbose => 99,
+        -sections => "DUMP.*" );
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
     my $json     = $json_pkg->new->utf8;
@@ -190,11 +212,23 @@ Prints the manual page and exits.
 
 =head1 SUBCOMMANDS
 
-=head2 dump
+=over 4
+
+=item B<dump>
 
 Parses TC strings and outputs them as JSON.
 
-=head3 Options
+=item B<validate>
+
+Validates TC strings against provided business rules (Stub).
+
+=back
+
+=head1 DUMP
+
+Parses TC strings and outputs them as JSON.
+
+=head2 Options
 
 =over 4
 
@@ -228,7 +262,7 @@ Suppress human-readable warning messages on B<STDERR>.
 
 =back
 
-=head3 Examples
+=head2 Examples
 
     # Dump a string to JSON line
     iabtcfv2 dump CPi...AAA
@@ -238,6 +272,10 @@ Suppress human-readable warning messages on B<STDERR>.
 
     # Read from STDIN
     cat strings.txt | iabtcfv2 dump --json-array
+
+=head1 VALIDATE
+
+Validates TC strings against provided business rules. (Not yet implemented).
 
 =head1 DESCRIPTION
 
