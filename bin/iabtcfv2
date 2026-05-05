@@ -22,19 +22,13 @@ sub _json_false {
 
 my %global_opts;
 GetOptions(
-    'help|h'    => \$global_opts{help},
-    'man'       => \$global_opts{man},
-    'version|V' => \$global_opts{version},
+    'help|h' => \$global_opts{help},
+    'man'    => \$global_opts{man},
   )
   or pod2usage(
     -input    => $script_path, -exitval => 2, -verbose => 99,
     -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
   );
-
-if ( $global_opts{version} ) {
-    print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
-    exit EXIT_SUCCESS;
-}
 
 if ( $global_opts{help} ) {
     my $topic = $ARGV[0];
@@ -229,10 +223,6 @@ iabtcfv2 [options] <subcommand> [subcommand-options]
 =item B<--help>, B<-h>
 
 Print a brief help message and exits.
-
-=item B<--version>, B<-V>
-
-Print the version and exits.
 
 =item B<--man>
 

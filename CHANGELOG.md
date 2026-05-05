@@ -1,24 +1,14 @@
-## [0.360] - 2026-05-05
-
-### Other
-
-- Merge devel into Phase 2 and resolve CHANGELOG conflict
-
-## [0.350] - 2026-05-05
-
-### Features
-
-- Add --version and -V options to CLI
-
-### Other
-
-- Merge feat/phase-1-tcf-v23-segments into devel
-
 ## [0.340] - 2026-05-05
 
 ### Other
 
 - Merge feat/phase-0-core-logic into devel
+- Update documentation
+- Update doc
+- Add Golden File Test System baseline
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion
 
 ## [0.330] - 2026-05-05
 
@@ -56,31 +46,9 @@
 
 - Fix yaml lint issues
 
-### Documentation
-
-- Update changelog for Phase 2
-- Update changelog for Phase 1
-
 ### Other
 
 - Independent iabtcf-dump CLI utility 
-- Merge Phase 1 updates
-- Merge Phase 0 updates
-- Update documentation
-- Update doc
-- Merge test fix
-- Fix test expectation for aligned TO_JSON
-- Merge updated Golden File
-- Update Golden File for TCF v2.3
-- Merge TO_JSON alignment
-- Align TO_JSON output
-- Refactor Validator to reduce complexity (fix perlcritic)
-- Phase 2: The Validator Interface
-- Phase 1: TCF v2.3 & Segment Robustness
-- Add Golden File Test System baseline
-- Phase 0: Core Logic Expansion (Fixed linting & tidy)
-- Phase 0: Core Logic Expansion (Fixed linting & tidy)
-- Phase 0: Core Logic Expansion
 - Normalize macos
 - Update changelog
 
