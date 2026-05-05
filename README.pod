@@ -72,6 +72,25 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)" 
         if $consent->check_publisher_restriction(InfoStorageAccess, NotAllowed, 284);
 
+=head1 COMMAND LINE TOOLS
+
+This distribution includes command line tools to work with TC strings.
+
+=head2 iabtcf-dump
+
+The C<iabtcf-dump> utility allows you to parse TC strings and output them as JSON.
+
+    # Basic usage
+    iabtcf-dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Pretty printed JSON
+    iabtcf-dump --pretty "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Stream multiple strings from STDIN to a JSON array
+    cat strings.txt | iabtcf-dump --json-array
+
+See C<iabtcf-dump --help> or C<perldoc iabtcf-dump> for more details.
+
 =head1 ACRONYMS
 
 L<GDPR|https://gdpr-info.eu/>: General Data Protection Regulation
