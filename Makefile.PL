@@ -63,3 +63,14 @@ sub _get_provides {
     );
     return \%provides;
 }
+
+sub MY::postamble {
+    return <<'EOF';
+lint:
+	perlcritic -profile .perlcriticrc lib bin t xt
+
+tidy:
+	perltidy -b -pro=.perltidyrc $$(find lib bin t xt -name "*.pm" -o -name "*.t" -o -name "iabtcfv2")
+EOF
+}
+

@@ -1,3 +1,17 @@
+## [0.320] - 2026-05-05
+
+### Bug Fixes
+
+- Resolve subroutine name mismatch and incorrect parameter passing in CLI
+
+### Documentation
+
+- Improve CLI help system with subcommand-specific documentation
+
+### Other
+
+- Centralized Quality Checks (xt/ & Makefile) 
+
 ## [0.310] - 2026-05-05
 
 ### Features
