@@ -34,3 +34,11 @@
 ## Phase 4: Performance
 *   **Tasks:**
     *   Investigate `vec()` for bitfields.
+
+## Distribution
+*   [ ] Distribute CLI tool as Docker image via DockerHub.
+    *   Create multi-stage `Dockerfile`.
+    *   Automate build/push via GitHub Actions.
+*   [ ] Distribute library as Debian package (`libgdpr-iab-tcfv2-perl`).
+    *   Use `dh-make-perl` to generate `debian/` metadata.
+    *   Implement build pipeline for `.deb` artifacts.

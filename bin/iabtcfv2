@@ -1,0 +1,328 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Getopt::Long qw(GetOptionsFromArray :config pass_through);
+use Pod::Usage;
+use File::Spec;
+eval { require JSON; 1 } or require JSON::PP;
+use GDPR::IAB::TCFv2;
+
+use constant {
+    EXIT_SUCCESS     => 0,
+    EXIT_PARSE_ERROR => 1,
+};
+
+my $script_path = File::Spec->rel2abs($0);
+
+sub _json_false {
+    return JSON->can('false') ? JSON->false() : JSON::PP::false();
+}
+
+my %global_opts;
+GetOptions(
+    'help|h' => \$global_opts{help},
+    'man'    => \$global_opts{man},
+  )
+  or pod2usage(
+    -input    => $script_path, -exitval => 2, -verbose => 99,
+    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+  );
+
+if ( $global_opts{help} ) {
+    my $topic = $ARGV[0];
+    if ( $topic && $topic eq 'dump' ) {
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "DUMP"
+        );
+    }
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
+}
+pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
+  if $global_opts{man};
+
+my $subcommand = shift @ARGV || 'help';
+
+if ( $subcommand eq 'dump' ) {
+    run_dump(@ARGV);
+}
+elsif ( $subcommand eq 'validate' ) {
+    warn "The 'validate' subcommand is not yet implemented.\n";
+    exit EXIT_PARSE_ERROR;
+}
+elsif ( $subcommand eq 'help' ) {
+    my $topic = shift @ARGV;
+    if ( $topic && $topic eq 'dump' ) {
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "DUMP"
+        );
+    }
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
+}
+else {
+    warn "Unknown subcommand: $subcommand\n";
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
+}
+
+sub run_dump {
+    my @args = @_;
+    my %opts = (
+        pretty             => 0,
+        'json-array'       => 0,
+        compact            => 0,
+        'ignore-errors'    => 0,
+        'fail-fast'        => 0,
+        'errors-to-stderr' => 0,
+        'quiet'            => 0,
+    );
+
+    GetOptionsFromArray(
+        \@args,
+        'pretty|p'           => \$opts{pretty},
+        'json-array'         => \$opts{'json-array'},
+        'compact'            => \$opts{compact},
+        'ignore-errors|i'    => \$opts{'ignore-errors'},
+        'fail-fast|f'        => \$opts{'fail-fast'},
+        'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
+        'quiet|q'            => \$opts{'quiet'},
+        'help|h'             => sub {
+            pod2usage(
+                -input    => $script_path, -exitval => 1, -verbose => 99,
+                -sections => "DUMP"
+            );
+        },
+      )
+      or pod2usage(
+        -input    => $script_path, -exitval => 2, -verbose => 99,
+        -sections => "DUMP"
+      );
+
+    my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
+    my $json     = $json_pkg->new->utf8;
+    if ( $opts{pretty} ) {
+        $json->pretty(1);
+        $json->indent_length(4) if $json->isa('JSON::PP');
+    }
+    if ( $opts{'json-array'} ) {
+        print "[\n";
+    }
+
+    my $state = {
+        count    => 0,
+        line_num => 0,
+    };
+
+    if (@args) {
+        foreach my $str (@args) {
+            $state->{line_num}++;
+            _process_string( $str, $state, \%opts, $json );
+        }
+    }
+    else {
+        binmode( STDIN, ':utf8' ) if -t STDIN;
+        while ( my $line = <STDIN> ) {
+            $state->{line_num}++;
+            chomp $line;
+            next unless $line =~ /\S/;
+            _process_string( $line, $state, \%opts, $json );
+        }
+    }
+
+
+    if ( $opts{'json-array'} ) {
+        print "\n]\n";
+    }
+
+    exit EXIT_SUCCESS;
+}
+
+sub _process_string {
+    my ( $str, $state, $o, $j ) = @_;
+    my $output_data;
+
+    eval {
+        my $tcf = GDPR::IAB::TCFv2->Parse(
+            $str,
+            json => {
+                compact => $o->{compact},
+            }
+        );
+        $output_data = $tcf->TO_JSON;
+    };
+    if ( my $err = $@ ) {
+        if ( $o->{'fail-fast'} ) {
+            warn
+              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n";
+            exit EXIT_PARSE_ERROR;
+        }
+
+        warn
+          "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
+          unless $o->{'quiet'};
+
+        return if $o->{'ignore-errors'};
+
+        chomp $err;
+        $output_data = {
+            tc_string => $str,
+            error     => $err,
+            success   => _json_false(),
+        };
+
+        if ( $o->{'errors-to-stderr'} ) {
+            warn $j->encode($output_data) . "\n";
+            return;
+        }
+    }
+
+    my $out = $j->encode($output_data);
+
+    if ( $o->{'json-array'} ) {
+        print ",\n" if $state->{count} > 0;
+        print $o->{pretty} ? _indent($out) : $out;
+    }
+    else {
+        print "$out\n";
+    }
+
+    $state->{count}++;
+}
+
+sub _indent {
+    my $text = shift;
+    $text =~ s/^/    /mg;
+    return $text;
+}
+
+__END__
+
+=head1 NAME
+
+iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings
+
+=head1 SYNOPSIS
+
+iabtcfv2 [options] <subcommand> [subcommand-options]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--help>, B<-h>
+
+Print a brief help message and exits.
+
+=item B<--man>
+
+Prints the manual page and exits.
+
+=back
+
+=head1 SUBCOMMANDS
+
+=over 4
+
+=item B<dump>
+
+Parses TC strings and outputs them as JSON.
+
+=item B<validate>
+
+Validates TC strings against provided business rules (Stub).
+
+=back
+
+=head1 DUMP
+
+Parses TC strings and outputs them as JSON.
+
+=head2 Options
+
+=over 4
+
+=item B<--pretty>, B<-p>
+
+Output human-readable, indented JSON.
+
+=item B<--json-array>
+
+Output a single JSON array containing all parsed objects.
+
+=item B<--compact>
+
+Output a compact JSON representation (lists of IDs instead of boolean maps).
+
+=item B<--ignore-errors>, B<-i>
+
+Do not output any JSON error object for failed strings.
+
+=item B<--fail-fast>, B<-f>
+
+Stop processing and exit the program immediately upon the first parse error.
+
+=item B<--errors-to-stderr>, B<-e>
+
+Output JSON error objects to B<STDERR> instead of B<STDOUT>.
+
+=item B<--quiet>, B<-q>
+
+Suppress human-readable warning messages on B<STDERR>.
+
+=back
+
+=head2 Examples
+
+    # Dump a string to JSON line
+    iabtcfv2 dump CPi...AAA
+
+    # Dump multiple strings to a pretty-printed JSON array
+    iabtcfv2 dump --pretty --json-array CPi...AAA CPj...BBB
+
+    # Read from STDIN
+    cat strings.txt | iabtcfv2 dump --json-array
+
+=head1 DOCKER USAGE
+
+This tool is also available as a Docker image on Docker Hub.
+
+=head2 Basic Usage
+
+    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+=head2 Processing Streams (STDIN)
+
+To process a stream of strings via pipe:
+
+    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+
+To type strings manually:
+
+    docker run -it --rm peczenyj/iabtcfv2 dump
+
+=head1 VALIDATE
+
+Validates TC strings against provided business rules. (Not yet implemented).
+
+=head1 DESCRIPTION
+
+B<iabtcfv2> is a command-line interface for the GDPR::IAB::TCFv2 library.
+
+=head2 B<Warning: Name Change>
+
+Previous versions of this distribution (v0.300) included a standalone utility
+named B<iabtcf-dump>. This has been unified into the B<iabtcfv2> tool using
+the B<dump> subcommand.
+
+=cut
