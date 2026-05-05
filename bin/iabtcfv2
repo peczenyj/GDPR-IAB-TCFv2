@@ -25,19 +25,26 @@ GetOptions(
     'help|h' => \$global_opts{help},
     'man'    => \$global_opts{man},
   )
-  or pod2usage( -input => $script_path, -exitval => 2, -verbose => 99,
-    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
+  or pod2usage(
+    -input    => $script_path, -exitval => 2, -verbose => 99,
+    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+  );
 
 if ( $global_opts{help} ) {
     my $topic = $ARGV[0];
     if ( $topic && $topic eq 'dump' ) {
-        pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
-            -sections => "DUMP" );
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "DUMP"
+        );
     }
-    pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
 }
-pod2usage( -input => $script_path, -exitval => 0, -verbose => 2 ) if $global_opts{man};
+pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
+  if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
 
@@ -46,21 +53,27 @@ if ( $subcommand eq 'dump' ) {
 }
 elsif ( $subcommand eq 'validate' ) {
     warn "The 'validate' subcommand is not yet implemented.\n";
-    exit EXIT_SUCCESS;
+    exit EXIT_PARSE_ERROR;
 }
 elsif ( $subcommand eq 'help' ) {
     my $topic = shift @ARGV;
     if ( $topic && $topic eq 'dump' ) {
-        pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
-            -sections => "DUMP" );
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "DUMP"
+        );
     }
-    pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
 }
 else {
     warn "Unknown subcommand: $subcommand\n";
-    pod2usage( -input => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    );
 }
 
 sub run_dump {
@@ -85,12 +98,16 @@ sub run_dump {
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
         'help|h'             => sub {
-            pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
-                -sections => "DUMP" );
+            pod2usage(
+                -input    => $script_path, -exitval => 1, -verbose => 99,
+                -sections => "DUMP"
+            );
         },
       )
-      or pod2usage( -input => $script_path, -exitval => 2, -verbose => 99,
-        -sections => "DUMP" );
+      or pod2usage(
+        -input    => $script_path, -exitval => 2, -verbose => 99,
+        -sections => "DUMP"
+      );
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
     my $json     = $json_pkg->new->utf8;
@@ -275,6 +292,24 @@ Suppress human-readable warning messages on B<STDERR>.
 
     # Read from STDIN
     cat strings.txt | iabtcfv2 dump --json-array
+
+=head1 DOCKER USAGE
+
+This tool is also available as a Docker image on Docker Hub.
+
+=head2 Basic Usage
+
+    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+=head2 Processing Streams (STDIN)
+
+To process a stream of strings via pipe:
+
+    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+
+To type strings manually:
+
+    docker run -it --rm peczenyj/iabtcfv2 dump
 
 =head1 VALIDATE
 

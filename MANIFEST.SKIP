@@ -5,6 +5,7 @@
 blib/
 \.bs$
 cliff.toml
+Dockerfile
 ex/
 \.git
 Makefile$

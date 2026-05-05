@@ -1,3 +1,13 @@
+## [unreleased]
+
+### Documentation
+
+- Add Docker usage instructions and refine contributor guidelines
+
+### Other
+
+- Merge v0.320 updates
+
 ## [0.320] - 2026-05-05
 
 ### Bug Fixes
@@ -7,6 +17,10 @@
 ### Documentation
 
 - Improve CLI help system with subcommand-specific documentation
+
+### Features
+
+- Implement automated docker distribution (isolated)
 
 ### Other
 

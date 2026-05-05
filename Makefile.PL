@@ -9,6 +9,7 @@ WriteMakefile(
     MIN_PERL_VERSION => 5.008,
     EXE_FILES        => ['bin/iabtcfv2'],
     TEST_REQUIRES    => {
+        'JSON::PP'        => 0,
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,
         'Test::Pod'       => 0,
@@ -34,7 +35,9 @@ WriteMakefile(
                     },
                 },
                 recommends => {
-                    'JSON' => 0,
+                    'JSON'               => 0,
+                    'JSON::XS'           => 0,
+                    'DateTimeX::TO_JSON' => 0,
                 },
                 x_authority => 'cpan:PACMAN',
             }

@@ -22,7 +22,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.320";
+our $VERSION = "0.330";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -734,6 +734,47 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     # NotAllowed exported by GDPR::IAB::TCFv2::Constants::RestrictionType
     say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)" 
         if $consent->check_publisher_restriction(InfoStorageAccess, NotAllowed, 284);
+
+=head1 COMMAND LINE TOOLS
+
+This distribution includes a unified command line tool to work with TC strings.
+
+=head2 iabtcfv2
+
+The C<iabtcfv2> utility provides several subcommands for TCF v2 strings.
+
+=head3 dump
+
+Parses TC strings and output them as JSON.
+
+    # Basic usage
+    iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Pretty printed JSON
+    iabtcfv2 dump --pretty "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Stream multiple strings from STDIN to a JSON array
+    cat strings.txt | iabtcfv2 dump --json-array
+
+See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
+
+=head1 DOCKER USAGE
+
+This tool is also available as a Docker image on Docker Hub.
+
+=head2 Basic Usage
+
+    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+=head2 Processing Streams (STDIN)
+
+To process a stream of strings via pipe:
+
+    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+
+To type strings manually:
+
+    docker run -it --rm peczenyj/iabtcfv2 dump
 
 =head1 ACRONYMS
 
