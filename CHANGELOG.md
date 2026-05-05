@@ -1,31 +1,14 @@
-## [unreleased]
+## [0.300] - 2026-05-05
 
 ### Bug Fixes
 
-- Remove stale Changes from MANIFEST and add missing files
-- Make CLI tests cross-platform for Windows
-- Make CLI test more robust for Windows
 - Fix yaml lint issues
-
-### Documentation
-
-- Implement security policy and metadata
-- Add distribution goals to TODO.md
-
-### Features
-
-- Add dynamic META 'provides' metadata to Makefile.PL
-- Enhance CLI dump with structured error handling and flags
-- Implement iabtcfv2 cli tool with dump subcommand
 
 ### Other
 
+- Independent iabtcf-dump CLI utility 
 - Normalize macos
 - Update changelog
-
-### Refactor
-
-- Split unified CLI into standalone iabtcf-dump utility
 
 ## [0.203] - 2025-04-21
 
