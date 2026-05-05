@@ -22,7 +22,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 
-our $VERSION = "0.300";
+our $VERSION = "0.310";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {

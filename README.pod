@@ -74,22 +74,26 @@ The purpose of this package is to parse Transparency & Consent String (TC String
 
 =head1 COMMAND LINE TOOLS
 
-This distribution includes command line tools to work with TC strings.
+This distribution includes a unified command line tool to work with TC strings.
 
-=head2 iabtcf-dump
+=head2 iabtcfv2
 
-The C<iabtcf-dump> utility allows you to parse TC strings and output them as JSON.
+The C<iabtcfv2> utility provides several subcommands for TCF v2 strings.
+
+=head3 dump
+
+Parses TC strings and output them as JSON.
 
     # Basic usage
-    iabtcf-dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
     # Pretty printed JSON
-    iabtcf-dump --pretty "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    iabtcfv2 dump --pretty "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
     # Stream multiple strings from STDIN to a JSON array
-    cat strings.txt | iabtcf-dump --json-array
+    cat strings.txt | iabtcfv2 dump --json-array
 
-See C<iabtcf-dump --help> or C<perldoc iabtcf-dump> for more details.
+See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
 
 =head1 ACRONYMS
 
@@ -534,4 +538,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 =cut
-
