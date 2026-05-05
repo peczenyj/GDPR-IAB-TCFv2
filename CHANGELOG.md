@@ -1,3 +1,9 @@
+## [0.310] - 2026-05-05
+
+### Features
+
+- Implement unified subcommand-based CLI and bump version to 0.310
+
 ## [0.300] - 2026-05-05
 
 ### Bug Fixes
