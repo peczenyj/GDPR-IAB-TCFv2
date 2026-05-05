@@ -69,8 +69,10 @@ sub run_dump {
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
     my $json     = $json_pkg->new->utf8;
-    $json->pretty(1)->indent_length(4) if $opts{pretty};
-
+    if ( $opts{pretty} ) {
+        $json->pretty(1);
+        $json->indent_length(4) if $json->can('indent_length');
+    }
     if ( $opts{'json-array'} ) {
         print "[\n";
     }

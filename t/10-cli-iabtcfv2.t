@@ -37,7 +37,7 @@ like(
     qr/"version"\s*:\s*2/,
     "Pretty output contains version"
 );
-like( $pretty_output, qr/\n    "/, "Pretty output contains indentation" );
+like( $pretty_output, qr/\n\s+"/, "Pretty output contains indentation" );
 
 # Test short -p alias
 my $short_p_output = `$perl -Ilib $bin dump -p $tc_string`;
