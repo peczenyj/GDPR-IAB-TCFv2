@@ -1,6 +1,10 @@
 use strict;
 use warnings;
 use Test::More;
+
+eval { require JSON::PP; 1 }
+  or plan skip_all => 'JSON::PP required for this test';
+
 use JSON::PP;
 use File::Spec;
 
@@ -30,7 +34,7 @@ like(
 like( $pretty_output, qr/\n    "/, "Pretty output contains indentation" );
 
 # Test array output
-my $array_output = `$perl -Ilib $bin --array $tc_string $tc_string`;
+my $array_output = `$perl -Ilib $bin --json-array $tc_string $tc_string`;
 my $array_json   = eval { decode_json($array_output) };
 ok( $array_json, "Output is valid JSON array" );
 is( ref($array_json),     'ARRAY', "Root is an array" );
