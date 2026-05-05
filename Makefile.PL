@@ -7,7 +7,7 @@ WriteMakefile(
     ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
     VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
     MIN_PERL_VERSION => 5.008,
-    EXE_FILES        => ['bin/iabtcfv2'],
+    EXE_FILES        => ['bin/iabtcf-dump'],
     TEST_REQUIRES    => {
         'Test::Exception' => 0.43,
         'Test::More'      => 0.94,

@@ -4,16 +4,16 @@ use Test::More;
 use JSON::PP;
 use File::Spec;
 
-my $bin = File::Spec->catfile( 'bin', 'iabtcfv2' );
+my $bin = File::Spec->catfile( 'bin', 'iabtcf-dump' );
 my $tc_string =
   'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
 
 # Use $^X to ensure we use the same perl interpreter
-my $perl    = $^X;
+my $perl = $^X;
 my $devnull = ( $^O eq 'MSWin32' ) ? 'NUL' : '/dev/null';
 
 # Test basic dump (JSON Line)
-my $output = `$perl -Ilib $bin dump $tc_string`;
+my $output = `$perl -Ilib $bin $tc_string`;
 ok( $output, "Got output from CLI dump" );
 
 my $json = eval { decode_json($output) };
@@ -21,7 +21,7 @@ ok( $json, "Output is valid JSON" );
 is( $json->{version}, 2, "Parsed version is correct" );
 
 # Test pretty print
-my $pretty_output = `$perl -Ilib $bin dump --pretty $tc_string`;
+my $pretty_output = `$perl -Ilib $bin --pretty $tc_string`;
 like(
     $pretty_output,
     qr/"version"\s*:\s*2/,
@@ -30,14 +30,15 @@ like(
 like( $pretty_output, qr/\n    "/, "Pretty output contains indentation" );
 
 # Test array output
-my $array_output = `$perl -Ilib $bin dump --array $tc_string $tc_string`;
+my $array_output = `$perl -Ilib $bin --array $tc_string $tc_string`;
 my $array_json   = eval { decode_json($array_output) };
 ok( $array_json, "Output is valid JSON array" );
 is( ref($array_json),     'ARRAY', "Root is an array" );
 is( scalar(@$array_json), 2,       "Array contains two elements" );
 
 # Test STDIN (using Perl to avoid shell-specific echo/heredoc issues)
-my $stdin_output = `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
+my $stdin_output =
+  `$perl -e "print '$tc_string'" | $perl -Ilib $bin`;
 
 my $stdin_json = eval { decode_json($stdin_output) };
 ok( $stdin_json, "Parsed from STDIN correctly" )
@@ -48,7 +49,7 @@ is( $stdin_json->{version}, 2, "Parsed version from STDIN is correct" );
 my $invalid_str = "INVALID_STRING_XYZ";
 
 # 1. Default Error JSON
-my $err_output = `$perl -Ilib $bin dump $invalid_str 2>$devnull`;
+my $err_output = `$perl -Ilib $bin $invalid_str 2>$devnull`;
 my $err_json   = eval { decode_json($err_output) };
 ok( $err_json, "Invalid string produces JSON error object" );
 is( $err_json->{success},   JSON::PP::false, "Error object success is false" );
@@ -56,18 +57,19 @@ is( $err_json->{tc_string}, $invalid_str, "Error object includes raw string" );
 
 # 2. --ignore-errors
 my $ignore_output =
-  `$perl -Ilib $bin dump --ignore-errors $invalid_str 2>$devnull`;
+  `$perl -Ilib $bin --ignore-errors $invalid_str 2>$devnull`;
 is( $ignore_output, "", "--ignore-errors produces no output for bad string" );
 
 # 3. --fail-fast
-my $ff_output = `$perl -Ilib $bin dump --fail-fast $invalid_str 2>$devnull`;
+my $ff_output = `$perl -Ilib $bin --fail-fast $invalid_str 2>$devnull`;
 ok( $? != 0, "--fail-fast exits with non-zero code" );
 
 # 4. --errors-to-stderr
 # Use a temporary file to capture stderr safely
 my $stderr_file = File::Spec->catfile( File::Spec->tmpdir(), "tcf_stderr_$$" );
 my $e2s_stdout =
-  `$perl -Ilib $bin dump --quiet --errors-to-stderr $invalid_str 2>$stderr_file`;
+  `$perl -Ilib $bin --quiet --errors-to-stderr $invalid_str 2>$stderr_file`;
+
 
 is( $e2s_stdout, "", "--errors-to-stderr stdout is empty for bad string" );
 
