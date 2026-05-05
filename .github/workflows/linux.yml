@@ -12,7 +12,7 @@ jobs:
       matrix:
         perl: ["5.12.2"]
         include:
-          - perl: '5.40'
+          - perl: 'latest'
             coverage: true
     name: Perl ${{ matrix.perl }} on ubuntu
     steps:

@@ -5,7 +5,7 @@ use warnings;
 use integer;
 use bytes;
 
-use Carp         qw<croak>;
+use Carp         qw<carp croak>;
 use MIME::Base64 qw<decode_base64>;
 use POSIX        qw<strftime>;
 
@@ -21,6 +21,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 >;
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
+use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
 our $VERSION = "0.330";
 
@@ -231,12 +232,15 @@ sub _safe_is_special_feature_opt_in {
 }
 
 sub is_purpose_consent_allowed {
-    my ( $self, $id ) = @_;
+    my ( $self, @ids ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
-      if $id < 1 || $id > MAX_PURPOSE_ID;
+    $self->_validate_purpose_ids( 'is_purpose_consent_allowed', @ids );
 
-    return $self->_safe_is_purpose_consent_allowed($id);
+    foreach my $id (@ids) {
+        return 0 unless $self->_safe_is_purpose_consent_allowed($id);
+    }
+
+    return 1;
 }
 
 sub _safe_is_purpose_consent_allowed {
@@ -249,12 +253,32 @@ sub _safe_is_purpose_consent_allowed {
 }
 
 sub is_purpose_legitimate_interest_allowed {
-    my ( $self, $id ) = @_;
+    my ( $self, @ids ) = @_;
 
-    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
-      if $id < 1 || $id > MAX_PURPOSE_ID;
+    $self->_validate_purpose_ids(
+        'is_purpose_legitimate_interest_allowed',
+        @ids
+    );
 
-    return $self->_safe_is_purpose_legitimate_interest_allowed($id);
+    foreach my $id (@ids) {
+        return 0
+          unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
+    }
+
+    return 1;
+}
+
+sub _validate_purpose_ids {
+    my ( $self, $method_name, @ids ) = @_;
+
+    croak "method $method_name requires at least one argument"
+      unless @ids;
+
+    foreach my $id (@ids) {
+        croak
+          "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
+          if $id < 1 || $id > MAX_PURPOSE_ID;
+    }
 }
 
 sub _safe_is_purpose_legitimate_interest_allowed {
@@ -336,6 +360,165 @@ sub publisher_tc {
     my $self = shift;
 
     return $self->{publisher}->publisher_tc;
+}
+
+sub is_vendor_consent_allowed {
+    my ( $self, $vendor_id, @args ) = @_;
+
+    my ( $purpose_ids, $opts ) = $self->_parse_vendor_args(@args);
+
+    foreach my $purpose_id (@$purpose_ids) {
+        return 0 unless $self->_check_purpose_id( $purpose_id, %$opts );
+    }
+
+    return 0 unless $self->vendor_consent($vendor_id);
+
+    foreach my $purpose_id (@$purpose_ids) {
+        return 0
+          if $self->check_publisher_restriction(
+            $purpose_id, NotAllowed,
+            $vendor_id
+          );
+        return 0
+          if $self->check_publisher_restriction(
+            $purpose_id,
+            RequireLegitimateInterest, $vendor_id
+          );
+
+        return 0 unless $self->_safe_is_purpose_consent_allowed($purpose_id);
+    }
+
+    return 1;
+}
+
+sub is_vendor_legitimate_interest_allowed {
+    my ( $self, $vendor_id, @args ) = @_;
+
+    my ( $purpose_ids, $opts ) = $self->_parse_vendor_args(@args);
+
+    foreach my $purpose_id (@$purpose_ids) {
+        return 0 unless $self->_check_purpose_id( $purpose_id, %$opts );
+    }
+
+    return 0 unless $self->vendor_legitimate_interest($vendor_id);
+
+    foreach my $purpose_id (@$purpose_ids) {
+        return 0
+          if $self->check_publisher_restriction(
+            $purpose_id, NotAllowed,
+            $vendor_id
+          );
+        return 0
+          if $self->check_publisher_restriction(
+            $purpose_id, RequireConsent,
+            $vendor_id
+          );
+
+        return 0
+          unless $self->_safe_is_purpose_legitimate_interest_allowed(
+            $purpose_id);
+    }
+
+    return 1;
+}
+
+sub _parse_vendor_args {
+    my ( $self, @args ) = @_;
+
+    if ( @args && ref $args[-1] eq 'HASH' ) {
+        my $opts = pop @args;
+        return ( \@args, $opts );
+    }
+
+    my @purposes;
+    my %opts;
+    while (@args) {
+        if ( $args[0] =~ /^\d+$/ ) {
+            push @purposes, shift @args;
+        }
+        else {
+            %opts = @args;
+            last;
+        }
+    }
+
+    return ( \@purposes, \%opts );
+}
+
+sub is_vendor_allowed_for_any_basis {
+    my ( $self, $vendor_id, @args ) = @_;
+
+    return 1 if $self->is_vendor_consent_allowed( $vendor_id, @args );
+    return 1
+      if $self->is_vendor_legitimate_interest_allowed( $vendor_id, @args );
+
+    return 0;
+}
+
+sub is_vendor_allowed_for_flexible_purpose {
+    my ( $self, $vendor_id, $purpose_id, $default_is_li, %opts ) = @_;
+
+    return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    if ($self->check_publisher_restriction(
+            $purpose_id, RequireConsent, $vendor_id
+        )
+      )
+    {
+        return $self->is_vendor_consent_allowed(
+            $vendor_id, $purpose_id,
+            %opts
+        );
+    }
+
+    if ($self->check_publisher_restriction(
+            $purpose_id, RequireLegitimateInterest, $vendor_id
+        )
+      )
+    {
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
+    }
+
+    if ($self->check_publisher_restriction(
+            $purpose_id, NotAllowed, $vendor_id
+        )
+      )
+    {
+        return 0;
+    }
+
+    if ($default_is_li) {
+        return $self->is_vendor_legitimate_interest_allowed(
+            $vendor_id,
+            $purpose_id, %opts
+        );
+    }
+
+    return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
+}
+
+sub _check_purpose_id {
+    my ( $self, $id, %opts ) = @_;
+
+    my $strict =
+      exists $opts{strict} ? $opts{strict} : $self->{options}->{strict};
+
+    if ( $id < 1 || $id > MAX_PURPOSE_ID ) {
+        if ($strict) {
+            croak
+              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+        }
+        else {
+            carp
+              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 sub _format_date {
@@ -963,16 +1146,24 @@ See also: L<GDPR::IAB::TCFv2::Constants::SpecialFeature>.
 If true means Consent.
 
 The user's consent value for each Purpose established on the legal basis of consent.
+Accepts one or more Purpose IDs. Returns true if all Purposes have consent.
 
     my $ok = $instance->is_purpose_consent_allowed(1);
+    my $all_ok = $instance->is_purpose_consent_allowed(1, 2, 3);
+
+Throws an exception if no arguments are provided or if an ID is invalid.
 
 See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
 =head2 is_purpose_legitimate_interest_allowed
 
 The user's consent value for each Purpose established on the legal basis of legitimate interest.
+Accepts one or more Purpose IDs. Returns true if all Purposes have legitimate interest.
 
     my $ok = $instance->is_purpose_legitimate_interest_allowed(1);
+    my $all_ok = $instance->is_purpose_legitimate_interest_allowed(1, 2, 3);
+
+Throws an exception if no arguments are provided or if an ID is invalid.
 
 See also: L<GDPR::IAB::TCFv2::Constants::Purpose>.
 
@@ -1016,6 +1207,30 @@ If true, legitimate interest established.
 The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
+
+=head2 is_vendor_consent_allowed
+
+Check if a vendor has consent for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_consent_allowed(284, 1, 2, 3)) {
+        # ...
+    }
+
+=head2 is_vendor_legitimate_interest_allowed
+
+Check if a vendor has legitimate interest for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_legitimate_interest_allowed(284, 2, 4)) {
+        # ...
+    }
+
+=head2 is_vendor_allowed_for_any_basis
+
+Check if a vendor has either consent or legitimate interest for a list of purposes, respecting publisher restrictions.
+
+    if ($consent->is_vendor_allowed_for_any_basis(284, 1, 2)) {
+        # ...
+    }
 
 =head2 check_publisher_restriction
 
@@ -1063,6 +1278,14 @@ Vendors that declared a purpose with a default legal basis (consent or legitimat
 For the avoidance of doubt:
 
 In case a vendor has declared flexibility for a purpose and there is no legal basis restriction signal it must always apply the default legal basis under which the purpose was registered aside from being registered as flexible. That means if a vendor declared a purpose as legitimate interest and also declared that purpose as flexible it may not apply a "consent" signal without a legal basis restriction signal to require consent.
+
+=head2 is_vendor_allowed_for_flexible_purpose
+
+Check if a vendor is allowed for a flexible purpose, given a default legal basis (true if Legitimate Interest, false if Consent).
+
+    if ($consent->is_vendor_allowed_for_flexible_purpose(284, 2, 1)) {
+        # vendor 284, purpose 2, default is LI
+    }
 
 =head2 publisher_restrictions
 

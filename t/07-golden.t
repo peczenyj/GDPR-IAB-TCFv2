@@ -1,0 +1,116 @@
+use strict;
+use warnings;
+
+use Test::More;
+use Test::Exception;
+use JSON::PP;
+use FindBin;
+use File::Spec;
+use lib 'lib';
+use GDPR::IAB::TCFv2;
+
+my $corpus_dir  = File::Spec->catdir( $FindBin::Bin, 'corpus' );
+my $golden_file = File::Spec->catfile( $corpus_dir, 'golden.jsonl' );
+
+# Support regeneration via environment variable
+if ( $ENV{REGEN_CORPUS} ) {
+    diag("Regenerating corpus...");
+    my $generator = File::Spec->catfile( $FindBin::Bin, 'generate_golden.pl' );
+    system( $^X, '-Ilib', $generator ) == 0
+      or die "Failed to regenerate corpus: $!";
+}
+
+if ( !-f $golden_file ) {
+    plan skip_all => "Golden file $golden_file not found";
+}
+
+open my $fh, '<', $golden_file or die "Could not open $golden_file: $!";
+my $json = JSON::PP->new->utf8;
+
+my $count = 0;
+while ( my $line_json = <$fh> ) {
+    chomp $line_json;
+    next unless $line_json;
+
+    my $entry     = $json->decode($line_json);
+    my $tc_string = $entry->{tc_string};
+
+    $count++;
+
+    if ( $entry->{expect_failure} ) {
+        throws_ok { GDPR::IAB::TCFv2->Parse($tc_string); }
+        qr/\Q$entry->{error_match}\E/, "String $count should fail as expected";
+    }
+    else {
+        my $consent;
+        lives_ok {
+            $consent = GDPR::IAB::TCFv2->Parse(
+                $tc_string,
+                json =>
+                  { boolean_values => [ JSON::PP::false, JSON::PP::true ] }
+            );
+        }
+        "String $count parsed successfully";
+
+        next unless $consent;
+
+        my $tests = $entry->{tests};
+
+        # Test JSON representation
+        is_deeply_with_diag(
+            $consent->TO_JSON, $tests->{to_json},
+            "String $count: TO_JSON match"
+        );
+
+        # Test metadata
+        is( $consent->version, $tests->{metadata}->{version},
+            "String $count: version match"
+        );
+        is( $consent->cmp_id, $tests->{metadata}->{cmp_id},
+            "String $count: cmp_id match"
+        );
+        is( scalar( $consent->created ),
+            $tests->{metadata}->{created_epoch},
+            "String $count: created match"
+        );
+
+        # Test sampling
+        my $sampling = $tests->{sampling};
+        foreach my $key ( keys %{$sampling} ) {
+            if ( $key eq 'purpose_1_consent' ) {
+                is( !!$consent->is_purpose_consent_allowed(1),
+                    !!$sampling->{$key}, "String $count: $key match"
+                );
+            }
+            elsif ( $key eq 'vendor_284_consent' ) {
+                is( !!$consent->vendor_consent(284),
+                    !!$sampling->{$key}, "String $count: $key match"
+                );
+            }
+            elsif ($key eq 'vendor_284_purpose_1_allowed'
+                && $consent->can('is_vendor_consent_allowed') )
+            {
+                is( !!$consent->is_vendor_consent_allowed( 284, 1 ),
+                    !!$sampling->{$key}, "String $count: $key match"
+                );
+            }
+        }
+    }
+}
+
+sub is_deeply_with_diag {
+    my ( $got, $expected, $name ) = @_;
+    if ( !is_deeply( $got, $expected, $name ) ) {
+        diag( "\n" . ( "!" x 60 ) );
+        diag("GOLDEN FILE MISMATCH DETECTED");
+        diag(
+            "If this is expected (e.g. intentional logic change), regenerate the corpus with:"
+        );
+        diag("  REGEN_CORPUS=1 prove -l $0");
+        diag( ( "!" x 60 ) . "\n" );
+        return 0;
+    }
+    return 1;
+}
+
+done_testing;
