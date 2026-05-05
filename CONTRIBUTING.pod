@@ -81,8 +81,8 @@ Redo from step 3.
     $EDITOR lib/GDPR/IAB/TCFv2.pm
     # Update changelog
     git cliff -o CHANGELOG.md
-    # update pod documentation
-    # (README.pod is maintained directly)
+    # update readme
+    pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md
     git add .
     git commit
 
