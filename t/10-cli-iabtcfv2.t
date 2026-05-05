@@ -2,7 +2,8 @@ use strict;
 use warnings;
 use Test::More;
 
-eval { require JSON; 1 } or eval { require JSON::PP; 1 }
+eval { require JSON; 1 }
+  or eval { require JSON::PP; 1 }
   or plan skip_all => 'JSON or JSON::PP required for this test';
 
 my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
@@ -36,14 +37,16 @@ like(
     qr/"version"\s*:\s*2/,
     "Pretty output contains version"
 );
-like( $pretty_output, qr/\n    "/, "Pretty output contains indentation" );
+like( $pretty_output, qr/\n\s+"/, "Pretty output contains indentation" );
 
 # Test short -p alias
 my $short_p_output = `$perl -Ilib $bin dump -p $tc_string`;
 my $short_p_json   = decode_helper($short_p_output);
 my $pretty_json    = decode_helper($pretty_output);
-is_deeply( $short_p_json, $pretty_json,
-    "Short -p alias produces logically same output as --pretty" );
+is_deeply(
+    $short_p_json, $pretty_json,
+    "Short -p alias produces logically same output as --pretty"
+);
 
 # Test array output
 my $array_output = `$perl -Ilib $bin dump --json-array $tc_string $tc_string`;
@@ -77,7 +80,7 @@ my $json_false =
 my $err_output = `$perl -Ilib $bin dump $invalid_str 2>$devnull`;
 my $err_json   = decode_helper($err_output);
 ok( $err_json, "Invalid string produces JSON error object" );
-is( $err_json->{success},   $json_false,       "Error object success is false" );
+is( $err_json->{success},   $json_false,  "Error object success is false" );
 is( $err_json->{tc_string}, $invalid_str, "Error object includes raw string" );
 
 # 2. --ignore-errors
