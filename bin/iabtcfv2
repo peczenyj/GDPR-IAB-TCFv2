@@ -293,6 +293,24 @@ Suppress human-readable warning messages on B<STDERR>.
     # Read from STDIN
     cat strings.txt | iabtcfv2 dump --json-array
 
+=head1 DOCKER USAGE
+
+This tool is also available as a Docker image on Docker Hub.
+
+=head2 Basic Usage
+
+    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+=head2 Processing Streams (STDIN)
+
+To process a stream of strings via pipe:
+
+    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+
+To type strings manually:
+
+    docker run -it --rm peczenyj/iabtcfv2 dump
+
 =head1 VALIDATE
 
 Validates TC strings against provided business rules. (Not yet implemented).

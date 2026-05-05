@@ -95,6 +95,24 @@ Parses TC strings and output them as JSON.
 
 See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
 
+=head1 DOCKER USAGE
+
+This tool is also available as a Docker image on Docker Hub.
+
+=head2 Basic Usage
+
+    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+=head2 Processing Streams (STDIN)
+
+To process a stream of strings via pipe:
+
+    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+
+To type strings manually:
+
+    docker run -it --rm peczenyj/iabtcfv2 dump
+
 =head1 ACRONYMS
 
 L<GDPR|https://gdpr-info.eu/>: General Data Protection Regulation
