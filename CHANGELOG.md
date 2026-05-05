@@ -1,4 +1,20 @@
+## [0.340] - 2026-05-05
+
+### Other
+
+- Merge feat/phase-0-core-logic into devel
+- Update documentation
+- Update doc
+- Add Golden File Test System baseline
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion
+
 ## [0.330] - 2026-05-05
+
+### Bug Fixes
+
+- Allow non-standard semver in Docker tags
 
 ### Other
 
