@@ -5,6 +5,7 @@ use warnings;
 
 use Getopt::Long qw(GetOptionsFromArray :config pass_through);
 use Pod::Usage;
+use File::Spec;
 eval { require JSON; 1 } or require JSON::PP;
 use GDPR::IAB::TCFv2;
 
@@ -12,6 +13,8 @@ use constant {
     EXIT_SUCCESS     => 0,
     EXIT_PARSE_ERROR => 1,
 };
+
+my $script_path = File::Spec->rel2abs($0);
 
 sub _json_false {
     return JSON->can('false') ? JSON->false() : JSON::PP::false();
@@ -22,19 +25,19 @@ GetOptions(
     'help|h' => \$global_opts{help},
     'man'    => \$global_opts{man},
   )
-  or pod2usage( -input => $0, -exitval => 2, -verbose => 99,
+  or pod2usage( -input => $script_path, -exitval => 2, -verbose => 99,
     -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 
 if ( $global_opts{help} ) {
     my $topic = $ARGV[0];
     if ( $topic && $topic eq 'dump' ) {
-        pod2usage( -input => $0, -exitval => 0, -verbose => 99,
-            -sections => "DUMP.*" );
+        pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
+            -sections => "DUMP" );
     }
-    pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+    pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
         -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 }
-pod2usage( -input => $0, -exitval => 0, -verbose => 2 ) if $global_opts{man};
+pod2usage( -input => $script_path, -exitval => 0, -verbose => 2 ) if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
 
@@ -48,15 +51,15 @@ elsif ( $subcommand eq 'validate' ) {
 elsif ( $subcommand eq 'help' ) {
     my $topic = shift @ARGV;
     if ( $topic && $topic eq 'dump' ) {
-        pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+        pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
             -sections => "DUMP" );
     }
-    pod2usage( -input => $0, -exitval => 0, -verbose => 99,
+    pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
         -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 }
 else {
     warn "Unknown subcommand: $subcommand\n";
-    pod2usage( -input => $0, -exitval => 1, -verbose => 99,
+    pod2usage( -input => $script_path, -exitval => 1, -verbose => 99,
         -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS" );
 }
 
@@ -82,12 +85,12 @@ sub run_dump {
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
         'help|h'             => sub {
-            pod2usage( -input => $0, -exitval => 0, -verbose => 99,
-                -sections => "DUMP.*" );
+            pod2usage( -input => $script_path, -exitval => 0, -verbose => 99,
+                -sections => "DUMP" );
         },
       )
-      or pod2usage( -input => $0, -exitval => 2, -verbose => 99,
-        -sections => "DUMP.*" );
+      or pod2usage( -input => $script_path, -exitval => 2, -verbose => 99,
+        -sections => "DUMP" );
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
     my $json     = $json_pkg->new->utf8;
