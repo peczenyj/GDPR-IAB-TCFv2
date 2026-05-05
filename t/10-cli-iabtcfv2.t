@@ -125,8 +125,10 @@ subtest 'Help System' => sub {
     my $dump_help = `$perl -Ilib $bin dump --help`;
     like( $dump_help, qr/DUMP/i,      "Subcommand help header found" );
     like( $dump_help, qr/--compact/i, "Subcommand help lists --compact" );
-    like( $dump_help, qr/--json-array/i,
-        "Subcommand help lists --json-array" );
+    like(
+        $dump_help, qr/--json-array/i,
+        "Subcommand help lists --json-array"
+    );
     like( $dump_help, qr/Examples/i, "Subcommand help shows examples" );
 
     # 3. Help Subcommand
