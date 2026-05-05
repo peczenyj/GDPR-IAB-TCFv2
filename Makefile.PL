@@ -46,20 +46,29 @@ WriteMakefile(
 sub _get_provides {
     use File::Find;
     my %provides;
-    find(
-        {   wanted => sub {
-                return unless /\.pm$/;
-                my $file   = $File::Find::name;
-                my $module = $file;
-                $module =~ s|^lib/||;
-                $module =~ s|/|::|g;
-                $module =~ s|\.pm$||;
-                my $v = MM->parse_version($file);
-                $provides{$module} = { file => $file, version => $v || "0" };
-            },
-            no_chdir => 1
+    find({
+        wanted => sub {
+            return unless /\.pm$/;
+            my $file = $File::Find::name;
+            my $module = $file;
+            $module =~ s|^lib/||;
+            $module =~ s|/|::|g;
+            $module =~ s|\.pm$||;
+            my $v = MM->parse_version($file);
+            $provides{$module} = { file => $file, version => $v || "0" };
         },
-        "lib"
-    );
+        no_chdir => 1
+    }, "lib");
     return \%provides;
 }
+
+sub MY::postamble {
+    return <<'EOF';
+lint:
+	perlcritic -profile .perlcriticrc lib bin t xt
+
+tidy:
+	perltidy -b -pro=.perltidyrc $$(find lib bin t xt -name "*.pm" -o -name "*.t" -o -name "iabtcfv2")
+EOF
+}
+
