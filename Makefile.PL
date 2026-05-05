@@ -17,6 +17,7 @@ WriteMakefile(
         ? ( META_MERGE => {
                 'meta-spec'    => { version => 2 },
                 dynamic_config => 0,
+                provides       => _get_provides(),
                 resources      => {
                     homepage   => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
                     repository => {
@@ -39,3 +40,22 @@ WriteMakefile(
         : ()
     ),
 );
+
+sub _get_provides {
+    use File::Find;
+    my %provides;
+    find({
+        wanted => sub {
+            return unless /\.pm$/;
+            my $file = $File::Find::name;
+            my $module = $file;
+            $module =~ s|^lib/||;
+            $module =~ s|/|::|g;
+            $module =~ s|\.pm$||;
+            my $v = MM->parse_version($file);
+            $provides{$module} = { file => $file, version => $v || "0" };
+        },
+        no_chdir => 1
+    }, "lib");
+    return \%provides;
+}
