@@ -114,18 +114,20 @@ ok( $e2s_stderr_json, "--errors-to-stderr routes JSON to stderr" )
 
 # Test Help System
 subtest 'Help System' => sub {
+
     # 1. Global Help
     my $global_help = `$perl -Ilib $bin --help`;
     like( $global_help, qr/SUBCOMMANDS/i, "Global help lists subcommands" );
-    like( $global_help, qr/dump/i,         "Global help mentions 'dump'" );
-    like( $global_help, qr/validate/i,     "Global help mentions 'validate'" );
+    like( $global_help, qr/dump/i,        "Global help mentions 'dump'" );
+    like( $global_help, qr/validate/i,    "Global help mentions 'validate'" );
 
     # 2. Subcommand Help (dump)
     my $dump_help = `$perl -Ilib $bin dump --help`;
-    like( $dump_help, qr/DUMP/i,           "Subcommand help header found" );
-    like( $dump_help, qr/--compact/i,      "Subcommand help lists --compact" );
-    like( $dump_help, qr/--json-array/i,   "Subcommand help lists --json-array" );
-    like( $dump_help, qr/Examples/i,       "Subcommand help shows examples" );
+    like( $dump_help, qr/DUMP/i,      "Subcommand help header found" );
+    like( $dump_help, qr/--compact/i, "Subcommand help lists --compact" );
+    like( $dump_help, qr/--json-array/i,
+        "Subcommand help lists --json-array" );
+    like( $dump_help, qr/Examples/i, "Subcommand help shows examples" );
 
     # 3. Help Subcommand
     my $help_cmd = `$perl -Ilib $bin help dump`;
