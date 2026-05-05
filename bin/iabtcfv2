@@ -33,15 +33,23 @@ else {
 sub run_dump {
     my @args = @_;
     my %opts = (
-        pretty => 0,
-        array  => 0,
+        pretty             => 0,
+        array              => 0,
+        'ignore-errors'    => 0,
+        'fail-fast'        => 0,
+        'errors-to-stderr' => 0,
+        'quiet'            => 0,
     );
 
     GetOptionsFromArray(
         \@args,
-        'pretty' => \$opts{pretty},
-        'array'  => \$opts{array},
-        'help|h' => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
+        'pretty'             => \$opts{pretty},
+        'array'              => \$opts{array},
+        'ignore-errors|i'    => \$opts{'ignore-errors'},
+        'fail-fast|f'        => \$opts{'fail-fast'},
+        'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
+        'quiet|q'            => \$opts{'quiet'},
+        'help|h'             => sub { pod2usage( -sections => 'SUBCOMMANDS/dump' ) },
     ) or pod2usage( -sections => 'SUBCOMMANDS/dump' );
 
     my @inputs;
@@ -61,17 +69,38 @@ sub run_dump {
 
     my @results;
     foreach my $str (@inputs) {
+        my $output_data;
         eval {
             my $tcf = GDPR::IAB::TCFv2->Parse($str);
-            if ( $opts{array} ) {
-                push @results, $tcf->TO_JSON;
-            }
-            else {
-                print $json->encode( $tcf->TO_JSON ) . "\n";
-            }
+            $output_data = $tcf->TO_JSON;
         };
-        if ($@) {
-            warn "Failed to parse TC string '$str': $@\n";
+        if ( my $err = $@ ) {
+            die "Fatal: Failed to parse TC string '$str': $err"
+              if $opts{'fail-fast'};
+
+            warn "Warning: Failed to parse TC string '$str': $err"
+              unless $opts{'quiet'};
+
+            next if $opts{'ignore-errors'};
+
+            chomp $err;
+            $output_data = {
+                tc_string => $str,
+                error     => $err,
+                success   => JSON::PP::false
+            };
+
+            if ( $opts{'errors-to-stderr'} ) {
+                warn $json->encode($output_data) . "\n";
+                next;
+            }
+        }
+
+        if ( $opts{array} ) {
+            push @results, $output_data;
+        }
+        else {
+            print $json->encode($output_data) . "\n";
         }
     }
 
@@ -121,6 +150,22 @@ Output human-readable, indented JSON.
 =item B<--array>
 
 Output a single JSON array containing all parsed objects.
+
+=item B<--ignore-errors>, B<-i>
+
+Do not output any JSON error object for failed strings.
+
+=item B<--fail-fast>, B<-f>
+
+Stop processing and exit the program immediately upon the first parse error.
+
+=item B<--errors-to-stderr>, B<-e>
+
+Output JSON error objects to B<STDERR> instead of B<STDOUT>.
+
+=item B<--quiet>, B<-q>
+
+Suppress human-readable warning messages on B<STDERR>.
 
 =back
 
