@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Build, CPAN and GitHub Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Perl
+        uses: shogo82148/actions-setup-perl@v1
+        with:
+          perl-version: '5.38'
+
+      - name: Install Release Dependencies
+        run: |
+          cpanm -n CPAN::Uploader pod2markdown
+
+      - name: Build Distribution
+        run: |
+          perl Makefile.PL
+          make manifest
+          make dist
+
+      - name: Upload to CPAN
+        if: env.PAUSE_USER != ''
+        env:
+          PAUSE_USER: ${{ secrets.PAUSE_USER }}
+          PAUSE_PASSWORD: ${{ secrets.PAUSE_PASSWORD }}
+        run: |
+          cpan-upload -u "$PAUSE_USER" -p "$PAUSE_PASSWORD" GDPR-IAB-TCFv2-*.tar.gz
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: GDPR-IAB-TCFv2-*.tar.gz
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

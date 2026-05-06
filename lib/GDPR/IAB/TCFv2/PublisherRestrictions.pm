@@ -28,6 +28,8 @@ sub Parse {
     my $max_id    = ASSUMED_MAX_VENDOR_ID;
     my $options   = $args{options};
 
+    return if length($data) < 12;
+
     my ( $num_restrictions, $next_offset ) = get_uint12( $data, $offset );
 
     my %restrictions;
@@ -60,6 +62,11 @@ sub Parse {
     bless $self, $klass;
 
     return $self;
+}
+
+sub has_restrictions {
+    my $self = shift;
+    return scalar keys %{ $self->{restrictions} } ? 1 : 0;
 }
 
 sub restrictions {
@@ -103,28 +110,43 @@ sub check_restriction {
 }
 
 sub TO_JSON {
-    my $self = shift;
+    my ( $self, $filter_id ) = @_;
 
     my %publisher_restrictions;
 
-    foreach my $purpose_id ( keys %{ $self->{restrictions} } ) {
+    foreach
+      my $purpose_id ( sort { $a <=> $b } keys %{ $self->{restrictions} } )
+    {
         my $restriction_map = $self->{restrictions}->{$purpose_id};
 
         my %purpose_restrictions;
 
         foreach my $restriction_type ( keys %{$restriction_map} ) {
-            my $vendors = $restriction_map->{$restriction_type}->all;
+            if ( defined $filter_id ) {
+                if ($restriction_map->{$restriction_type}->contains($filter_id)
+                  )
+                {
+                    $purpose_restrictions{$filter_id} = int($restriction_type);
+                }
+            }
+            else {
+                my $vendors = $restriction_map->{$restriction_type}->all;
 
-            foreach my $vendor ( @{$vendors} ) {
-                $purpose_restrictions{$vendor} = int($restriction_type);
+                foreach my $vendor ( @{$vendors} ) {
+                    $purpose_restrictions{$vendor} = int($restriction_type);
+                }
             }
         }
 
-        $publisher_restrictions{$purpose_id} = \%purpose_restrictions;
+        # If not filtering, or if we found the filtered vendor, add the purpose
+        if ( !defined $filter_id || scalar keys %purpose_restrictions ) {
+            $publisher_restrictions{$purpose_id} = \%purpose_restrictions;
+        }
     }
 
     return \%publisher_restrictions;
 }
+
 
 1;
 __END__

@@ -24,12 +24,9 @@ sub Parse {
     my $max_id    = $args{max_id};
     my $options   = $args{options};
 
-    # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_id + 7 ) / 8;
-
     croak
-      "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
-      if $data_size < $bytes_required;
+      "a BitField for $max_id bits requires a consent string of at least $max_id bits. This consent string only had $data_size bits"
+      if $data_size < $max_id;
 
     my $self = {
         data    => substr( $data, $offset, $max_id ),
@@ -59,10 +56,38 @@ sub contains {
     return is_set( $self->{data}, $id - 1 );
 }
 
-sub TO_JSON {
+sub all {
     my $self = shift;
 
     my @data = split //, $self->{data};
+
+    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
+}
+
+sub TO_JSON {
+    my ( $self, $filter_id ) = @_;
+
+    my @data = split //, $self->{data};
+
+    if ( defined $filter_id ) {
+        my $val =
+          ( $filter_id > 0 && $filter_id <= $self->{max_id} )
+          ? $data[ $filter_id - 1 ]
+          : 0;
+
+        if ( !!$self->{options}->{json}->{compact} ) {
+            return $val ? [$filter_id] : [];
+        }
+
+        my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+        my $bool_val = $val ? $true : $false;
+
+        if ( !!$self->{options}->{json}->{verbose} ) {
+            return { $filter_id => $bool_val };
+        }
+
+        return $val ? { $filter_id => $true } : {};
+    }
 
     if ( !!$self->{options}->{json}->{compact} ) {
         return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
