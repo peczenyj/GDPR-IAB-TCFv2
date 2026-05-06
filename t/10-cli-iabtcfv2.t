@@ -97,7 +97,7 @@ ok( $? != 0, "--fail-fast exits with non-zero code" );
 # Use a temporary file to capture stderr safely
 my $stderr_file = File::Spec->catfile( File::Spec->tmpdir(), "tcf_stderr_$$" );
 my $e2s_stdout =
-  `$perl -Ilib $bin dump --quiet --errors-to-stderr $invalid_str 2>$stderr_file`;
+  `$perl -Ilib $bin dump --errors-to-stderr $invalid_str 2>$stderr_file`;
 
 is( $e2s_stdout, "", "--errors-to-stderr stdout is empty for bad string" );
 
@@ -154,15 +154,16 @@ subtest 'Version Option' => sub {
 # Test Short Option Bundling and = syntax
 subtest 'Short option bundling and = value syntax' => sub {
 
-    # Bundled boolean flags: -pq is parsed as --pretty --quiet.
+    # Bundled boolean flags: -pi is parsed as --pretty --ignore-errors.
     # `--pretty` produces multi-line indented JSON, which is the easiest
-    # observable side effect to assert on.
-    my $bundled_flags_out  = `$perl -Ilib $bin dump -pq $tc_string`;
+    # observable side effect to assert on; -i is a no-op for a valid TC
+    # string (no parse error to ignore).
+    my $bundled_flags_out  = `$perl -Ilib $bin dump -pi $tc_string`;
     my $bundled_flags_data = decode_helper($bundled_flags_out);
-    ok( $bundled_flags_data, '-pq produces valid JSON' );
+    ok( $bundled_flags_data, '-pi produces valid JSON' );
     like(
         $bundled_flags_out, qr/\n\s+"/,
-        '-pq enables --pretty (multi-line output)'
+        '-pi enables --pretty (multi-line output)'
     );
 
     # Bundled flag + value-taking short: -pv 1 is --pretty --vendor-id 1.
@@ -204,11 +205,12 @@ subtest 'Short aliases -c (compact) and -s (strict)' => sub {
 
     # -s == --strict: a TCF v2.3 string without Disclosed Vendors segment
     # must be rejected with the standard "Disclosed Vendors segment is
-    # mandatory" message.  --quiet keeps the warn off CI.
+    # mandatory" message.  Warnings are off by default (Path D), so no
+    # extra flag needed to keep CI clean.
     my $tc_v23_no_dv =
       'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA';
 
-    my $s_out = `$perl -Ilib $bin dump -s --quiet $tc_v23_no_dv`;
+    my $s_out = `$perl -Ilib $bin dump -s $tc_v23_no_dv`;
     like(
         $s_out, qr/Disclosed Vendors segment is mandatory/,
         '-s enables --strict (rejects v2.3 without Disclosed Vendors)'
@@ -223,6 +225,119 @@ subtest 'Short aliases -c (compact) and -s (strict)' => sub {
         $bundled_cp_data, $longform_cp_data,
         '-cp produces the same data as --compact --pretty'
     );
+};
+
+subtest 'validate subcommand' => sub {
+
+    # The fixture TC string was produced for vendor 32 (it appears in the
+    # vendor consents).  Asking the validator to OK vendor 32 with no
+    # required purposes should always succeed; asking it to OK an
+    # out-of-range vendor (99999) for any required purpose always fails,
+    # which gives stable assertions independent of the GVL contents.
+
+    my $valid_out  = `$perl -Ilib $bin validate -v 32 $tc_string`;
+    my $valid_data = decode_helper($valid_out);
+    ok( $valid_data, 'validate emits JSON' );
+    is( $valid_data->{valid},
+        JSON->can('true') ? JSON->true() : JSON::PP::true(),
+        'valid case has valid:true'
+    );
+    is( $valid_data->{vendor_id}, 32, 'valid case echoes vendor_id' );
+
+    # Failure (singular reason, fail-fast default).
+    my $fail_out  = `$perl -Ilib $bin validate -v 99999 -C 1,2 $tc_string`;
+    my $fail_code = $? >> 8;
+    my $fail_data = decode_helper($fail_out);
+    ok( $fail_data, 'failing validate emits JSON' );
+    is( $fail_data->{valid}, $json_false, 'failing case has valid:false' );
+    ok( exists $fail_data->{reason}, 'fail-fast uses singular reason' );
+    ok( !exists $fail_data->{reasons},
+        'fail-fast does not emit reasons array'
+    );
+    is( $fail_code, 1, 'failing validate exits 1' );
+
+    # --all aggregates reasons.
+    my $all_out =
+      `$perl -Ilib $bin validate -av 99999 -C 1,2 -L 7,8 $tc_string`;
+    my $all_data = decode_helper($all_out);
+    ok( exists $all_data->{reasons}, '--all uses plural reasons array' );
+    ok( !exists $all_data->{reason}, '--all does not emit singular reason' );
+    is( ref $all_data->{reasons}, 'ARRAY', 'reasons is an array' );
+    cmp_ok(
+        scalar @{ $all_data->{reasons} }, '>=', 2,
+        '--all aggregates multiple failures'
+    );
+
+    # --text output paths (success and failure).
+    my $text_ok = `$perl -Ilib $bin validate -tv 32 $tc_string`;
+    like( $text_ok, qr/^OK\s+\S+\s+vendor 32/, '--text valid line shape' );
+
+    my $text_fail = `$perl -Ilib $bin validate -tv 99999 -C 1 $tc_string`;
+    like(
+        $text_fail, qr/^FAIL\s+\S+\s+vendor 99999:/,
+        '--text fail line shape'
+    );
+
+    my $text_all   = `$perl -Ilib $bin validate -atv 99999 -C 1,2 $tc_string`;
+    my @text_lines = split /\n/, $text_all;
+    cmp_ok(
+        scalar @text_lines, '>=', 2,
+        '--text --all spans multiple lines'
+    );
+    like(
+        $text_lines[0], qr/^FAIL\s+\S+\s+vendor 99999:$/,
+        '--text --all first line ends with colon'
+    );
+    like(
+        $text_lines[1], qr/^\s+-\s/,
+        '--text --all subsequent lines are indented bullets'
+    );
+
+    # --quiet preserves exit code, suppresses stdout.
+    my $quiet_ok = `$perl -Ilib $bin validate -qv 32 $tc_string`;
+    is( $quiet_ok, '', '--quiet on success emits nothing' );
+    is( $? >> 8,   0,  '--quiet on success exits 0' );
+
+    my $quiet_fail = `$perl -Ilib $bin validate -qv 99999 -C 1 $tc_string`;
+    is( $quiet_fail, '', '--quiet on failure emits nothing' );
+    is( $? >> 8,     1,  '--quiet on failure still exits 1' );
+
+    # Missing --vendor-id: exit 2 with diagnostic on STDERR.
+    my $missing_v_stderr = File::Spec->catfile(
+        File::Spec->tmpdir(),
+        "tcf_missing_v_$$"
+    );
+    my $missing_v_stdout =
+      `$perl -Ilib $bin validate $tc_string 2>$missing_v_stderr`;
+    is( $? >> 8, 2, 'missing --vendor-id exits 2' );
+    my $missing_v_msg = "";
+    if ( -f $missing_v_stderr ) {
+        open my $fh, '<', $missing_v_stderr;
+        $missing_v_msg = join '', <$fh>;
+        close $fh;
+        unlink $missing_v_stderr;
+    }
+    like(
+        $missing_v_msg, qr/--vendor-id\|-v is required/,
+        'missing --vendor-id explains itself on STDERR'
+    );
+
+    # Parse error path.
+    my $parse_err_out =
+      `$perl -Ilib $bin validate -v 32 INVALID_STRING 2>$devnull`;
+    my $parse_err_code = $? >> 8;
+    my $parse_err_data = decode_helper($parse_err_out);
+    ok( $parse_err_data, 'parse error emits JSON' );
+    is( $parse_err_data->{success}, $json_false,
+        'parse error has success:false'
+    );
+    is( $parse_err_code, 1, 'parse error exits 1' );
+
+    # --ignore-errors silences the parse error JSON but keeps exit code.
+    my $ignore_out =
+      `$perl -Ilib $bin validate -iv 32 INVALID_STRING 2>$devnull`;
+    is( $ignore_out, '', '--ignore-errors silences parse error JSON' );
+    is( $? >> 8,     1,  '--ignore-errors still exits 1' );
 };
 
 done_testing();
