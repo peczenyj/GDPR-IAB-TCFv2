@@ -24,6 +24,9 @@
         *   Filter `vendor` (consents, legitimate_interests, disclosed, allowed) to show only the target ID.
         *   Filter `publisher/restrictions` to only show purposes/restrictions for that target ID.
         *   Maintain structural consistency (return empty map/array if ID not found).
+    *   **Implement Automated Release Workflow**:
+        *   Create `.github/workflows/release.yml`.
+        *   Automate CPAN upload (using PAUSE secrets) and GitHub Release creation on version tags.
 
 ## Phase 2: The Validator Interface
 *   **Goal:** Automated policy enforcement, TCF v2.3 aware.
