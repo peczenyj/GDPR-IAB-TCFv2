@@ -2,6 +2,7 @@ bin/iabtcfv2
 CHANGELOG.md
 CODE_OF_CONDUCT.md
 CONTRIBUTING.pod
+docs/superpowers/plans/2026-05-06-validator-flexible-purposes-redesign.md
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
@@ -12,6 +13,8 @@ lib/GDPR/IAB/TCFv2/Publisher.pm
 lib/GDPR/IAB/TCFv2/PublisherRestrictions.pm
 lib/GDPR/IAB/TCFv2/PublisherTC.pm
 lib/GDPR/IAB/TCFv2/RangeSection.pm
+lib/GDPR/IAB/TCFv2/Validator.pm
+lib/GDPR/IAB/TCFv2/Validator/Result.pm
 LICENSE
 Makefile.PL
 MANIFEST
@@ -23,12 +26,15 @@ t/02-json-bitfield.t
 t/03-json-range.t
 t/04-legal-basis.t
 t/05-tcf-v23.t
+t/06-validator.t
 t/07-golden.t
+t/08-golden-validator.t
 t/09-predicates.t
 t/10-cli-iabtcfv2.t
 t/12-bigint-fallback.t
 t/90-bugs.t
 t/99-pod.t
 t/corpus/gdpr_subset.txt
-t/corpus/golden.jsonl
+t/corpus/golden.jsonl.gz
+t/corpus/validator_scenarios.pl
 t/generate_golden.pl

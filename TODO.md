@@ -58,6 +58,34 @@
     *   **Tests:** use fixed reference dates so the `deletedDate` / staleness checks are deterministic across execution environments.
 *   **Reference:** PR [#38](https://github.com/peczenyj/GDPR-IAB-TCFv2/pull/38) (`feat/phase-5-cmp-validator`, currently OPEN).
 
+## Phase 6: GVL-Aware Validator
+*   **Goal:** Bridge the IAB Global Vendor List schema to the Phase 2 validator so callers do not have to translate vendor entries by hand.
+*   **Depends on:** Phase 2 (Validator Interface).
+*   **Tasks:**
+    *   Reintroduce `from_gvl_vendor_entry` (deferred from Phase 2): convert a single GVL vendor entry (`{ id, purposes, legIntPurposes, flexiblePurposes }`) into the constructor argument list expected by `Validator->new`.
+    *   Add a higher-level `from_gvl(...)` helper that takes a parsed GVL document and a target vendor ID, performs the lookup, and returns a configured `Validator` instance — failing fast if the vendor is missing.
+    *   Support flexible GVL input: local file path, raw JSON string, or a parsed hashref.
+    *   CLI integration: `iabtcfv2 validate --gvl path/to/gvl.json -v 32 ...` derives the purpose lists from the GVL entry instead of requiring `-C` / `-L` / `-F` on the command line.
+    *   **Tests:** golden GVL fixture covering vendors with and without flexible purposes; round-trip `from_gvl_vendor_entry` against a hand-crafted entry.
+
+## Phase 7: Features, Special Features, and Special Purposes
+*   **Goal:** Extend the validator beyond standard purposes to cover the rest of the TCF taxonomy.
+*   **Depends on:** Phase 2 (Validator Interface).
+*   **Tasks:**
+    *   Validator support for **Special Features** (opt-in, e.g. precise geolocation): require the bit to be set in the TC string when listed.
+    *   Validator support for **Features** (vendor-declared): no consent required, but cross-check that the vendor declares the feature in the GVL once Phase 6 lands.
+    *   Validator support for **Special Purposes**: legitimate-interest-only by spec; check vendor declaration without requiring a consent bit.
+    *   Surface these on the CLI as `--special-features`, `--features`, `--special-purposes` (comma-separated, same shape as `-C` / `-L`).
+    *   **Tests:** extend `t/06-validator.t` with subtests per category; add CLI subtests in `t/10-cli-iabtcfv2.t`.
+
+## Phase 8: CLI Configuration Loading
+*   **Goal:** Reduce boilerplate on the command line by letting common flags come from the environment or a config file.
+*   **Tasks:**
+    *   Map a curated set of environment variables to CLI flags (e.g. `IABTCFV2_VENDOR_ID`, `IABTCFV2_CONSENT_PURPOSES`, `IABTCFV2_LEGITIMATE_INTEREST_PURPOSES`, `IABTCFV2_FLEXIBLE_PURPOSES`, `IABTCFV2_MIN_POLICY_VERSION`). Explicit CLI flags always win.
+    *   Optional config file discovery: `.iabtcfv2rc` in the current directory or `$HOME`, plus `.env`-style loading if the file is present. Document the precedence (CLI > env > file > built-in defaults).
+    *   Add `iabtcfv2 config` (or `validate --print-config`) to dump the resolved configuration as JSON for debugging.
+    *   **Tests:** a CLI subtest that sets the env vars, runs `validate` without the matching flags, and asserts the same outcome as the explicit invocation.
+
 ## Distribution
 *   [ ] Distribute CLI tool as Docker image via DockerHub.
     *   Create multi-stage `Dockerfile`.

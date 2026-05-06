@@ -4,6 +4,17 @@ use Test::More;
 use GDPR::IAB::TCFv2;
 use File::Spec;
 
+eval { require JSON; 1 }
+  or eval { require JSON::PP; 1 }
+  or plan skip_all => 'JSON or JSON::PP required for this test';
+
+my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
+
+sub decode_json_str {
+    my $s = shift;
+    return eval { $json_pkg->new->utf8->decode($s) };
+}
+
 # Test TC strings
 my $tc_with_res = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA'
   ;    # Core + Restrictions
@@ -79,19 +90,23 @@ subtest 'CLI --vendor-id option' => sub {
     my $bin  = File::Spec->catfile( 'bin', 'iabtcfv2' );
     my $perl = $^X;
 
-    # Filter for vendor 1
-    # Vendor section should have "1":true
-    # Vendor section should NOT have "23":true (it was in original disclosed)
-    my $out = `$perl -Ilib $bin dump --vendor-id 1 $tc_full`;
+    # Filter for vendor 1.  Decoded structurally so the assertions don't
+    # depend on JSON key order, which varies by encoder, Perl version,
+    # and hash randomization (CPAN Testers report 4f448578-4978-... saw
+    # JSON::XS on Perl 5.32.1 emit a different key order than the
+    # previous regex assumed).
+    my $data = decode_json_str(`$perl -Ilib $bin dump --vendor-id 1 $tc_full`);
+    ok( $data, 'CLI emits valid JSON' )
+      or BAIL_OUT('--vendor-id output was not parseable JSON');
 
-    # Use a more flexible regex that doesn't choke on nested braces
-    like(
-        $out, qr/"vendor":\{.*"consents":\{"1":true\}/s,
-        'CLI isolated vendor consents'
+    is_deeply(
+        [ sort { $a <=> $b } keys %{ $data->{vendor}{consents} || {} } ],
+        [1],
+        'CLI isolated vendor consents to vendor 1 only'
     );
-    unlike(
-        $out, qr/"disclosed":\{[^}]*"23":true/,
-        'CLI removed other disclosed vendors'
+    ok( $data->{vendor}{consents}{1}, 'vendor 1 consent is true' );
+    ok( !exists $data->{vendor}{disclosed}{23},
+        'CLI removed other disclosed vendors (vendor 23 not in disclosed)'
     );
 
     # Regression: lowercase short -v must be parsed as --vendor-id by the
@@ -104,8 +119,12 @@ subtest 'CLI --vendor-id option' => sub {
         $out_short, qr/^iabtcfv2 version/,
         'short -v is not shadowed by the global -V/--version'
     );
-    like(
-        $out_short, qr/"vendor":\{.*"consents":\{"1":true\}/s,
+    my $data_short = decode_json_str($out_short);
+    ok( $data_short, 'short -v emits valid JSON' )
+      or BAIL_OUT('-v output was not parseable JSON');
+    is_deeply(
+        $data_short->{vendor}{consents},
+        $data->{vendor}{consents},
         'short -v isolates the same vendor as --vendor-id'
     );
 };
@@ -121,10 +140,9 @@ subtest 'CLI --strict option' => sub {
     my $out_lenient = `$perl -Ilib $bin dump $tc_v23_no_dv`;
     like( $out_lenient, qr/"tc_string":/i, 'Lenient mode (default) succeeds' );
 
-    # --quiet suppresses the application-level "Warning: Failed to parse..."
-    # so GitHub Actions doesn't promote it to a workflow annotation.  The
+    # Warnings are off by default (Path D), so no need to silence them.  The
     # error JSON is still emitted to stdout, which is what we assert on.
-    my $out_strict = `$perl -Ilib $bin dump --strict --quiet $tc_v23_no_dv`;
+    my $out_strict = `$perl -Ilib $bin dump --strict $tc_v23_no_dv`;
     like(
         $out_strict,
         qr/Disclosed Vendors segment is mandatory/,
