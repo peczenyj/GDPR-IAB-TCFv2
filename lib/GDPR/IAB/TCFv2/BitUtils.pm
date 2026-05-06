@@ -12,8 +12,8 @@ use base qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
 
-my $CAN_PACK_QUADS;
-my $CAN_FORCE_BIG_ENDIAN;
+our $CAN_PACK_QUADS;
+our $CAN_FORCE_BIG_ENDIAN;
 
 BEGIN {
     $CAN_PACK_QUADS       = !!eval { my $f = pack 'Q>'; 1 };
@@ -119,7 +119,9 @@ sub _get_big_endian_short_16bits {
     my ( $data_with_padding, $next_offset ) =
       _add_padding( $data, 16, $offset, $nbits );
 
-    my $r = Math::BigInt->new( "0b" . $data_with_padding );
+    # Coerce to a native scalar so downstream JSON serializers don't
+    # choke on a blessed Math::BigInt.  16 bits always fits in an IV.
+    my $r = Math::BigInt->new( "0b" . $data_with_padding )->numify;
 
     return wantarray ? ( $r, $next_offset ) : $r;
 }
@@ -139,7 +141,10 @@ sub get_uint36 {
     my ( $data_with_padding, $next_offset ) =
       _add_padding( $data, 64, $offset, 36 );
 
-    my $r = Math::BigInt->new( "0b" . $data_with_padding );
+    # Same coercion as _get_big_endian_short_16bits.  36 bits fits in
+    # an NV's 53-bit mantissa with no precision loss (covers all TCF
+    # v2 deciseconds-since-epoch through year ~2148).
+    my $r = Math::BigInt->new( "0b" . $data_with_padding )->numify;
 
     return wantarray ? ( $r, $next_offset ) : $r;
 }
