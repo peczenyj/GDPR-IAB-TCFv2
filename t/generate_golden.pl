@@ -8,13 +8,15 @@ use GDPR::IAB::TCFv2;
 use JSON::PP;
 use FindBin;
 use File::Spec;
+use IO::Compress::Gzip qw($GzipError);
 
 my $corpus_dir  = File::Spec->catdir( $FindBin::Bin, 'corpus' );
 my $input_file  = File::Spec->catfile( $corpus_dir, 'gdpr_subset.txt' );
-my $output_file = File::Spec->catfile( $corpus_dir, 'golden.jsonl' );
+my $output_file = File::Spec->catfile( $corpus_dir, 'golden.jsonl.gz' );
 
-open my $ifh, '<', $input_file  or die "Could not open $input_file: $!";
-open my $ofh, '>', $output_file or die "Could not open $output_file: $!";
+open my $ifh, '<', $input_file or die "Could not open $input_file: $!";
+my $ofh = IO::Compress::Gzip->new( $output_file, Level => 9 )
+  or die "Could not open $output_file: $GzipError";
 my $json = JSON::PP->new->canonical->utf8;
 
 while ( my $line = <$ifh> ) {

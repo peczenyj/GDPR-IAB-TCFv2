@@ -6,11 +6,15 @@ use Test::Exception;
 use JSON::PP;
 use FindBin;
 use File::Spec;
+use IO::Uncompress::Gunzip qw($GunzipError);
 use lib 'lib';
 use GDPR::IAB::TCFv2;
 
+# The golden corpus is shipped gzipped (~16x smaller).  To inspect a regen
+# diff locally:
+#   gunzip -c t/corpus/golden.jsonl.gz | diff - <(git show HEAD:t/corpus/golden.jsonl.gz | gunzip -c)
 my $corpus_dir  = File::Spec->catdir( $FindBin::Bin, 'corpus' );
-my $golden_file = File::Spec->catfile( $corpus_dir, 'golden.jsonl' );
+my $golden_file = File::Spec->catfile( $corpus_dir, 'golden.jsonl.gz' );
 
 # Support regeneration via environment variable
 if ( $ENV{REGEN_CORPUS} ) {
@@ -24,7 +28,8 @@ if ( !-f $golden_file ) {
     plan skip_all => "Golden file $golden_file not found";
 }
 
-open my $fh, '<', $golden_file or die "Could not open $golden_file: $!";
+my $fh = IO::Uncompress::Gunzip->new($golden_file)
+  or die "Could not open $golden_file: $GunzipError";
 my $json = JSON::PP->new->utf8;
 
 my $count = 0;
