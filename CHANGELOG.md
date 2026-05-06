@@ -14,9 +14,6 @@
 ### Other
 
 - Merge devel into Phase 1
-
-# Conflicts:
-#	CHANGELOG.md
 - Merge Phase 0 updates
 - Fix test expectation for aligned TO_JSON
 - Update Golden File for TCF v2.3
