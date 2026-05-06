@@ -12,6 +12,8 @@ lib/GDPR/IAB/TCFv2/Publisher.pm
 lib/GDPR/IAB/TCFv2/PublisherRestrictions.pm
 lib/GDPR/IAB/TCFv2/PublisherTC.pm
 lib/GDPR/IAB/TCFv2/RangeSection.pm
+lib/GDPR/IAB/TCFv2/Validator.pm
+lib/GDPR/IAB/TCFv2/Validator/Result.pm
 LICENSE
 Makefile.PL
 MANIFEST
@@ -23,6 +25,7 @@ t/02-json-bitfield.t
 t/03-json-range.t
 t/04-legal-basis.t
 t/05-tcf-v23.t
+t/06-validator.t
 t/07-golden.t
 t/09-predicates.t
 t/10-cli-iabtcfv2.t
