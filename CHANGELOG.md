@@ -1,3 +1,14 @@
+## [0.351] - 2026-05-06
+
+### Bug Fixes
+
+- Restore --version / -V CLI options dropped by PR #44 squash merge
+- *(ci)* Drop unused pod2markdown install and use latest Perl in release.yml 
+
+### Other
+
+- Merge tag 'v0.350' into devel
+
 ## [0.350] - 2026-05-06
 
 ### Bug Fixes
@@ -10,6 +21,9 @@
 
 ### Other
 
+- Merge branch 'release/0.350'
+- Remove docs
+- Update changelog, bump version
 - Remove broken badges
 - Phase 1: TCF v2.3 Support & Logic Alignment (Re-issue) 
 
