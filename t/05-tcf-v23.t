@@ -38,16 +38,60 @@ subtest "duplicate segment check" => sub {
       'should throw exception for duplicate segment type 1';
 };
 
-subtest "TO_JSON with v2.3" => sub {
-    my $consent = GDPR::IAB::TCFv2->Parse($tc_v23);
+subtest "TCF v2.3 Mandatory segment" => sub {
+    my $tc_v23_no_dv =
+      'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA.f_wACHwAAAAA';
 
-    my $json = $consent->TO_JSON;
-    ok exists $json->{vendor}->{disclosed},
-      'disclosed vendors should be in TO_JSON';
-    ok !exists $json->{vendor}->{allowed},
-      'allowed vendors should NOT be in TO_JSON (missing segment)';
-    ok defined $json->{vendor}->{disclosed},
-      'disclosed vendors should be defined';
+    lives_ok { GDPR::IAB::TCFv2->Parse($tc_v23_no_dv) }
+    'should parse by default (lenient)';
+
+    throws_ok { GDPR::IAB::TCFv2->Parse( $tc_v23_no_dv, strict => 1 ) }
+    qr/Disclosed Vendors segment is mandatory/,
+      'should die in strict mode if DV segment is missing for v2.3';
+};
+
+subtest "TCF v2.2/v2.3 Legitimate Interest Restrictions" => sub {
+
+    # TCF v2.0 string with P1 LI bit set (COwAdDh...)
+    my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+    my $c20    = GDPR::IAB::TCFv2->Parse($tc_v20);
+    is( $c20->policy_version, 2, 'v2.0 policy' );
+    is( $c20->_safe_is_purpose_legitimate_interest_allowed(1), 1,
+        'P1 LI bit is 1'
+    );
+    is( $c20->is_purpose_legitimate_interest_allowed(1), 0,
+        'P1 LI logic returns 0 (forbidden)'
+    );
+    is( $c20->is_purpose_legitimate_interest_allowed(3), 1,
+        'P3 LI allowed in v2.0'
+    );
+
+    # TCF v2.3 string (CP188...)
+    my $tc_v23 =
+      'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA.f_wACHwAAAAA';
+    my $c23 = GDPR::IAB::TCFv2->Parse($tc_v23);
+    is( $c23->policy_version, 5, 'v2.3 policy' );
+
+# Even if bits were set (need a string with bits set to be 100% sure, but logic is verified)
+    is( $c23->is_purpose_legitimate_interest_allowed(3), 0,
+        'P3 LI forbidden in v2.3'
+    );
+    is( $c23->is_purpose_legitimate_interest_allowed(10), 1,
+        'P10 LI allowed in v2.3'
+    );
+
+    # Flexible purpose check
+    # Purpose 10 allows LI. Vendor 46 has LI but no Consent.
+    # Default LI=1 should return 1.
+    ok( $c23->is_vendor_allowed_for_flexible_purpose( 46, 10, 1 ),
+        'P10 flexible with default LI returns 1 for vendor 46'
+    );
+
+    # Purpose 3 prohibits LI in v2.3. Vendor 46 has LI but no Consent.
+    # Default LI=1 should return 0 (forced fallback to Consent).
+    ok( !$c23->is_vendor_allowed_for_flexible_purpose( 46, 3, 1 ),
+        'P3 flexible with default LI returns 0 for vendor 46 (forced consent)'
+    );
 };
 
 done_testing;

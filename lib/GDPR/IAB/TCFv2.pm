@@ -35,6 +35,7 @@ use constant {
     MAX_SPECIAL_FEATURE_ID  => 12,
     MAX_PURPOSE_ID          => 24,
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
+    TCF_V23_DEADLINE        => 1772236800,             # 2026-02-28T00:00:00Z
     SEGMENT_TYPES           => {
         CORE              => 0,
         DISCLOSED_VENDORS => 1,
@@ -113,6 +114,12 @@ sub Parse {
       if $strict && $self->version != EXPECTED_TCF_V2_VERSION;
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
+
+    # TCF v2.3: Mandatory Disclosed Vendors segment check
+    if ( $strict && $self->is_v23 ) {
+        croak "TCF v2.3: Disclosed Vendors segment is mandatory"
+          unless $self->has_vendor_disclosure;
+    }
 
     my $next_offset = $self->_parse_vendor_section();
 
@@ -206,6 +213,16 @@ sub policy_version {
       scalar( get_uint6( $self->{core_data}, OFFSETS->{POLICY_VERSION} ) );
 }
 
+sub is_v22_plus {
+    my $self = shift;
+    return $self->policy_version >= 4 ? 1 : 0;
+}
+
+sub is_v23 {
+    my $self = shift;
+    return $self->policy_version >= 5 ? 1 : 0;
+}
+
 sub is_service_specific {
     my $self = shift;
 
@@ -270,6 +287,15 @@ sub is_purpose_legitimate_interest_allowed {
     );
 
     foreach my $id (@ids) {
+
+        # SPEC: Purpose 1 never allows Legitimate Interest
+        return 0 if $id == 1;
+
+       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+        if ( $self->is_v22_plus ) {
+            return 0 if $id >= 3 && $id <= 6;
+        }
+
         return 0
           unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
     }
@@ -438,6 +464,15 @@ sub is_vendor_legitimate_interest_allowed {
     return 0 unless $self->vendor_legitimate_interest($vendor_id);
 
     foreach my $purpose_id (@$purpose_ids) {
+
+        # SPEC: Purpose 1 never allows Legitimate Interest
+        return 0 if $purpose_id == 1;
+
+       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+        if ( $self->is_v22_plus ) {
+            return 0 if $purpose_id >= 3 && $purpose_id <= 6;
+        }
+
         return 0
           if $self->check_publisher_restriction(
             $purpose_id, NotAllowed,
@@ -494,6 +529,16 @@ sub is_vendor_allowed_for_flexible_purpose {
     my ( $self, $vendor_id, $purpose_id, $default_is_li, %opts ) = @_;
 
     return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+    if ( $self->is_v22_plus && $purpose_id >= 3 && $purpose_id <= 6 ) {
+        $default_is_li = 0;
+    }
+
+    # SPEC: Purpose 1 never allows Legitimate Interest
+    if ( $purpose_id == 1 ) {
+        $default_is_li = 0;
+    }
 
     if ($self->check_publisher_restriction(
             $purpose_id, RequireConsent, $vendor_id
