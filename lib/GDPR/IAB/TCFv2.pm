@@ -925,13 +925,12 @@ sub _parse_bitfield_or_range {
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data      = substr( $self->{core_data}, $range_section_start_offset );
-    my $data_size = length( $self->{core_data} );
+    my $data = substr( $self->{core_data}, $range_section_start_offset );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         offset    => 0,
         max_id    => $max_id,
         options   => $self->{options},
@@ -947,11 +946,10 @@ sub _parse_bitfield {
     my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
     my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
-    my $data_size = length( $self->{core_data} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         max_id    => $max_id,
         options   => $self->{options},
     );

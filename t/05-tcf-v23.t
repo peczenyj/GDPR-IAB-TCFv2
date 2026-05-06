@@ -94,4 +94,29 @@ subtest "TCF v2.2/v2.3 Legitimate Interest Restrictions" => sub {
     );
 };
 
+subtest "Core BitField data_size reflects slice length, not full core" => sub {
+
+    # Single-segment v2.0 string with a sizeable core bitfield
+    # (max_vendor_id_consent = 115).  Truncating 4 base64 chars chops
+    # ~24 bits off the bitfield tail.
+    #
+    # OLD behavior: data_size = length(core_data) > max_id, so the
+    # BitField guard never fires; the parser stumbles forward and
+    # eventually croaks deep in _parse_publisher_section with a
+    # misleading "missing 'core_data'" error.
+    # NEW behavior: data_size = length(slice) < max_id, the guard
+    # fires immediately with a clear "requires N bits" message that
+    # points at the actual problem.
+    my $good =
+      'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
+
+    lives_ok { GDPR::IAB::TCFv2->Parse($good) } 'baseline parses cleanly';
+
+    my $truncated = substr( $good, 0, length($good) - 4 );
+
+    throws_ok { GDPR::IAB::TCFv2->Parse($truncated) }
+    qr/a BitField for \d+ bits requires a consent string of at least \d+ bits/,
+      'truncated core bitfield is rejected with slice-aware size guard';
+};
+
 done_testing;
