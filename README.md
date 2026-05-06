@@ -75,8 +75,32 @@ The purpose of this package is to parse Transparency & Consent String (TC String
         if $consent->is_special_feature_opt_in(Geolocation);
 
     # NotAllowed exported by GDPR::IAB::TCFv2::Constants::RestrictionType
-    say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)" 
+    say "publisher restriction for purpose Info Storage Access (1), restriction type NotAllowed (0) for weborama (284)"
         if $consent->check_publisher_restriction(InfoStorageAccess, NotAllowed, 284);
+
+For policy-driven checks against an entire vendor profile (required purposes,
+legal basis, GVL flexibility, optional Disclosed Vendors enforcement),
+use the [GDPR::IAB::TCFv2::Validator](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator) companion class instead of stringing
+the predicates above together by hand:
+
+    use GDPR::IAB::TCFv2::Validator;
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 284,
+        consent_purpose_ids             => [ 1, 3 ],
+        legitimate_interest_purpose_ids => [ 7 ],
+    );
+
+    my $result = $validator->validate($consent);   # fail-fast
+    # ...or $validator->validate_all($consent) to accumulate every reason
+
+    if ($result) {
+        # vendor 284 has every required permission
+    }
+    else {
+        warn "compliance failed: $result\n";   # stringifies to the reasons
+        log_failure($_) for $result->reasons;
+    }
 
 # COMMAND LINE TOOLS
 
@@ -100,11 +124,46 @@ Parses TC strings and output them as JSON.
     cat strings.txt | iabtcfv2 dump --json-array
 
     # Short flags can be bundled (the last bundled short may take a value)
-    iabtcfv2 dump -pq "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    iabtcfv2 dump -pi "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
     iabtcfv2 dump -pv 284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
     # Long options accept the GNU `--opt=value` form
     iabtcfv2 dump --vendor-id=284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+### validate
+
+Validates TC strings against a vendor identity and a set of declared purpose
+lists, emitting one JSON record per string (or text lines with `--text`).
+The vendor must be allowed for every purpose in `--consent-purposes` on a
+consent basis, and for every purpose in `--legitimate-interest-purposes`
+on a legitimate-interest basis. Exit code is `0` when every string is
+valid, `1` on any parse or validation failure, `2` on bad CLI usage.
+
+    # Basic usage: vendor must appear in the TC string
+    iabtcfv2 validate -v 284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Require vendor 284 to be allowed for purposes 1 and 3 on consent basis
+    iabtcfv2 validate -v 284 -C 1,3 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Require both consent (purposes 1, 3) and legitimate interest (purpose 7)
+    iabtcfv2 validate -v 284 -C 1,3 -L 7 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Accumulate every failing rule (validate_all) instead of fail-fast
+    iabtcfv2 validate -av 284 -C 1,3 -L 7 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Human-readable text output instead of JSON
+    iabtcfv2 validate -tv 284 -C 1,3 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Reject TC strings whose policy version is below 5 (TCF v2.3)
+    iabtcfv2 validate -v 284 -m 5 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Pipeline-friendly: -q suppresses output, only the exit code is meaningful
+    if iabtcfv2 validate -qv 284 -C 1,3 "$tc_string"; then
+        echo "ok"
+    fi
+
+    # Stream multiple strings from STDIN as a JSON array
+    cat strings.txt | iabtcfv2 validate -v 284 -C 1,3 --json-array
 
 See `iabtcfv2 --help` or `perldoc iabtcfv2` for more details.
 
@@ -553,6 +612,10 @@ using [ISO\_8601](https://en.wikipedia.org/wiki/ISO_8601). This behaviour can be
 Will check if a given tc string starts with a literal `C`.
 
 # SEE ALSO
+
+[GDPR::IAB::TCFv2::Validator](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator) for declarative compliance checks against a
+parsed TC string -- a higher-level API for the per-vendor / per-purpose
+permission combinations that this module's predicates expose.
 
 The original documentation of the [TCF v2 from IAB documentation](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md).
 
