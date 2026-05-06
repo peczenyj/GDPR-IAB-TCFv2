@@ -22,5 +22,6 @@ t/01-parse.t
 t/02-json-bitfield.t
 t/03-json-range.t
 t/10-cli-iabtcfv2.t
+t/12-bigint-fallback.t
 t/90-bugs.t
 t/99-pod.t
