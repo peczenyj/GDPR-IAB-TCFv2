@@ -318,7 +318,7 @@ the workflow.
         | jq .version
     # Should report "0.360"
 
-The docker image (C<peczenyj/iabtcfv2:0.360> and C<:latest>) is published
+The docker image (C<peczenyj/gdpr-iab-tcfv2:0.360> and C<:latest>) is published
 by F<.github/workflows/docker.yml> on the same C<v*> tag push.
 
 =back
