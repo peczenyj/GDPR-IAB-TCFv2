@@ -23,6 +23,7 @@ sub new {
         flexible_purpose_ids            => $flexible,
         _flexible_set                   => { map { $_ => 1 } @{$flexible} },
         check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
+        min_policy_version              => $args{min_policy_version},
         strict => exists $args{strict} ? $args{strict} : 0,
     };
 
@@ -94,10 +95,17 @@ sub _run_validation {
       exists $overrides{check_disclosed_vendors}
       ? $overrides{check_disclosed_vendors}
       : $self->{check_disclosed_vendors};
+    my $min_policy_version =
+      exists $overrides{min_policy_version}
+      ? $overrides{min_policy_version}
+      : $self->{min_policy_version};
 
     croak "missing vendor_id" unless defined $vendor_id;
 
     my @reasons;
+
+    $self->_check_min_policy_version( $tc, $min_policy_version, \@reasons );
+    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
 
     $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@reasons );
     return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
@@ -118,6 +126,19 @@ sub _run_validation {
     }
 
     return $self->_make_result( 1, [] );
+}
+
+sub _check_min_policy_version {
+    my ( $self, $tc, $min_policy_version, $reasons ) = @_;
+
+    return unless defined $min_policy_version;
+
+    my $actual = $tc->policy_version;
+    if ( $actual < $min_policy_version ) {
+        push @{$reasons},
+          "TC string policy version $actual is below required minimum $min_policy_version";
+    }
+    return;
 }
 
 sub _check_disclosed {

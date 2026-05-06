@@ -137,6 +137,65 @@ subtest "Validator legitimate_interest_purpose_ids" => sub {
       'reason names the LI rule type';
 };
 
+subtest "Validator min_policy_version" => sub {
+
+    # The 'COwAdDh...' fixture is policy_version 2 (TCF v2.0).
+    my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+
+    # No min_policy_version set: no check, normal behaviour.
+    my $v_default = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 1,
+        consent_purpose_ids => [6],
+    );
+    ok $v_default->validate($tc_v20),
+      'no min_policy_version set: passes for v2.0 string';
+
+    # min_policy_version satisfied (v2.0 string with min=2).
+    my $v_satisfied = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 1,
+        consent_purpose_ids => [6],
+        min_policy_version  => 2,
+    );
+    ok $v_satisfied->validate($tc_v20),
+      'min_policy_version=2 passes for v2.0 string';
+
+    # min_policy_version not satisfied (v2.0 string with min=5).
+    my $v_too_old = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 1,
+        consent_purpose_ids => [6],
+        min_policy_version  => 5,
+    );
+    my $result = $v_too_old->validate($tc_v20);
+    ok !$result, 'min_policy_version=5 fails for v2.0 string';
+    like "$result",
+      qr/TC string policy version 2 is below required minimum 5/,
+      'reason names the actual and required versions';
+
+    # In fail-fast mode, the version check must run FIRST and short-circuit.
+    # Even though consent_purpose_ids includes a deliberately-failing purpose,
+    # only one reason is reported -- the version mismatch.
+    my $v_short_circuit = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 1,
+        consent_purpose_ids => [1],    # would also fail
+        min_policy_version  => 5,
+    );
+    my $r_first = $v_short_circuit->validate($tc_v20);
+    is scalar( $r_first->reasons ), 1,
+      'fail-fast stops after the version-check reason';
+    like "$r_first", qr/policy version/,
+      'first reason is the version-check failure';
+
+    # In --all mode, the version check still runs first but the other
+    # rules continue accumulating.
+    my $r_all = $v_short_circuit->validate_all($tc_v20);
+    is scalar( $r_all->reasons ), 2,
+      'validate_all accumulates version + consent failures';
+    like(
+        ( $r_all->reasons )[0],
+        qr/policy version/, 'version reason comes first'
+    );
+};
+
 subtest "Validator coherence checks at construction time" => sub {
 
     # A purpose can't be in both consent_purpose_ids and
