@@ -56,7 +56,7 @@ our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 __END__
 =head1 NAME
 
-GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.2 purposes
+GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.3 purposes
 
 =head1 SYNOPSIS
 
