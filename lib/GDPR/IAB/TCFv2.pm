@@ -876,6 +876,20 @@ sub _parse_vendor_bitfield_or_range {
 
     my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
 
+    # Spec: MaxVendorId == 0 means "field unused".  Skip the IsRange flag
+    # and any trailing payload entirely; return an empty BitField so that
+    # has_vendor_disclosure() still reports the segment as present while
+    # contains() always returns false for any vendor id.
+    if ( $max_id == 0 ) {
+        my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => '',
+            data_size => 0,
+            max_id    => 0,
+            options   => $self->{options},
+        );
+        return $empty_section;
+    }
+
     my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
 
     my $vendors_section;

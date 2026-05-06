@@ -94,6 +94,37 @@ subtest "TCF v2.2/v2.3 Legitimate Interest Restrictions" => sub {
     );
 };
 
+subtest "MaxVendorId == 0 yields an empty vendor section" => sub {
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA');
+
+    # Hand-built Disclosed Vendors segment:
+    #   segment_type      = 001 (=1)
+    #   max_vendor_id     = 16 zero bits
+    #   is_range_encoding = 1
+    #   num_entries       = 12 zero bits
+    # With IsRange=1 and max_id=0, RangeSection->Parse would parse the
+    # 12-bit num_entries from the trailing zeros (NumEntries=0, harmless
+    # here, but a malicious payload could declare NumEntries>0).  The
+    # short-circuit must skip RangeSection entirely and return an empty
+    # BitField regardless of the IsRange flag.
+    my $segment = '001' . ( '0' x 16 ) . '1' . ( '0' x 12 );
+
+    my $section;
+    lives_ok {
+        $section = $consent->_parse_vendor_bitfield_or_range(
+            $segment,
+            GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},
+        );
+    }
+    'max_id=0 segment parses without error';
+
+    ok defined $section, 'returns a defined section';
+    is $section->max_id, 0, 'max_id is 0';
+    ok !$section->contains(1),
+      'contains(1) returns falsey (early-exit on id > max_id)';
+};
+
 subtest "Disclosed Vendors helper rejects mis-typed payload" => sub {
 
     # Hand-craft a "Disclosed Vendors" segment whose first 3 bits claim
