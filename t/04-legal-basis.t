@@ -3,18 +3,10 @@ use warnings;
 
 use Test::More;
 use Test::Exception;
+use Test::Warn;
 
 use GDPR::IAB::TCFv2;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
-
-# Helper for testing warnings
-sub warning_like (&$;$) {
-    my ( $code, $pattern, $message ) = @_;
-    my @warnings;
-    local $SIG{__WARN__} = sub { push @warnings, @_ };
-    $code->();
-    like( join( '', @warnings ), $pattern, $message );
-}
 
 subtest "is_vendor_consent_allowed" => sub {
     my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';

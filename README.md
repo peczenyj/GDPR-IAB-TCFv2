@@ -107,17 +107,17 @@ This tool is also available as a Docker image on Docker Hub.
 
 ## Basic Usage
 
-    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    docker run --rm peczenyj/gdpr-iab-tcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
 ## Processing Streams (STDIN)
 
 To process a stream of strings via pipe:
 
-    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+    cat strings.txt | docker run -i --rm peczenyj/gdpr-iab-tcfv2 dump
 
 To type strings manually:
 
-    docker run -it --rm peczenyj/iabtcfv2 dump
+    docker run -it --rm peczenyj/gdpr-iab-tcfv2 dump
 
 # ACRONYMS
 

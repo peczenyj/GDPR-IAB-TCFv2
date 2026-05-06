@@ -28,7 +28,7 @@ GetOptions(
   )
   or pod2usage(
     -input    => $script_path, -exitval => 2, -verbose => 99,
-    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
   );
 
 if ( $global_opts{version} ) {
@@ -41,12 +41,12 @@ if ( $global_opts{help} ) {
     if ( $topic && $topic eq 'dump' ) {
         pod2usage(
             -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "DUMP"
+            -sections => "DUMP|BUGS"
         );
     }
     pod2usage(
         -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
     );
 }
 pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
@@ -66,19 +66,19 @@ elsif ( $subcommand eq 'help' ) {
     if ( $topic && $topic eq 'dump' ) {
         pod2usage(
             -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "DUMP"
+            -sections => "DUMP|BUGS"
         );
     }
     pod2usage(
         -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
     );
 }
 else {
     warn "Unknown subcommand: $subcommand\n";
     pod2usage(
         -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS"
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
     );
 }
 
@@ -110,13 +110,13 @@ sub run_dump {
         'help|h'             => sub {
             pod2usage(
                 -input    => $script_path, -exitval => 1, -verbose => 99,
-                -sections => "DUMP"
+                -sections => "DUMP|BUGS"
             );
         },
       )
       or pod2usage(
         -input    => $script_path, -exitval => 2, -verbose => 99,
-        -sections => "DUMP"
+        -sections => "DUMP|BUGS"
       );
 
     my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
@@ -324,17 +324,17 @@ This tool is also available as a Docker image on Docker Hub.
 
 =head2 Basic Usage
 
-    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    docker run --rm peczenyj/gdpr-iab-tcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
 =head2 Processing Streams (STDIN)
 
 To process a stream of strings via pipe:
 
-    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+    cat strings.txt | docker run -i --rm peczenyj/gdpr-iab-tcfv2 dump
 
 To type strings manually:
 
-    docker run -it --rm peczenyj/iabtcfv2 dump
+    docker run -it --rm peczenyj/gdpr-iab-tcfv2 dump
 
 =head1 VALIDATE
 
@@ -349,5 +349,9 @@ B<iabtcfv2> is a command-line interface for the GDPR::IAB::TCFv2 library.
 Previous versions of this distribution (v0.300) included a standalone utility
 named B<iabtcf-dump>. This has been unified into the B<iabtcfv2> tool using
 the B<dump> subcommand.
+
+=head1 BUGS
+
+Report bugs and feature requests at L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues>.
 
 =cut
