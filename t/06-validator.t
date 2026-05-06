@@ -137,6 +137,44 @@ subtest "Validator legitimate_interest_purpose_ids" => sub {
       'reason names the LI rule type';
 };
 
+subtest "Validator coherence checks at construction time" => sub {
+
+    # A purpose can't be in both consent_purpose_ids and
+    # legitimate_interest_purpose_ids — the GVL schema treats those as
+    # mutually exclusive declarations.
+    throws_ok {
+        GDPR::IAB::TCFv2::Validator->new(
+            vendor_id                       => 1,
+            consent_purpose_ids             => [3],
+            legitimate_interest_purpose_ids => [3],
+        );
+    }
+    qr/purpose 3 cannot be in both consent_purpose_ids and legitimate_interest_purpose_ids/,
+      'croaks when a purpose is listed under both bases';
+
+    # A flexible purpose must be listed under one of the two bases —
+    # otherwise no default can be derived.
+    throws_ok {
+        GDPR::IAB::TCFv2::Validator->new(
+            vendor_id            => 1,
+            flexible_purpose_ids => [5],
+        );
+    }
+    qr/flexible purpose 5 must also appear in consent_purpose_ids or legitimate_interest_purpose_ids/,
+      'croaks when a flexible purpose has no derivable default basis';
+
+    # Sanity: a properly-coherent config still constructs.
+    lives_ok {
+        GDPR::IAB::TCFv2::Validator->new(
+            vendor_id                       => 1,
+            consent_purpose_ids             => [ 1, 6 ],
+            legitimate_interest_purpose_ids => [ 2, 10 ],
+            flexible_purpose_ids            => [ 6, 2 ],
+        );
+    }
+    'coherent configuration constructs without error';
+};
+
 subtest "flexible_purpose_ids derives default basis from membership" => sub {
     my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 

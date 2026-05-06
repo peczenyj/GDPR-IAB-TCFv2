@@ -14,6 +14,8 @@ sub new {
     my $legitimate_interest = $args{legitimate_interest_purpose_ids} || [];
     my $flexible            = $args{flexible_purpose_ids}            || [];
 
+    _check_coherence( $consent, $legitimate_interest, $flexible );
+
     my $self = {
         vendor_id                       => $args{vendor_id},
         consent_purpose_ids             => $consent,
@@ -25,6 +27,27 @@ sub new {
     };
 
     return bless $self, $klass;
+}
+
+sub _check_coherence {
+    my ( $consent, $legitimate_interest, $flexible ) = @_;
+
+    my %consent_set = map { $_ => 1 } @{$consent};
+    my %li_set      = map { $_ => 1 } @{$legitimate_interest};
+
+    foreach my $pid ( @{$consent} ) {
+        croak
+          "purpose $pid cannot be in both consent_purpose_ids and legitimate_interest_purpose_ids"
+          if $li_set{$pid};
+    }
+
+    foreach my $pid ( @{$flexible} ) {
+        next if $consent_set{$pid} || $li_set{$pid};
+        croak
+          "flexible purpose $pid must also appear in consent_purpose_ids or legitimate_interest_purpose_ids";
+    }
+
+    return;
 }
 
 sub validate {
