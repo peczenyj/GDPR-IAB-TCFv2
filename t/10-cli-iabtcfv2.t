@@ -32,17 +32,18 @@ is( $json_obj->{version}, 2, "Parsed version is correct" );
 
 # Test pretty print
 my $pretty_output = `$perl -Ilib $bin dump --pretty $tc_string`;
-like(
-    $pretty_output,
-    qr/"version"\s*:\s*2/,
-    "Pretty output contains version"
-);
+my $pretty_json   = decode_helper($pretty_output);
+ok( $pretty_json, "Pretty output is valid JSON" );
+is( $pretty_json->{version}, 2, "Pretty output reports version 2" );
+
+# Multi-line indentation is the *visible* effect of --pretty; this regex
+# is over plain output structure (newline + whitespace + open quote), not
+# JSON content, so it stays.
 like( $pretty_output, qr/\n\s+"/, "Pretty output contains indentation" );
 
 # Test short -p alias
 my $short_p_output = `$perl -Ilib $bin dump -p $tc_string`;
 my $short_p_json   = decode_helper($short_p_output);
-my $pretty_json    = decode_helper($pretty_output);
 is_deeply(
     $short_p_json, $pretty_json,
     "Short -p alias produces logically same output as --pretty"
