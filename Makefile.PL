@@ -9,11 +9,13 @@ WriteMakefile(
     MIN_PERL_VERSION => 5.008,
     EXE_FILES        => ['bin/iabtcfv2'],
     TEST_REQUIRES    => {
-        'JSON::PP'        => 0,
-        'Test::Exception' => 0.43,
-        'Test::More'      => 0.94,
-        'Test::Pod'       => 0,
-        'Test::Warn'      => 0.30,
+        'JSON::PP'               => 0,
+        'Test::Exception'        => 0.43,
+        'Test::More'             => 0.94,
+        'Test::Pod'              => 0,
+        'Test::Warn'             => 0.30,
+        'IO::Compress::Gzip'     => 0,
+        'IO::Uncompress::Gunzip' => 0,
     },
     (   eval { ExtUtils::MakeMaker->VERSION(6.46) }
         ? ( META_MERGE => {
