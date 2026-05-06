@@ -16,6 +16,14 @@
     *   Implement decoding for **Segment Type 2 (Allowed Vendors)**.
     *   **Fix Segment Overwriting:** Update `_decode_tc_string_segments` to handle multiple segments of the same type safely (e.g., only keep the first occurrence or throw error).
     *   Update `TO_JSON` to include new segments.
+    *   **Implement Predicates**:
+        *   `has_vendor_disclosure`: Boolean check for Segment Type 1 or 5.
+        *   `has_publisher_restrictions`: Boolean check if core segment includes restrictions.
+    *   **Implement `vendor_id` filter for `TO_JSON`**:
+        *   Support `vendor_id` filter in `Parse` (via `json` options) and direct `TO_JSON` calls.
+        *   Filter `vendor` (consents, legitimate_interests, disclosed, allowed) to show only the target ID.
+        *   Filter `publisher/restrictions` to only show purposes/restrictions for that target ID.
+        *   Maintain structural consistency (return empty map/array if ID not found).
 
 ## Phase 2: The Validator Interface
 *   **Goal:** Automated policy enforcement, TCF v2.3 aware.

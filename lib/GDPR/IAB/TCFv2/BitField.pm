@@ -59,10 +59,38 @@ sub contains {
     return is_set( $self->{data}, $id - 1 );
 }
 
-sub TO_JSON {
+sub all {
     my $self = shift;
 
     my @data = split //, $self->{data};
+
+    return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];
+}
+
+sub TO_JSON {
+    my ( $self, $filter_id ) = @_;
+
+    my @data = split //, $self->{data};
+
+    if ( defined $filter_id ) {
+        my $val =
+          ( $filter_id > 0 && $filter_id <= $self->{max_id} )
+          ? $data[ $filter_id - 1 ]
+          : 0;
+
+        if ( !!$self->{options}->{json}->{compact} ) {
+            return $val ? [$filter_id] : [];
+        }
+
+        my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+        my $bool_val = $val ? $true : $false;
+
+        if ( !!$self->{options}->{json}->{verbose} ) {
+            return { $filter_id => $bool_val };
+        }
+
+        return $val ? { $filter_id => $true } : {};
+    }
 
     if ( !!$self->{options}->{json}->{compact} ) {
         return [ grep { $data[ $_ - 1 ] } 1 .. $self->{max_id} ];

@@ -65,7 +65,7 @@ use constant {
 
 use overload q<""> => \&tc_string;
 
-# ABSTRACT: gdpr iab tcf v2 consent string parser
+# ABSTRACT: gdpr iab tcf v2.3 consent string parser
 
 sub Parse {
     my ( $klass, $tc_string, %opts ) = @_;
@@ -348,6 +348,11 @@ sub disclosed_vendor {
     return $self->{disclosed_vendors}->contains($id);
 }
 
+sub has_vendor_disclosure {
+    my $self = shift;
+    return defined $self->{disclosed_vendors} ? 1 : 0;
+}
+
 sub allowed_vendor {
     my ( $self, $id ) = @_;
 
@@ -373,6 +378,11 @@ sub check_publisher_restriction {
 
     return $self->{publisher}
       ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+}
+
+sub has_publisher_restrictions {
+    my $self = shift;
+    return $self->{publisher}->has_restrictions;
 }
 
 sub publisher_restrictions {
@@ -577,6 +587,9 @@ sub _format_json_subsection {
 sub TO_JSON {
     my $self = shift;
 
+    my %args      = ( @_ && ref $_[-1] eq 'HASH' ) ? %{ pop @_ } : @_;
+    my $filter_id = $args{vendor_id} || $self->{options}->{json}->{vendor_id};
+
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
     my $created      = $self->_format_date( $self->created );
@@ -628,19 +641,20 @@ sub TO_JSON {
             ),
         },
         vendor => {
-            consents             => $self->{vendor_consents}->TO_JSON,
+            consents => $self->{vendor_consents}->TO_JSON($filter_id),
             legitimate_interests =>
-              $self->{vendor_legitimate_interests}->TO_JSON,
+              $self->{vendor_legitimate_interests}->TO_JSON($filter_id),
             (   $self->{disclosed_vendors}
-                ? ( disclosed => $self->{disclosed_vendors}->TO_JSON )
+                ? ( disclosed =>
+                      $self->{disclosed_vendors}->TO_JSON($filter_id) )
                 : ()
             ),
             (   $self->{allowed_vendors}
-                ? ( allowed => $self->{allowed_vendors}->TO_JSON )
+                ? ( allowed => $self->{allowed_vendors}->TO_JSON($filter_id) )
                 : ()
             ),
         },
-        publisher => $self->{publisher}->TO_JSON,
+        publisher => $self->{publisher}->TO_JSON($filter_id),
     };
 }
 
@@ -1012,7 +1026,7 @@ This distribution includes a unified command line tool to work with TC strings.
 
 =head2 iabtcfv2
 
-The C<iabtcfv2> utility provides several subcommands for TCF v2 strings.
+The C<iabtcfv2> utility provides several subcommands for TCF v2.3 strings.
 
 =head3 dump
 

@@ -86,6 +86,7 @@ sub run_dump {
         'fail-fast'        => 0,
         'errors-to-stderr' => 0,
         'quiet'            => 0,
+        'vendor-id'        => undef,
     );
 
     GetOptionsFromArray(
@@ -97,6 +98,7 @@ sub run_dump {
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
+        'vendor-id|v=i'      => \$opts{'vendor-id'},
         'help|h'             => sub {
             pod2usage(
                 -input    => $script_path, -exitval => 1, -verbose => 99,
@@ -156,7 +158,8 @@ sub _process_string {
         my $tcf = GDPR::IAB::TCFv2->Parse(
             $str,
             json => {
-                compact => $o->{compact},
+                compact   => $o->{compact},
+                vendor_id => $o->{'vendor-id'},
             }
         );
         $output_data = $tcf->TO_JSON;
@@ -263,6 +266,10 @@ Output a single JSON array containing all parsed objects.
 =item B<--compact>
 
 Output a compact JSON representation (lists of IDs instead of boolean maps).
+
+=item B<--vendor-id>, B<-v> I<ID>
+
+Filter the output to only show data for a specific vendor ID.
 
 =item B<--ignore-errors>, B<-i>
 
