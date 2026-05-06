@@ -96,7 +96,7 @@ ok( $? != 0, "--fail-fast exits with non-zero code" );
 # Use a temporary file to capture stderr safely
 my $stderr_file = File::Spec->catfile( File::Spec->tmpdir(), "tcf_stderr_$$" );
 my $e2s_stdout =
-  `$perl -Ilib $bin dump --quiet --errors-to-stderr $invalid_str 2>$stderr_file`;
+  `$perl -Ilib $bin dump --errors-to-stderr $invalid_str 2>$stderr_file`;
 
 is( $e2s_stdout, "", "--errors-to-stderr stdout is empty for bad string" );
 
@@ -153,15 +153,16 @@ subtest 'Version Option' => sub {
 # Test Short Option Bundling and = syntax
 subtest 'Short option bundling and = value syntax' => sub {
 
-    # Bundled boolean flags: -pq is parsed as --pretty --quiet.
+    # Bundled boolean flags: -pi is parsed as --pretty --ignore-errors.
     # `--pretty` produces multi-line indented JSON, which is the easiest
-    # observable side effect to assert on.
-    my $bundled_flags_out  = `$perl -Ilib $bin dump -pq $tc_string`;
+    # observable side effect to assert on; -i is a no-op for a valid TC
+    # string (no parse error to ignore).
+    my $bundled_flags_out  = `$perl -Ilib $bin dump -pi $tc_string`;
     my $bundled_flags_data = decode_helper($bundled_flags_out);
-    ok( $bundled_flags_data, '-pq produces valid JSON' );
+    ok( $bundled_flags_data, '-pi produces valid JSON' );
     like(
         $bundled_flags_out, qr/\n\s+"/,
-        '-pq enables --pretty (multi-line output)'
+        '-pi enables --pretty (multi-line output)'
     );
 
     # Bundled flag + value-taking short: -pv 1 is --pretty --vendor-id 1.
@@ -203,11 +204,12 @@ subtest 'Short aliases -c (compact) and -s (strict)' => sub {
 
     # -s == --strict: a TCF v2.3 string without Disclosed Vendors segment
     # must be rejected with the standard "Disclosed Vendors segment is
-    # mandatory" message.  --quiet keeps the warn off CI.
+    # mandatory" message.  Warnings are off by default (Path D), so no
+    # extra flag needed to keep CI clean.
     my $tc_v23_no_dv =
       'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA';
 
-    my $s_out = `$perl -Ilib $bin dump -s --quiet $tc_v23_no_dv`;
+    my $s_out = `$perl -Ilib $bin dump -s $tc_v23_no_dv`;
     like(
         $s_out, qr/Disclosed Vendors segment is mandatory/,
         '-s enables --strict (rejects v2.3 without Disclosed Vendors)'

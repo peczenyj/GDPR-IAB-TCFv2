@@ -93,6 +93,7 @@ sub run_dump {
         'fail-fast'        => 0,
         'errors-to-stderr' => 0,
         'quiet'            => 0,
+        'enable-warnings'  => 0,
         'vendor-id'        => undef,
         strict             => 0,
     );
@@ -106,6 +107,7 @@ sub run_dump {
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
+        'enable-warnings|w'  => \$opts{'enable-warnings'},
         'vendor-id|v=i'      => \$opts{'vendor-id'},
         'strict|s'           => \$opts{strict},
         'help|h'             => sub {
@@ -126,7 +128,7 @@ sub run_dump {
         $json->pretty(1);
         $json->indent_length(4) if $json->isa('JSON::PP');
     }
-    if ( $opts{'json-array'} ) {
+    if ( $opts{'json-array'} && !$opts{'quiet'} ) {
         print "[\n";
     }
 
@@ -152,7 +154,7 @@ sub run_dump {
     }
 
 
-    if ( $opts{'json-array'} ) {
+    if ( $opts{'json-array'} && !$opts{'quiet'} ) {
         print "\n]\n";
     }
 
@@ -177,13 +179,14 @@ sub _process_string {
     if ( my $err = $@ ) {
         if ( $o->{'fail-fast'} ) {
             warn
-              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n";
+              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
+              if $o->{'enable-warnings'};
             exit EXIT_PARSE_ERROR;
         }
 
         warn
           "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
-          unless $o->{'quiet'};
+          if $o->{'enable-warnings'};
 
         return if $o->{'ignore-errors'};
 
@@ -199,6 +202,8 @@ sub _process_string {
             return;
         }
     }
+
+    return if $o->{'quiet'};
 
     my $out = $j->encode($output_data);
 
@@ -302,9 +307,17 @@ Stop processing and exit the program immediately upon the first parse error.
 
 Output JSON error objects to B<STDERR> instead of B<STDOUT>.
 
+=item B<--enable-warnings>, B<-w>
+
+Emit human-readable warning messages on B<STDERR> when a TC string fails to
+parse. Off by default; enable to get diagnostic context alongside the JSON
+error object.
+
 =item B<--quiet>, B<-q>
 
-Suppress human-readable warning messages on B<STDERR>.
+Suppress all output on B<STDOUT>. The exit code still reflects whether parsing
+succeeded, which is convenient for shell-style C<if iabtcfv2 dump -q "$tc">
+checks. Combine with C<--enable-warnings> if you want diagnostics on B<STDERR>.
 
 =back
 
@@ -324,11 +337,11 @@ Suppress human-readable warning messages on B<STDERR>.
 Single-character flags can be bundled together after a single dash. The last
 option in the bundle may take a value as the next argument.
 
-    # Equivalent of `--pretty --quiet`
-    iabtcfv2 dump -pq CPi...AAA
+    # Equivalent of `--pretty --ignore-errors`
+    iabtcfv2 dump -pi CPi...AAA
 
-    # Equivalent of `--pretty --ignore-errors --quiet`
-    iabtcfv2 dump -piq CPi...AAA
+    # Equivalent of `--compact --pretty`
+    iabtcfv2 dump -cp CPi...AAA
 
     # Last bundled short can take a value: -p (pretty) + -v <id> (vendor-id)
     iabtcfv2 dump -pv 284 CPi...AAA
