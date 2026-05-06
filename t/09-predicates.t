@@ -17,7 +17,7 @@ subtest 'Predicates' => sub {
     my $tc_basic =
       'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA.f_wACHwAAAAA';
     my $c1 = GDPR::IAB::TCFv2->Parse($tc_basic);
-    ok( !$c1->has_vendor_disclosure, 'No disclosure segment' );
+    ok( !$c1->has_vendor_disclosure,      'No disclosure segment' );
     ok( !$c1->has_publisher_restrictions, 'No restrictions on CP188 string' );
 
     my $c2 = GDPR::IAB::TCFv2->Parse($tc_with_res);
@@ -54,16 +54,25 @@ subtest 'vendor_id filter in TO_JSON' => sub {
     my $json_1 = $c->TO_JSON( vendor_id => 1 );
 
     # Check that ONLY vendor 1 is in the vendor sections
-    is_deeply( [ sort { $a <=> $b } keys %{ $json_1->{vendor}{consents} } ], [1], 'Vendor section isolated: only vendor 1' );
-    ok( !exists $json_1->{vendor}{legitimate_interests}{2}, 'Other vendor (2) removed from LI' );
-    
+    is_deeply(
+        [ sort { $a <=> $b } keys %{ $json_1->{vendor}{consents} } ],
+        [1], 'Vendor section isolated: only vendor 1'
+    );
+    ok( !exists $json_1->{vendor}{legitimate_interests}{2},
+        'Other vendor (2) removed from LI'
+    );
+
     # Purpose section should still have entries for vendor 1
-    ok( exists $json_1->{purpose}{consents}{23}, 'Vendor 1 still has Purpose 23' );
+    ok( exists $json_1->{purpose}{consents}{23},
+        'Vendor 1 still has Purpose 23'
+    );
 
     # Publisher restrictions should only show 32
     my $json_res = $c->TO_JSON( vendor_id => 32 );
-    is_deeply( [ keys %{ $json_res->{publisher}{restrictions}{7} } ], [32],
-        'Filtered publisher restrictions only contains 32' );
+    is_deeply(
+        [ keys %{ $json_res->{publisher}{restrictions}{7} } ], [32],
+        'Filtered publisher restrictions only contains 32'
+    );
 };
 
 subtest 'CLI --vendor-id option' => sub {
@@ -74,10 +83,16 @@ subtest 'CLI --vendor-id option' => sub {
     # Vendor section should have "1":true
     # Vendor section should NOT have "23":true (it was in original disclosed)
     my $out = `$perl -Ilib $bin dump --vendor-id 1 $tc_full`;
-    
+
     # Use a more flexible regex that doesn't choke on nested braces
-    like( $out, qr/"vendor":\{.*"consents":\{"1":true\}/s, 'CLI isolated vendor consents' );
-    unlike( $out, qr/"disclosed":\{[^}]*"23":true/, 'CLI removed other disclosed vendors' );
+    like(
+        $out, qr/"vendor":\{.*"consents":\{"1":true\}/s,
+        'CLI isolated vendor consents'
+    );
+    unlike(
+        $out, qr/"disclosed":\{[^}]*"23":true/,
+        'CLI removed other disclosed vendors'
+    );
 };
 
 subtest 'CLI --strict option' => sub {

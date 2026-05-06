@@ -642,21 +642,25 @@ sub TO_JSON {
 
     my $purpose_consents = $self->_format_json_subsection(
         map {
-            my $id     = $_;
-            my $status = $filter_id
-              ? $self->is_vendor_allowed_for_any_basis( $filter_id, $id )
-              : $self->_safe_is_purpose_consent_allowed($id);
-            [ $id => $status ? $true : $false ]
+            [   $_ => (
+                      $filter_id
+                    ? $self->is_vendor_allowed_for_any_basis( $filter_id, $_ )
+                    : $self->_safe_is_purpose_consent_allowed($_)
+                ) ? $true : $false
+            ]
         } 1 .. MAX_PURPOSE_ID,
     );
 
     my $purpose_li = $self->_format_json_subsection(
         map {
-            my $id     = $_;
-            my $status = $filter_id
-              ? $self->is_vendor_legitimate_interest_allowed( $filter_id, $id )
-              : $self->_safe_is_purpose_legitimate_interest_allowed($id);
-            [ $id => $status ? $true : $false ]
+            [   $_ => (
+                    $filter_id
+                    ? $self->is_vendor_legitimate_interest_allowed(
+                        $filter_id, $_
+                      )
+                    : $self->_safe_is_purpose_legitimate_interest_allowed($_)
+                ) ? $true : $false
+            ]
         } 1 .. MAX_PURPOSE_ID,
     );
 
