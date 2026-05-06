@@ -92,7 +92,7 @@ This distribution includes a unified command line tool to work with TC strings.
 
 ## iabtcfv2
 
-The `iabtcfv2` utility provides several subcommands for TCF v2 strings.
+The `iabtcfv2` utility provides several subcommands for TCF v2.3 strings.
 
 ### dump
 
