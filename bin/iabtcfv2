@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw(GetOptionsFromArray :config pass_through);
+use Getopt::Long qw(GetOptionsFromArray :config pass_through require_order);
 use Pod::Usage;
 use File::Spec;
 eval { require JSON; 1 } or require JSON::PP;
