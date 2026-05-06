@@ -1114,6 +1114,13 @@ Parses TC strings and output them as JSON.
     # Stream multiple strings from STDIN to a JSON array
     cat strings.txt | iabtcfv2 dump --json-array
 
+    # Short flags can be bundled (the last bundled short may take a value)
+    iabtcfv2 dump -pq "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    iabtcfv2 dump -pv 284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Long options accept the GNU `--opt=value` form
+    iabtcfv2 dump --vendor-id=284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
 See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
 
 =head1 DOCKER USAGE

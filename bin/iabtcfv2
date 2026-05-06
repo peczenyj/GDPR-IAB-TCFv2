@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw(GetOptionsFromArray :config pass_through require_order);
+use Getopt::Long
+  qw(GetOptionsFromArray :config pass_through require_order bundling);
 use Pod::Usage;
 use File::Spec;
 eval { require JSON; 1 } or require JSON::PP;
@@ -317,6 +318,27 @@ Suppress human-readable warning messages on B<STDERR>.
 
     # Read from STDIN
     cat strings.txt | iabtcfv2 dump --json-array
+
+=head2 Short option bundling
+
+Single-character flags can be bundled together after a single dash. The last
+option in the bundle may take a value as the next argument.
+
+    # Equivalent of `--pretty --quiet`
+    iabtcfv2 dump -pq CPi...AAA
+
+    # Equivalent of `--pretty --ignore-errors --quiet`
+    iabtcfv2 dump -piq CPi...AAA
+
+    # Last bundled short can take a value: -p (pretty) + -v <id> (vendor-id)
+    iabtcfv2 dump -pv 284 CPi...AAA
+
+    # Long options accept the GNU `=value` form too
+    iabtcfv2 dump --vendor-id=284 CPi...AAA
+
+Bundling does NOT support abbreviating long options (`--ver` is not accepted
+as a shortcut for `--version`); always use the full long-option name or its
+single-character short alias.
 
 =head1 DOCKER USAGE
 

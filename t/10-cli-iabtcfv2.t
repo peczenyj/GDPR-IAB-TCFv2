@@ -150,4 +150,43 @@ subtest 'Version Option' => sub {
     );
 };
 
+# Test Short Option Bundling and = syntax
+subtest 'Short option bundling and = value syntax' => sub {
+
+    # Bundled boolean flags: -pq is parsed as --pretty --quiet.
+    # `--pretty` produces multi-line indented JSON, which is the easiest
+    # observable side effect to assert on.
+    my $bundled_flags_out  = `$perl -Ilib $bin dump -pq $tc_string`;
+    my $bundled_flags_data = decode_helper($bundled_flags_out);
+    ok( $bundled_flags_data, '-pq produces valid JSON' );
+    like(
+        $bundled_flags_out, qr/\n\s+"/,
+        '-pq enables --pretty (multi-line output)'
+    );
+
+    # Bundled flag + value-taking short: -pv 1 is --pretty --vendor-id 1.
+    # Compare logically against the canonical long-form invocation so the
+    # assertion doesn't depend on which fields are populated for the chosen
+    # vendor in the fixture.
+    my $bundled_value_data =
+      decode_helper(`$perl -Ilib $bin dump -pv 1 $tc_string`);
+    my $longform_data =
+      decode_helper(`$perl -Ilib $bin dump --pretty --vendor-id 1 $tc_string`);
+    is_deeply(
+        $bundled_value_data, $longform_data,
+        '-pv 1 produces the same data as --pretty --vendor-id 1'
+    );
+
+    # GNU-style --opt=value: --vendor-id=1 must behave identically to
+    # --vendor-id 1.
+    my $eq_data =
+      decode_helper(`$perl -Ilib $bin dump --vendor-id=1 $tc_string`);
+    my $space_data =
+      decode_helper(`$perl -Ilib $bin dump --vendor-id 1 $tc_string`);
+    is_deeply(
+        $eq_data, $space_data,
+        '--vendor-id=1 is parsed identically to --vendor-id 1'
+    );
+};
+
 done_testing();
