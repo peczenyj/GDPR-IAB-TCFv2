@@ -109,9 +109,11 @@ subtest 'fallback values JSON-encode without convert_blessed' => sub {
     # JSON::XS / JSON::PP / Perl versions.
     my $decoded = $encoder->decode($output);
     ok( looks_like_number( $decoded->{cmp_id} ),
-        'cmp_id round-trips as a JSON number' );
+        'cmp_id round-trips as a JSON number'
+    );
     ok( looks_like_number( $decoded->{vendor_list_version} ),
-        'vendor_list_version round-trips as a JSON number' );
+        'vendor_list_version round-trips as a JSON number'
+    );
 };
 
 done_testing;
