@@ -843,9 +843,10 @@ sub _parse_disclosed_vendors {
 
     return unless defined $self->{disclosed_vendors_data};
 
-    $self->{disclosed_vendors} =
-      $self->_parse_vendor_bitfield_or_range(
-        $self->{disclosed_vendors_data} );
+    $self->{disclosed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{disclosed_vendors_data},
+        SEGMENT_TYPES->{DISCLOSED_VENDORS},
+    );
 }
 
 sub _parse_allowed_vendors {
@@ -853,14 +854,21 @@ sub _parse_allowed_vendors {
 
     return unless defined $self->{allowed_vendors_data};
 
-    $self->{allowed_vendors} =
-      $self->_parse_vendor_bitfield_or_range( $self->{allowed_vendors_data} );
+    $self->{allowed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{allowed_vendors_data},
+        SEGMENT_TYPES->{ALLOWED_VENDORS},
+    );
 }
 
 sub _parse_vendor_bitfield_or_range {
-    my ( $self, $data ) = @_;
+    my ( $self, $data, $expected_segment_type ) = @_;
 
-    my $offset = 3;    # segment type
+    my ( $segment_type, $offset ) = get_uint3( $data, 0 );
+
+    croak
+      "invalid segment type $segment_type: expected $expected_segment_type"
+      if defined $expected_segment_type
+      && $segment_type != $expected_segment_type;
 
     my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
 

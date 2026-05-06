@@ -94,6 +94,28 @@ subtest "TCF v2.2/v2.3 Legitimate Interest Restrictions" => sub {
     );
 };
 
+subtest "Disclosed Vendors helper rejects mis-typed payload" => sub {
+
+    # Hand-craft a "Disclosed Vendors" segment whose first 3 bits claim
+    # segment_type=2 (Allowed Vendors) instead of 1.  The router would
+    # never feed this through _parse_disclosed_vendors today, but the
+    # helper itself should still reject it as defense-in-depth.
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA');
+
+    # 3 bits = 010 (=2), then a benign MaxVendorId=0, IsRangeEncoding=0 tail.
+    my $bad = '010' . ( '0' x 16 ) . '0';
+
+    throws_ok {
+        $consent->_parse_vendor_bitfield_or_range(
+            $bad,
+            GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},
+        );
+    }
+    qr/invalid segment type/,
+      'helper croaks when payload header does not match expected type';
+};
+
 subtest "Core BitField data_size reflects slice length, not full core" => sub {
 
     # Single-segment v2.0 string with a sizeable core bitfield
