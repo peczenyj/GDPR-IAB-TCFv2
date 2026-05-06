@@ -3,7 +3,8 @@
 use strict;
 use warnings;
 
-use Getopt::Long qw(GetOptionsFromArray :config pass_through require_order);
+use Getopt::Long
+  qw(GetOptionsFromArray :config pass_through require_order bundling);
 use Pod::Usage;
 use File::Spec;
 eval { require JSON; 1 } or require JSON::PP;
@@ -100,13 +101,13 @@ sub run_dump {
         \@args,
         'pretty|p'           => \$opts{pretty},
         'json-array'         => \$opts{'json-array'},
-        'compact'            => \$opts{compact},
+        'compact|c'          => \$opts{compact},
         'ignore-errors|i'    => \$opts{'ignore-errors'},
         'fail-fast|f'        => \$opts{'fail-fast'},
         'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
         'quiet|q'            => \$opts{'quiet'},
         'vendor-id|v=i'      => \$opts{'vendor-id'},
-        'strict'             => \$opts{strict},
+        'strict|s'           => \$opts{strict},
         'help|h'             => sub {
             pod2usage(
                 -input    => $script_path, -exitval => 1, -verbose => 99,
@@ -276,7 +277,7 @@ Output human-readable, indented JSON.
 
 Output a single JSON array containing all parsed objects.
 
-=item B<--compact>
+=item B<--compact>, B<-c>
 
 Output a compact JSON representation (lists of IDs instead of boolean maps).
 
@@ -284,7 +285,7 @@ Output a compact JSON representation (lists of IDs instead of boolean maps).
 
 Filter the output to only show data for a specific vendor ID.
 
-=item B<--strict>
+=item B<--strict>, B<-s>
 
 Enable strict specification validation. In this mode, the tool will fail if
 mandatory segments are missing (e.g., Disclosed Vendors in TCF v2.3).
@@ -317,6 +318,27 @@ Suppress human-readable warning messages on B<STDERR>.
 
     # Read from STDIN
     cat strings.txt | iabtcfv2 dump --json-array
+
+=head2 Short option bundling
+
+Single-character flags can be bundled together after a single dash. The last
+option in the bundle may take a value as the next argument.
+
+    # Equivalent of `--pretty --quiet`
+    iabtcfv2 dump -pq CPi...AAA
+
+    # Equivalent of `--pretty --ignore-errors --quiet`
+    iabtcfv2 dump -piq CPi...AAA
+
+    # Last bundled short can take a value: -p (pretty) + -v <id> (vendor-id)
+    iabtcfv2 dump -pv 284 CPi...AAA
+
+    # Long options accept the GNU `=value` form too
+    iabtcfv2 dump --vendor-id=284 CPi...AAA
+
+Bundling does NOT support abbreviating long options (`--ver` is not accepted
+as a shortcut for `--version`); always use the full long-option name or its
+single-character short alias.
 
 =head1 DOCKER USAGE
 

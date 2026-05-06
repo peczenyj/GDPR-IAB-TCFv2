@@ -23,7 +23,7 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.352";
+our $VERSION = "0.360";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -1113,6 +1113,13 @@ Parses TC strings and output them as JSON.
 
     # Stream multiple strings from STDIN to a JSON array
     cat strings.txt | iabtcfv2 dump --json-array
+
+    # Short flags can be bundled (the last bundled short may take a value)
+    iabtcfv2 dump -pq "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    iabtcfv2 dump -pv 284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+
+    # Long options accept the GNU `--opt=value` form
+    iabtcfv2 dump --vendor-id=284 "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
 See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
 

@@ -150,4 +150,78 @@ subtest 'Version Option' => sub {
     );
 };
 
+# Test Short Option Bundling and = syntax
+subtest 'Short option bundling and = value syntax' => sub {
+
+    # Bundled boolean flags: -pq is parsed as --pretty --quiet.
+    # `--pretty` produces multi-line indented JSON, which is the easiest
+    # observable side effect to assert on.
+    my $bundled_flags_out  = `$perl -Ilib $bin dump -pq $tc_string`;
+    my $bundled_flags_data = decode_helper($bundled_flags_out);
+    ok( $bundled_flags_data, '-pq produces valid JSON' );
+    like(
+        $bundled_flags_out, qr/\n\s+"/,
+        '-pq enables --pretty (multi-line output)'
+    );
+
+    # Bundled flag + value-taking short: -pv 1 is --pretty --vendor-id 1.
+    # Compare logically against the canonical long-form invocation so the
+    # assertion doesn't depend on which fields are populated for the chosen
+    # vendor in the fixture.
+    my $bundled_value_data =
+      decode_helper(`$perl -Ilib $bin dump -pv 1 $tc_string`);
+    my $longform_data =
+      decode_helper(`$perl -Ilib $bin dump --pretty --vendor-id 1 $tc_string`);
+    is_deeply(
+        $bundled_value_data, $longform_data,
+        '-pv 1 produces the same data as --pretty --vendor-id 1'
+    );
+
+    # GNU-style --opt=value: --vendor-id=1 must behave identically to
+    # --vendor-id 1.
+    my $eq_data =
+      decode_helper(`$perl -Ilib $bin dump --vendor-id=1 $tc_string`);
+    my $space_data =
+      decode_helper(`$perl -Ilib $bin dump --vendor-id 1 $tc_string`);
+    is_deeply(
+        $eq_data, $space_data,
+        '--vendor-id=1 is parsed identically to --vendor-id 1'
+    );
+};
+
+# Test short aliases -c (compact) and -s (strict)
+subtest 'Short aliases -c (compact) and -s (strict)' => sub {
+
+    # -c == --compact: assert by comparing decoded data against the long form.
+    my $c_data = decode_helper(`$perl -Ilib $bin dump -c $tc_string`);
+    my $long_data =
+      decode_helper(`$perl -Ilib $bin dump --compact $tc_string`);
+    is_deeply( $c_data, $long_data, '-c produces the same data as --compact' );
+    is( ref( $c_data->{purpose}{consents} ), 'ARRAY',
+        '-c enables compact form (purpose consents as array)'
+    );
+
+    # -s == --strict: a TCF v2.3 string without Disclosed Vendors segment
+    # must be rejected with the standard "Disclosed Vendors segment is
+    # mandatory" message.  --quiet keeps the warn off CI.
+    my $tc_v23_no_dv =
+      'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA';
+
+    my $s_out = `$perl -Ilib $bin dump -s --quiet $tc_v23_no_dv`;
+    like(
+        $s_out, qr/Disclosed Vendors segment is mandatory/,
+        '-s enables --strict (rejects v2.3 without Disclosed Vendors)'
+    );
+
+    # Bundled new shorts: -cp must produce the same data as --compact --pretty.
+    my $bundled_cp_data =
+      decode_helper(`$perl -Ilib $bin dump -cp $tc_string`);
+    my $longform_cp_data =
+      decode_helper(`$perl -Ilib $bin dump --compact --pretty $tc_string`);
+    is_deeply(
+        $bundled_cp_data, $longform_cp_data,
+        '-cp produces the same data as --compact --pretty'
+    );
+};
+
 done_testing();

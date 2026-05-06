@@ -1,3 +1,15 @@
+## [0.360] - 2026-05-06
+
+### Features
+
+- *(cli)* Bundling + short aliases (-c for --compact, -s for --strict) 
+
+### Other
+
+- Merge tag 'v0.352' into devel
+
+Tagged for release. v0.352
+
 ## [0.352] - 2026-05-06
 
 ### Bug Fixes
@@ -6,6 +18,7 @@
 
 ### Other
 
+- Release v0.352 - fix iabtcvf2 cli tool that mix -v with -V
 - Update changelog
 - Merge tag 'v0.351' into devel
 
