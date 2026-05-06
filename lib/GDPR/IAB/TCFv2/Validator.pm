@@ -10,14 +10,18 @@ use GDPR::IAB::TCFv2::Validator::Result;
 sub new {
     my ( $klass, %args ) = @_;
 
+    my $consent             = $args{consent_purpose_ids}             || [];
+    my $legitimate_interest = $args{legitimate_interest_purpose_ids} || [];
+    my $flexible            = $args{flexible_purpose_ids}            || [];
+
     my $self = {
         vendor_id                       => $args{vendor_id},
-        consent_purpose_ids             => $args{consent_purpose_ids} || [],
-        legitimate_interest_purpose_ids =>
-          $args{legitimate_interest_purpose_ids} || [],
-        flexible_purpose_ids    => $args{flexible_purpose_ids}    || [],
-        check_disclosed_vendors => $args{check_disclosed_vendors} || 0,
-        strict                  => exists $args{strict} ? $args{strict} : 0,
+        consent_purpose_ids             => $consent,
+        legitimate_interest_purpose_ids => $legitimate_interest,
+        flexible_purpose_ids            => $flexible,
+        _flexible_set                   => { map { $_ => 1 } @{$flexible} },
+        check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
+        strict => exists $args{strict} ? $args{strict} : 0,
     };
 
     return bless $self, $klass;
@@ -71,12 +75,6 @@ sub _run_validation {
         $tc, $vendor_id, $strict, \@reasons,
         $stop_on_first
     );
-    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
-
-    $self->_check_flexible_purposes(
-        $tc, $vendor_id, $strict, \@reasons,
-        $stop_on_first
-    );
 
     if (@reasons) {
         return $self->_make_result( 0, \@reasons );
@@ -101,12 +99,17 @@ sub _check_consent_purposes {
     my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
 
     foreach my $pid ( @{ $self->{consent_purpose_ids} } ) {
-        unless (
-            $tc->is_vendor_consent_allowed(
-                $vendor_id, $pid, strict => $strict
-            )
+        my $allowed = $self->{_flexible_set}->{$pid}
+          ? $tc->is_vendor_allowed_for_flexible_purpose(
+            $vendor_id, $pid, 0,
+            strict => $strict
           )
-        {
+          : $tc->is_vendor_consent_allowed(
+            $vendor_id, $pid,
+            strict => $strict
+          );
+
+        unless ($allowed) {
             push @{$reasons},
               "vendor $vendor_id not allowed for purpose $pid (consent)";
             return if $stop_on_first;
@@ -119,42 +122,19 @@ sub _check_li_purposes {
     my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
 
     foreach my $pid ( @{ $self->{legitimate_interest_purpose_ids} } ) {
-        unless (
-            $tc->is_vendor_legitimate_interest_allowed(
-                $vendor_id, $pid, strict => $strict
-            )
+        my $allowed = $self->{_flexible_set}->{$pid}
+          ? $tc->is_vendor_allowed_for_flexible_purpose(
+            $vendor_id, $pid, 1,
+            strict => $strict
           )
-        {
+          : $tc->is_vendor_legitimate_interest_allowed(
+            $vendor_id, $pid,
+            strict => $strict
+          );
+
+        unless ($allowed) {
             push @{$reasons},
               "vendor $vendor_id not allowed for purpose $pid (legitimate interest)";
-            return if $stop_on_first;
-        }
-    }
-    return;
-}
-
-sub _check_flexible_purposes {
-    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
-
-    foreach my $flex ( @{ $self->{flexible_purpose_ids} } ) {
-        my ( $pid, $default_is_li );
-        if ( ref($flex) eq 'HASH' ) {
-            $pid           = $flex->{purpose_id};
-            $default_is_li = $flex->{default_is_li};
-        }
-        else {
-            $pid           = $flex;
-            $default_is_li = 0;
-        }
-
-        unless (
-            $tc->is_vendor_allowed_for_flexible_purpose(
-                $vendor_id, $pid, $default_is_li, strict => $strict
-            )
-          )
-        {
-            push @{$reasons},
-              "vendor $vendor_id not allowed for flexible purpose $pid";
             return if $stop_on_first;
         }
     }

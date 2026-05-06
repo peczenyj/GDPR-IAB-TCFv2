@@ -137,36 +137,39 @@ subtest "Validator legitimate_interest_purpose_ids" => sub {
       'reason names the LI rule type';
 };
 
-subtest "Validator flexible_purpose_ids - scalar form" => sub {
+subtest "flexible_purpose_ids derives default basis from membership" => sub {
     my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-    # Plain integer means default_is_li = 0 (consent default).
-    # P6/V1 has both consent and LI bits set, so passes either way.
-    my $validator = GDPR::IAB::TCFv2::Validator->new(
+    # Vendor 1, Purpose 6: consent=1, LI=1.  P6 is in consent_purpose_ids
+    # AND flexible_purpose_ids -> flexible with default consent.  Passes.
+    my $v_consent_default = GDPR::IAB::TCFv2::Validator->new(
         vendor_id            => 1,
+        consent_purpose_ids  => [6],
         flexible_purpose_ids => [6],
     );
-    ok $validator->validate($tc_string),
-      'flexible P6 (default consent) passes for vendor 1';
-};
+    ok $v_consent_default->validate($tc_string),
+      'flexible P6 with default consent (because P6 is in consent_purpose_ids) passes';
 
-subtest "Validator flexible_purpose_ids - hashref form" => sub {
-    my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
-
-    # P2/V2 has consent=0 and LI=1, so default_is_li flips the outcome.
-    my $validator_consent_default = GDPR::IAB::TCFv2::Validator->new(
-        vendor_id            => 2,
-        flexible_purpose_ids => [ { purpose_id => 2, default_is_li => 0 } ],
+    # Vendor 2, Purpose 2: consent=0, LI=1.  P2 is in
+    # legitimate_interest_purpose_ids AND flexible_purpose_ids -> flexible
+    # with default LI.  Passes (LI bit is set).
+    my $v_li_default = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 2,
+        legitimate_interest_purpose_ids => [2],
+        flexible_purpose_ids            => [2],
     );
-    ok !$validator_consent_default->validate($tc_string),
-      'flexible P2/V2 with default_is_li=0 fails (no consent bit)';
+    ok $v_li_default->validate($tc_string),
+      'flexible P2 with default LI (because P2 is in legitimate_interest_purpose_ids) passes';
 
-    my $validator_li_default = GDPR::IAB::TCFv2::Validator->new(
+    # P2 in consent_purpose_ids AND flexible_purpose_ids -> default consent.
+    # Vendor 2 has consent=0 for P2 -> fails.
+    my $v_p2_consent_flex = GDPR::IAB::TCFv2::Validator->new(
         vendor_id            => 2,
-        flexible_purpose_ids => [ { purpose_id => 2, default_is_li => 1 } ],
+        consent_purpose_ids  => [2],
+        flexible_purpose_ids => [2],
     );
-    ok $validator_li_default->validate($tc_string),
-      'flexible P2/V2 with default_is_li=1 passes (LI bit is set)';
+    ok !$v_p2_consent_flex->validate($tc_string),
+      'flexible P2 with default consent fails for vendor 2 (no consent bit)';
 };
 
 subtest "Validator strict mode override" => sub {
@@ -201,26 +204,28 @@ subtest "Validator strict mode override" => sub {
 subtest "Validator validate_all accumulates across rule families" => sub {
     my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-  # Three failures, one per rule family:
-  #   - Consent rule: P1/V1 has consent bit = 0     -> "(consent)"
-  #   - LI rule:      P1 LI is spec-forbidden        -> "(legitimate interest)"
-  #   - Flexible:     P7/V1 has consent bit = 0     -> "flexible purpose 7"
+    # Vendor 99 is out of range for this fixture's bitfields (max=10), so
+    # every rule fails uniformly.  Three rules, three reasons:
+    #   - Consent rule:  P1/V99 -> "(consent)"
+    #   - Consent rule:  P6/V99, via flexible default consent -> "(consent)"
+    #   - LI rule:       P10/V99 -> "(legitimate interest)"
     my $validator = GDPR::IAB::TCFv2::Validator->new(
-        vendor_id                       => 1,
-        consent_purpose_ids             => [1],
-        legitimate_interest_purpose_ids => [1],
-        flexible_purpose_ids => [ { purpose_id => 7, default_is_li => 0 } ],
+        vendor_id                       => 99,
+        consent_purpose_ids             => [ 1, 6 ],
+        legitimate_interest_purpose_ids => [10],
+        flexible_purpose_ids            => [6],
     );
 
     my $result = $validator->validate_all($tc_string);
     ok !$result, 'all-fail validation reports failure';
     is scalar( $result->reasons ), 3,
-      'one reason per rule family (3 total)';
+      'three reasons accumulated across consent + LI rules';
 
     my $joined = join '|', $result->reasons;
     like $joined, qr/\(consent\)/,             'has the consent rule reason';
     like $joined, qr/\(legitimate interest\)/, 'has the LI rule reason';
-    like $joined, qr/flexible purpose 7/,      'has the flexible rule reason';
+    like $joined, qr/purpose 6 \(consent\)/,
+      'flexible P6 with default consent reports as a consent failure';
 };
 
 done_testing;
