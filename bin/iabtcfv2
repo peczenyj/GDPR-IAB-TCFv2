@@ -490,6 +490,8 @@ sub _emit_validate {
 
 __END__
 
+=encoding utf8
+
 =head1 NAME
 
 iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings
