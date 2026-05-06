@@ -23,7 +23,7 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.350";
+our $VERSION = "0.351";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
