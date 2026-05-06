@@ -106,7 +106,10 @@ subtest 'CLI --strict option' => sub {
     my $out_lenient = `$perl -Ilib $bin dump $tc_v23_no_dv`;
     like( $out_lenient, qr/"tc_string":/i, 'Lenient mode (default) succeeds' );
 
-    my $out_strict = `$perl -Ilib $bin dump --strict $tc_v23_no_dv`;
+    # --quiet suppresses the application-level "Warning: Failed to parse..."
+    # so GitHub Actions doesn't promote it to a workflow annotation.  The
+    # error JSON is still emitted to stdout, which is what we assert on.
+    my $out_strict = `$perl -Ilib $bin dump --strict --quiet $tc_v23_no_dv`;
     like(
         $out_strict,
         qr/Disclosed Vendors segment is mandatory/,
