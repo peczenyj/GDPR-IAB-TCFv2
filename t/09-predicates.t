@@ -93,6 +93,21 @@ subtest 'CLI --vendor-id option' => sub {
         $out, qr/"disclosed":\{[^}]*"23":true/,
         'CLI removed other disclosed vendors'
     );
+
+    # Regression: lowercase short -v must be parsed as --vendor-id by the
+    # `dump` subcommand, NOT slurped by the global Getopt::Long as a
+    # case-insensitive match for --version|-V.  Before require_order was
+    # added to the Getopt::Long config, this would print
+    # "iabtcfv2 version 0.351" instead of the JSON dump.
+    my $out_short = `$perl -Ilib $bin dump -v 1 $tc_full`;
+    unlike(
+        $out_short, qr/^iabtcfv2 version/,
+        'short -v is not shadowed by the global -V/--version'
+    );
+    like(
+        $out_short, qr/"vendor":\{.*"consents":\{"1":true\}/s,
+        'short -v isolates the same vendor as --vendor-id'
+    );
 };
 
 subtest 'CLI --strict option' => sub {
