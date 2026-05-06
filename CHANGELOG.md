@@ -1,3 +1,16 @@
+## [0.352] - 2026-05-06
+
+### Bug Fixes
+
+- *(cli)* Stop short -v from being shadowed by global --version|-V 
+
+### Other
+
+- Update changelog
+- Merge tag 'v0.351' into devel
+
+Tagged for release. v0.351
+
 ## [0.351] - 2026-05-06
 
 ### Bug Fixes
@@ -12,6 +25,7 @@
 
 ### Other
 
+- Merge branch 'release/0.351'
 - Merge tag 'v0.350' into devel
 
 Tagged for release. v0.350
