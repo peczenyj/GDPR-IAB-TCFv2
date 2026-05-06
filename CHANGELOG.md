@@ -1,14 +1,136 @@
+## [0.350] - 2026-05-06
+
+### Bug Fixes
+
+- Coerce Math::BigInt fallback values to plain scalars in BitUtils 
+
+### Features
+
+- Add --version and -V options to CLI
+
+### Other
+
+- Remove broken badges
+- Phase 1: TCF v2.3 Support & Logic Alignment (Re-issue) 
+
+* docs: update TCF version mentions to v2.3 in constants
+
+* feat: Phase 1 implementation (predicates, vendor_id filter, CLI options)
+
+* feat: enforce TCF v2.2/v2.3 legal restrictions on Legitimate Interest
+
+* feat: add --strict option to CLI dump and enforce TCF v2.3 rules
+
+* chore: prepare for v0.350 release (Phase 1)
+
+* chore: consolidate documentation to README.md and remove README.pod
+
+* chore: simplify docker tagging (version and latest only)
+
+* chore: final Phase 1 refinements (POD, logic fixes, golden file)
+
+* chore: establish strict operational boundaries for agents in AGENTS.md
+
+* feat: add automated release workflow for CPAN and GitHub Releases
+
+* docs: update AGENTS.md with automated release flow and Phase 1 features
+
+* fix: improve TO_JSON isolation and fix predicates tests
+
+* fix: robust regex for CLI isolation test
+
+* fix: satisfy perl critic and tidy in CI
+
+* Vendor segment parser cleanup (stacked on #44) 
+
+* fix: align core bitfield/range data_size to slice length
+
+Both _parse_bitfield and _parse_range_section previously passed the
+full core_data bit-length as data_size while passing a sliced \$data.
+This made the BitField/RangeSection size validation lenient for
+truncated cores: malformed inputs would stumble forward and croak deep
+in _parse_publisher_section with a misleading "missing 'core_data'"
+error instead of failing fast at the bitfield boundary.
+
+Align with the pattern already used in _parse_vendor_bitfield_or_range
+so data_size faithfully describes what the callee receives.
+
+* feat: defensive segment-type check in vendor-segment helper
+
+_parse_vendor_bitfield_or_range now accepts an expected_segment_type
+argument and croaks if the payload header disagrees. Brings parity
+with PublisherTC->Parse and protects against future refactors that
+might bypass _decode_tc_string_segments routing.
+
+* docs: explain single-return shape of vendor-segment helper
+
+* fix: short-circuit MaxVendorId=0 in vendor-segment helper
+
+Per IAB TCF v2 spec, MaxVendorId=0 means the field is unused.
+Previously, a segment with max_id=0 and IsRangeEncoding=1 would
+fall into RangeSection->Parse and either parse spurious range
+entries or croak from the 31-byte minimum-size guard.
+
+Now we return an empty BitField immediately, preserving
+has_vendor_disclosure() semantics while making contains() return
+falsey for any vendor id.
+
+* docs: refresh plan with current line numbers and rebase notes
+
+* docs: regenerate README from POD and remove changelog merge noise
+
+Phase 1 added several public methods (is_v22_plus, is_v23,
+disclosed_vendor, has_vendor_disclosure, allowed_vendor,
+has_publisher_restrictions) and two Parse options (TCF v2.3
+strict-mode behaviour, vendor_id JSON filter), all documented in
+the .pm POD but missing from README.md.  Regenerated README.md via
+the documented workflow (`pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`).
+
+Also removed two leaked lines from a prior merge commit message
+(`# Conflicts:` / `#\tCHANGELOG.md`) that git-cliff had swept into
+the v0.350 "Other" section.
+
+* docs: expand CONTRIBUTING with full Git Flow release procedure
+
+The previous "FOR RELEASE MANAGER" section was a 12-line stub.
+Replaced with a comprehensive guide covering:
+
+  - Prerequisites: Pod::Markdown, git-cliff, git-flow CLI,
+    PAUSE secrets configuration
+  - Versioning convention (0.XYZ, v-prefix only on tags)
+  - Step-by-step release (10 steps), each with side-by-side
+    git-flow and vanilla-git commands
+  - What .github/workflows/release.yml does on tag push
+  - Hotfix release procedure (skips devel)
+
+Added `=encoding utf8` so podchecker accepts the em-dashes used
+throughout the new section.
+
+* docs: explain why we don't document the draft-release pattern
+
+Adds a "Pre-release review" subsection that calls out two reasons
+the draft GitHub Release pattern doesn't actually buy us anything
+on this project:
+
+  1. PAUSE upload is irreversible, so reviewing the GitHub Release
+     before it ships only protects the rendered notes page, not the
+     CPAN-distributed artifact.
+  2. release.yml hard-codes draft: false in the softprops step and
+     listens only on push.tags, so naively adding a draft step would
+     either close the review window in 3 minutes or skip release.yml
+     entirely (API-created tags don't trigger push events).
+
+Points readers at the existing PR-based vanilla-git path in step 8 as
+the actual review gate, and notes the workflow tweak required if
+someone later wants to support drafts properly.
+- Merge devel into Phase 2 and resolve CHANGELOG conflict
+- Merge feat/phase-1-tcf-v23-segments into devel
+
 ## [0.340] - 2026-05-05
 
 ### Other
 
 - Merge feat/phase-0-core-logic into devel
-- Update documentation
-- Update doc
-- Add Golden File Test System baseline
-- Phase 0: Core Logic Expansion (Fixed linting & tidy)
-- Phase 0: Core Logic Expansion (Fixed linting & tidy)
-- Phase 0: Core Logic Expansion
 
 ## [0.330] - 2026-05-05
 
@@ -46,9 +168,31 @@
 
 - Fix yaml lint issues
 
+### Documentation
+
+- Update changelog for Phase 2
+- Update changelog for Phase 1
+
 ### Other
 
 - Independent iabtcf-dump CLI utility 
+- Merge Phase 1 updates
+- Merge Phase 0 updates
+- Update documentation
+- Update doc
+- Merge test fix
+- Fix test expectation for aligned TO_JSON
+- Merge updated Golden File
+- Update Golden File for TCF v2.3
+- Merge TO_JSON alignment
+- Align TO_JSON output
+- Refactor Validator to reduce complexity (fix perlcritic)
+- Phase 2: The Validator Interface
+- Phase 1: TCF v2.3 & Segment Robustness
+- Add Golden File Test System baseline
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion (Fixed linting & tidy)
+- Phase 0: Core Logic Expansion
 - Normalize macos
 - Update changelog
 

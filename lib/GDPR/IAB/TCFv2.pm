@@ -23,7 +23,7 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.340";
+our $VERSION = "0.350";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -35,9 +35,12 @@ use constant {
     MAX_SPECIAL_FEATURE_ID  => 12,
     MAX_PURPOSE_ID          => 24,
     DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
+    TCF_V23_DEADLINE        => 1772236800,             # 2026-02-28T00:00:00Z
     SEGMENT_TYPES           => {
-        CORE         => 0,
-        PUBLISHER_TC => 3,
+        CORE              => 0,
+        DISCLOSED_VENDORS => 1,
+        ALLOWED_VENDORS   => 2,
+        PUBLISHER_TC      => 3,
     },
     OFFSETS => {
         SEGMENT_TYPE            => 0,
@@ -63,7 +66,7 @@ use constant {
 
 use overload q<""> => \&tc_string;
 
-# ABSTRACT: gdpr iab tcf v2 consent string parser
+# ABSTRACT: gdpr iab tcf v2.3 consent string parser
 
 sub Parse {
     my ( $klass, $tc_string, %opts ) = @_;
@@ -91,14 +94,18 @@ sub Parse {
     }
 
     my $self = {
-        core_data         => $segments->{core_data},
-        publisher_tc_data => $segments->{publisher_tc},
-        options           => \%options,
-        tc_string         => $tc_string,
+        core_data              => $segments->{core_data},
+        disclosed_vendors_data => $segments->{disclosed_vendors},
+        allowed_vendors_data   => $segments->{allowed_vendors},
+        publisher_tc_data      => $segments->{publisher_tc},
+        options                => \%options,
+        tc_string              => $tc_string,
 
         vendor_consents             => undef,
         vendor_legitimate_interests => undef,
         publisher                   => undef,
+        disclosed_vendors           => undef,
+        allowed_vendors             => undef,
     };
 
     bless $self, $klass;
@@ -108,9 +115,18 @@ sub Parse {
 
     croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
+    # TCF v2.3: Mandatory Disclosed Vendors segment check
+    if ( $strict && $self->is_v23 ) {
+        croak "TCF v2.3: Disclosed Vendors segment is mandatory"
+          unless $self->has_vendor_disclosure;
+    }
+
     my $next_offset = $self->_parse_vendor_section();
 
     $self->_parse_publisher_section($next_offset);
+
+    $self->_parse_disclosed_vendors();
+    $self->_parse_allowed_vendors();
 
     return $self;
 }
@@ -197,6 +213,16 @@ sub policy_version {
       scalar( get_uint6( $self->{core_data}, OFFSETS->{POLICY_VERSION} ) );
 }
 
+sub is_v22_plus {
+    my $self = shift;
+    return $self->policy_version >= 4 ? 1 : 0;
+}
+
+sub is_v23 {
+    my $self = shift;
+    return $self->policy_version >= 5 ? 1 : 0;
+}
+
 sub is_service_specific {
     my $self = shift;
 
@@ -261,6 +287,15 @@ sub is_purpose_legitimate_interest_allowed {
     );
 
     foreach my $id (@ids) {
+
+        # SPEC: Purpose 1 never allows Legitimate Interest
+        return 0 if $id == 1;
+
+       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+        if ( $self->is_v22_plus ) {
+            return 0 if $id >= 3 && $id <= 6;
+        }
+
         return 0
           unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
     }
@@ -331,6 +366,27 @@ sub vendor_legitimate_interest {
     return $self->{vendor_legitimate_interests}->contains($id);
 }
 
+sub disclosed_vendor {
+    my ( $self, $id ) = @_;
+
+    return 0 unless defined $self->{disclosed_vendors};
+
+    return $self->{disclosed_vendors}->contains($id);
+}
+
+sub has_vendor_disclosure {
+    my $self = shift;
+    return defined $self->{disclosed_vendors} ? 1 : 0;
+}
+
+sub allowed_vendor {
+    my ( $self, $id ) = @_;
+
+    return 0 unless defined $self->{allowed_vendors};
+
+    return $self->{allowed_vendors}->contains($id);
+}
+
 sub check_publisher_restriction {
     my $self = shift;
 
@@ -348,6 +404,11 @@ sub check_publisher_restriction {
 
     return $self->{publisher}
       ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+}
+
+sub has_publisher_restrictions {
+    my $self = shift;
+    return $self->{publisher} ? $self->{publisher}->has_restrictions : 0;
 }
 
 sub publisher_restrictions {
@@ -403,6 +464,15 @@ sub is_vendor_legitimate_interest_allowed {
     return 0 unless $self->vendor_legitimate_interest($vendor_id);
 
     foreach my $purpose_id (@$purpose_ids) {
+
+        # SPEC: Purpose 1 never allows Legitimate Interest
+        return 0 if $purpose_id == 1;
+
+       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+        if ( $self->is_v22_plus ) {
+            return 0 if $purpose_id >= 3 && $purpose_id <= 6;
+        }
+
         return 0
           if $self->check_publisher_restriction(
             $purpose_id, NotAllowed,
@@ -459,6 +529,16 @@ sub is_vendor_allowed_for_flexible_purpose {
     my ( $self, $vendor_id, $purpose_id, $default_is_li, %opts ) = @_;
 
     return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+
+    # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+    if ( $self->is_v22_plus && $purpose_id >= 3 && $purpose_id <= 6 ) {
+        $default_is_li = 0;
+    }
+
+    # SPEC: Purpose 1 never allows Legitimate Interest
+    if ( $purpose_id == 1 ) {
+        $default_is_li = 0;
+    }
 
     if ($self->check_publisher_restriction(
             $purpose_id, RequireConsent, $vendor_id
@@ -552,10 +632,37 @@ sub _format_json_subsection {
 sub TO_JSON {
     my $self = shift;
 
+    my %args      = ( @_ && ref $_[-1] eq 'HASH' ) ? %{ pop @_ } : @_;
+    my $filter_id = $args{vendor_id} || $self->{options}->{json}->{vendor_id};
+
     my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
 
     my $created      = $self->_format_date( $self->created );
     my $last_updated = $self->_format_date( $self->last_updated );
+
+    my $purpose_consents = $self->_format_json_subsection(
+        map {
+            [   $_ => (
+                      $filter_id
+                    ? $self->is_vendor_allowed_for_any_basis( $filter_id, $_ )
+                    : $self->_safe_is_purpose_consent_allowed($_)
+                ) ? $true : $false
+            ]
+        } 1 .. MAX_PURPOSE_ID,
+    );
+
+    my $purpose_li = $self->_format_json_subsection(
+        map {
+            [   $_ => (
+                    $filter_id
+                    ? $self->is_vendor_legitimate_interest_allowed(
+                        $filter_id, $_
+                      )
+                    : $self->_safe_is_purpose_legitimate_interest_allowed($_)
+                ) ? $true : $false
+            ]
+        } 1 .. MAX_PURPOSE_ID,
+    );
 
     return {
         tc_string               => $self->tc_string,
@@ -583,31 +690,24 @@ sub TO_JSON {
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
         purpose => {
-            consents => $self->_format_json_subsection(
-                map {
-                    [     $_ => $self->_safe_is_purpose_consent_allowed($_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
-            legitimate_interests => $self->_format_json_subsection(
-                map {
-                    [   $_ =>
-                          $self->_safe_is_purpose_legitimate_interest_allowed(
-                            $_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
+            consents             => $purpose_consents,
+            legitimate_interests => $purpose_li,
         },
         vendor => {
-            consents             => $self->{vendor_consents}->TO_JSON,
+            consents => $self->{vendor_consents}->TO_JSON($filter_id),
             legitimate_interests =>
-              $self->{vendor_legitimate_interests}->TO_JSON,
+              $self->{vendor_legitimate_interests}->TO_JSON($filter_id),
+            (   $self->{disclosed_vendors}
+                ? ( disclosed =>
+                      $self->{disclosed_vendors}->TO_JSON($filter_id) )
+                : ()
+            ),
+            (   $self->{allowed_vendors}
+                ? ( allowed => $self->{allowed_vendors}->TO_JSON($filter_id) )
+                : ()
+            ),
         },
-        publisher => $self->{publisher}->TO_JSON,
+        publisher => $self->{publisher}->TO_JSON($filter_id),
     };
 }
 
@@ -631,14 +731,17 @@ sub _decode_tc_string_segments {
 
         my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
 
+        croak "duplicate segment type $segment_type"
+          if exists $segments{$segment_type};
+
         $segments{$segment_type} = $decoded;
     }
 
-    my $publisher_tc = $segments{ SEGMENT_TYPES->{PUBLISHER_TC} };
-
     return {
-        core_data    => $core_data,
-        publisher_tc => $publisher_tc,
+        core_data         => $core_data,
+        disclosed_vendors => $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} },
+        allowed_vendors   => $segments{ SEGMENT_TYPES->{ALLOWED_VENDORS} },
+        publisher_tc      => $segments{ SEGMENT_TYPES->{PUBLISHER_TC} },
     };
 }
 
@@ -648,11 +751,11 @@ sub _validate_and_decode_base64 {
     # see: https://www.perlmonks.org/?node_id=775820
     croak "invalid base64 format" unless $s =~ m{
         ^
-        (?: [A-Za-z0-9-_]{4} )*
+        (?:[-A-Za-z0-9_]{4})*
         (?:
-            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048]
+            [-A-Za-z0-9_]{2}[AEIMQUYcgkosw048]
         |
-            [A-Za-z0-9-_] [AQgw]
+            [-A-Za-z0-9_][AQgw]
         )?
         \z
     }x;
@@ -662,7 +765,7 @@ sub _validate_and_decode_base64 {
 
 sub _decode_base64url {
     my $s = shift;
-    $s =~ tr[-_][+/];
+    $s =~ tr/-_/+\//;
     $s .= '=' while length($s) % 4;
     return decode_base64($s);
 }
@@ -735,10 +838,88 @@ sub _parse_publisher_section {
     $self->{publisher} = $publisher;
 }
 
+sub _parse_disclosed_vendors {
+    my $self = shift;
+
+    return unless defined $self->{disclosed_vendors_data};
+
+    $self->{disclosed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{disclosed_vendors_data},
+        SEGMENT_TYPES->{DISCLOSED_VENDORS},
+    );
+}
+
+sub _parse_allowed_vendors {
+    my $self = shift;
+
+    return unless defined $self->{allowed_vendors_data};
+
+    $self->{allowed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{allowed_vendors_data},
+        SEGMENT_TYPES->{ALLOWED_VENDORS},
+    );
+}
+
+# Returns only $vendors_section -- unlike _parse_bitfield_or_range, which
+# yields ($section, $next_offset) so the caller can keep parsing the core
+# segment.  Disclosed/Allowed Vendors live in their own base64 segment
+# with nothing trailing the bitfield/range, so there is no offset to chain.
+sub _parse_vendor_bitfield_or_range {
+    my ( $self, $data, $expected_segment_type ) = @_;
+
+    my ( $segment_type, $offset ) = get_uint3( $data, 0 );
+
+    croak
+      "invalid segment type $segment_type: expected $expected_segment_type"
+      if defined $expected_segment_type
+      && $segment_type != $expected_segment_type;
+
+    my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
+
+    # Spec: MaxVendorId == 0 means "field unused".  Skip the IsRange flag
+    # and any trailing payload entirely; return an empty BitField so that
+    # has_vendor_disclosure() still reports the segment as present while
+    # contains() always returns false for any vendor id.
+    if ( $max_id == 0 ) {
+        my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => '',
+            data_size => 0,
+            max_id    => 0,
+            options   => $self->{options},
+        );
+        return $empty_section;
+    }
+
+    my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
+
+    my $vendors_section;
+    if ($is_range) {
+        my $range_data = substr( $data, $bf_offset );
+        ( $vendors_section, ) = GDPR::IAB::TCFv2::RangeSection->Parse(
+            data      => $range_data,
+            data_size => length($range_data),
+            offset    => 0,
+            max_id    => $max_id,
+            options   => $self->{options},
+        );
+    }
+    else {
+        my $bitfield_data = substr( $data, $bf_offset, $max_id );
+        ( $vendors_section, ) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => $bitfield_data,
+            data_size => length($bitfield_data),
+            max_id    => $max_id,
+            options   => $self->{options},
+        );
+    }
+
+    return $vendors_section;
+}
+
 sub _parse_bitfield_or_range {
     my ( $self, $offset, $validate_next_offset ) = @_;
 
-    my $something;
+    my $vendors_section;
 
     my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
 
@@ -752,31 +933,30 @@ sub _parse_bitfield_or_range {
     );
 
     if ($is_range) {
-        ( $something, $next_offset ) = $self->_parse_range_section(
+        ( $vendors_section, $next_offset ) = $self->_parse_range_section(
             $max_id,
             $next_offset,
         );
     }
     else {
-        ( $something, $next_offset ) = $self->_parse_bitfield(
+        ( $vendors_section, $next_offset ) = $self->_parse_bitfield(
             $max_id,
             $next_offset,
         );
     }
 
-    return wantarray ? ( $something, $next_offset ) : $something;
+    return wantarray ? ( $vendors_section, $next_offset ) : $vendors_section;
 }
 
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data      = substr( $self->{core_data}, $range_section_start_offset );
-    my $data_size = length( $self->{core_data} );
+    my $data = substr( $self->{core_data}, $range_section_start_offset );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         offset    => 0,
         max_id    => $max_id,
         options   => $self->{options},
@@ -792,11 +972,10 @@ sub _parse_bitfield {
     my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
     my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
-    my $data_size = length( $self->{core_data} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         max_id    => $max_id,
         options   => $self->{options},
     );
@@ -855,10 +1034,6 @@ __END__
 =for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/windows.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/windows.yml/badge.svg" alt='tests'/></a>
 
 =for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/macos.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/macos.yml/badge.svg" alt='tests'/></a>
-
-=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perltidy.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perltidy.yml/badge.svg" alt='tests'/></a>
-
-=for html <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perlcritic.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perlcritic.yml/badge.svg" alt='tests'/></a>
 
 =for html <a href="https://coveralls.io/github/peczenyj/GDPR-IAB-TCFv2?branch=main"><img src="https://coveralls.io/repos/github/peczenyj/GDPR-IAB-TCFv2/badge.svg?branch=main" alt='Coverage Status' /></a>
 
@@ -924,7 +1099,7 @@ This distribution includes a unified command line tool to work with TC strings.
 
 =head2 iabtcfv2
 
-The C<iabtcfv2> utility provides several subcommands for TCF v2 strings.
+The C<iabtcfv2> utility provides several subcommands for TCF v2.3 strings.
 
 =head3 dump
 
@@ -1008,6 +1183,8 @@ Parse may receive an optional hash with the following parameters:
 
 On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
 
+Additionally, for TCF v2.3 strings (Policy Version 5+), C<strict> mode will enforce that the B<Disclosed Vendors> segment is present.
+
 The C<strict> mode is disabled by default.
 
 =item *
@@ -1049,6 +1226,10 @@ If omit, we will try to use C<JSON::false> and C<JSON::true> if the package L<JS
 C<date_format> if present accepts two kinds of value: an C<string> (to be used on C<POSIX::strftime>) or a code reference to a subroutine that
 will be called with two arguments: epoch in seconds and nanoseconds. If omitted the format L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601> will be used
 except if the option C<use_epoch> is true.
+
+=item *
+
+C<vendor_id> if present, filters the JSON output to only include data for the specific vendor ID. This affects the C<vendor> and C<publisher/restrictions> sections, drastically reducing the size of the output.
 
 =back
 
@@ -1122,6 +1303,14 @@ Version of the GVL used to create this TC String.
 Version of policy used within L<GVL|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list>.
 
 From the corresponding field in the GVL that was used for obtaining consent.
+
+=head2 is_v22_plus
+
+Returns true if the TC string uses Policy Version 4 or higher (TCF v2.2+).
+
+=head2 is_v23
+
+Returns true if the TC string uses Policy Version 5 or higher (TCF v2.3).
 
 =head2 is_service_specific
 
@@ -1208,6 +1397,22 @@ The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
 
+=head2 disclosed_vendor
+
+If true, the vendor was disclosed to the user (Segment 1 or 5).
+
+    say "Vendor 284 was disclosed" if $consent->disclosed_vendor(284);
+
+=head2 has_vendor_disclosure
+
+Returns true (1) if the TC string contains a "Disclosed Vendors" segment (ID 1 or 5), and false (0) otherwise.
+
+=head2 allowed_vendor
+
+If true, the vendor is in the "Allowed Vendors" segment (Segment 2). This is typically used for service-specific TC strings.
+
+    say "Vendor 284 is allowed" if $consent->allowed_vendor(284);
+
 =head2 is_vendor_consent_allowed
 
 Check if a vendor has consent for a list of purposes, respecting publisher restrictions.
@@ -1231,6 +1436,10 @@ Check if a vendor has either consent or legitimate interest for a list of purpos
     if ($consent->is_vendor_allowed_for_any_basis(284, 1, 2)) {
         # ...
     }
+
+=head2 has_publisher_restrictions
+
+Returns true (1) if the TC string contains a "Publisher Restrictions" section, and false (0) otherwise.
 
 =head2 check_publisher_restriction
 

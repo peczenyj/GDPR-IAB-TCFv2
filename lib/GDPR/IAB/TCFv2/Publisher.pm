@@ -53,6 +53,8 @@ sub Parse {
 sub check_restriction {
     my ( $self, $purpose_id, $restriction_type, $vendor_id ) = @_;
 
+    return 0 unless defined $self->{restrictions};
+
     return $self->{restrictions}
       ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
 }
@@ -60,7 +62,18 @@ sub check_restriction {
 sub restrictions {
     my ( $self, $vendor_id ) = @_;
 
+    return {} unless defined $self->{restrictions};
+
     return $self->{restrictions}->restrictions($vendor_id);
+}
+
+sub has_restrictions {
+    my $self = shift;
+
+    return
+      defined $self->{restrictions}
+      ? $self->{restrictions}->has_restrictions
+      : 0;
 }
 
 sub publisher_tc {
@@ -70,11 +83,13 @@ sub publisher_tc {
 }
 
 sub TO_JSON {
-    my $self = shift;
+    my ( $self, $filter_id ) = @_;
 
-    my %tags = (
-        restrictions => $self->{restrictions}->TO_JSON,
-    );
+    my %tags;
+
+    if ( defined $self->{restrictions} ) {
+        $tags{restrictions} = $self->{restrictions}->TO_JSON($filter_id);
+    }
 
     if ( defined $self->{publisher_tc} ) {
         %tags = ( %tags, %{ $self->{publisher_tc}->TO_JSON } );
@@ -82,6 +97,7 @@ sub TO_JSON {
 
     return \%tags;
 }
+
 
 1;
 __END__

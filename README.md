@@ -15,14 +15,6 @@
 </div>
 
 <div>
-    <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perltidy.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perltidy.yml/badge.svg" alt='tests'/></a>
-</div>
-
-<div>
-    <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perlcritic.yml"><img src="https://github.com/peczenyj/GDPR-IAB-TCFv2/actions/workflows/perlcritic.yml/badge.svg" alt='tests'/></a>
-</div>
-
-<div>
     <a href="https://coveralls.io/github/peczenyj/GDPR-IAB-TCFv2?branch=main"><img src="https://coveralls.io/repos/github/peczenyj/GDPR-IAB-TCFv2/badge.svg?branch=main" alt='Coverage Status' /></a>
 </div>
 
@@ -92,7 +84,7 @@ This distribution includes a unified command line tool to work with TC strings.
 
 ## iabtcfv2
 
-The `iabtcfv2` utility provides several subcommands for TCF v2 strings.
+The `iabtcfv2` utility provides several subcommands for TCF v2.3 strings.
 
 ### dump
 
@@ -172,6 +164,8 @@ Parse may receive an optional hash with the following parameters:
 
 - On `strict` mode we will validate if the version of the consent string is the version 2 (or die with an exception).
 
+    Additionally, for TCF v2.3 strings (Policy Version 5+), `strict` mode will enforce that the **Disclosed Vendors** segment is present.
+
     The `strict` mode is disabled by default.
 
 - The `prefetch` option receives one (as scalar) or more (as arrayref) vendor ids. 
@@ -192,6 +186,7 @@ Parse may receive an optional hash with the following parameters:
     - `date_format` if present accepts two kinds of value: an `string` (to be used on `POSIX::strftime`) or a code reference to a subroutine that
     will be called with two arguments: epoch in seconds and nanoseconds. If omitted the format [ISO\_8601](https://en.wikipedia.org/wiki/ISO_8601) will be used
     except if the option `use_epoch` is true.
+    - `vendor_id` if present, filters the JSON output to only include data for the specific vendor ID. This affects the `vendor` and `publisher/restrictions` sections, drastically reducing the size of the output.
 
 # METHODS
 
@@ -262,6 +257,14 @@ Version of the GVL used to create this TC String.
 Version of policy used within [GVL](https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list).
 
 From the corresponding field in the GVL that was used for obtaining consent.
+
+## is\_v22\_plus
+
+Returns true if the TC string uses Policy Version 4 or higher (TCF v2.2+).
+
+## is\_v23
+
+Returns true if the TC string uses Policy Version 5 or higher (TCF v2.3).
 
 ## is\_service\_specific
 
@@ -348,6 +351,22 @@ The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
 
+## disclosed\_vendor
+
+If true, the vendor was disclosed to the user (Segment 1 or 5).
+
+    say "Vendor 284 was disclosed" if $consent->disclosed_vendor(284);
+
+## has\_vendor\_disclosure
+
+Returns true (1) if the TC string contains a "Disclosed Vendors" segment (ID 1 or 5), and false (0) otherwise.
+
+## allowed\_vendor
+
+If true, the vendor is in the "Allowed Vendors" segment (Segment 2). This is typically used for service-specific TC strings.
+
+    say "Vendor 284 is allowed" if $consent->allowed_vendor(284);
+
 ## is\_vendor\_consent\_allowed
 
 Check if a vendor has consent for a list of purposes, respecting publisher restrictions.
@@ -371,6 +390,10 @@ Check if a vendor has either consent or legitimate interest for a list of purpos
     if ($consent->is_vendor_allowed_for_any_basis(284, 1, 2)) {
         # ...
     }
+
+## has\_publisher\_restrictions
+
+Returns true (1) if the TC string contains a "Publisher Restrictions" section, and false (0) otherwise.
 
 ## check\_publisher\_restriction
 

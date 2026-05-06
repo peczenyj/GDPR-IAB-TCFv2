@@ -160,7 +160,24 @@ sub all {
 }
 
 sub TO_JSON {
-    my $self = shift;
+    my ( $self, $filter_id ) = @_;
+
+    if ( defined $filter_id ) {
+        my $val = $self->contains($filter_id);
+
+        if ( !!$self->{options}->{json}->{compact} ) {
+            return $val ? [$filter_id] : [];
+        }
+
+        my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+        my $bool_val = $val ? $true : $false;
+
+        if ( !!$self->{options}->{json}->{verbose} ) {
+            return { $filter_id => $bool_val };
+        }
+
+        return $val ? { $filter_id => $true } : {};
+    }
 
     return $self->all if !!$self->{options}->{json}->{compact};
 
