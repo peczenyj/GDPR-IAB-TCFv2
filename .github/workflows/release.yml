@@ -18,11 +18,11 @@ jobs:
       - name: Set up Perl
         uses: shogo82148/actions-setup-perl@v1
         with:
-          perl-version: '5.38'
+          perl-version: 'latest'
 
       - name: Install Release Dependencies
         run: |
-          cpanm -n CPAN::Uploader pod2markdown
+          cpanm -n CPAN::Uploader
 
       - name: Build Distribution
         run: |
