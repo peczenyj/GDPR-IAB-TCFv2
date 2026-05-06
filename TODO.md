@@ -46,6 +46,18 @@
 *   **Tasks:**
     *   Investigate `vec()` for bitfields.
 
+## Phase 5: CMP Validation
+*   **Goal:** IAB Registry-based compliance and automatic CMP lifecycle checks.
+*   **Depends on:** Phase 2 (Validator Interface).
+*   **Tasks:**
+    *   Create `GDPR::IAB::TCFv2::CMPValidator` for querying the official IAB CMP list.
+    *   Support flexible registry loading: Local File path, Raw JSON string, or remote URL fetched via `HTTP::Tiny`.
+    *   **Compliance Checks:** verify CMP existence in the registry and respect `deletedDate` flags on retired CMPs.
+    *   **Stale Data Protection:** emit a warning when registry data is older than 28 days.
+    *   **Validator Integration:** expose a `cmp_validator` rule on the main `Validator` interface from Phase 2.
+    *   **Tests:** use fixed reference dates so the `deletedDate` / staleness checks are deterministic across execution environments.
+*   **Reference:** PR [#38](https://github.com/peczenyj/GDPR-IAB-TCFv2/pull/38) (`feat/phase-5-cmp-validator`, currently OPEN).
+
 ## Distribution
 *   [ ] Distribute CLI tool as Docker image via DockerHub.
     *   Create multi-stage `Dockerfile`.

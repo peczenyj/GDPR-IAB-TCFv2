@@ -23,7 +23,7 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.350";
+our $VERSION = "0.351";
 
 use constant {
     CONSENT_STRING_TCF_V2 => {
@@ -1122,17 +1122,17 @@ This tool is also available as a Docker image on Docker Hub.
 
 =head2 Basic Usage
 
-    docker run --rm peczenyj/iabtcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
+    docker run --rm peczenyj/gdpr-iab-tcfv2 dump "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
 =head2 Processing Streams (STDIN)
 
 To process a stream of strings via pipe:
 
-    cat strings.txt | docker run -i --rm peczenyj/iabtcfv2 dump
+    cat strings.txt | docker run -i --rm peczenyj/gdpr-iab-tcfv2 dump
 
 To type strings manually:
 
-    docker run -it --rm peczenyj/iabtcfv2 dump
+    docker run -it --rm peczenyj/gdpr-iab-tcfv2 dump
 
 =head1 ACRONYMS
 

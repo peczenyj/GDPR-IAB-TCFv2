@@ -1,3 +1,21 @@
+## [0.351] - 2026-05-06
+
+### Bug Fixes
+
+- Restore --version / -V + bump to v0.351 
+- *(ci)* Drop unused pod2markdown install and use latest Perl in release.yml 
+
+### Documentation
+
+- Track Phase 5 (CMP Validation) in TODO.md 
+- Test::Warn refactor, bug-tracker footer, Docker image name fix 
+
+### Other
+
+- Merge tag 'v0.350' into devel
+
+Tagged for release. v0.350
+
 ## [0.350] - 2026-05-06
 
 ### Bug Fixes
@@ -10,6 +28,9 @@
 
 ### Other
 
+- Merge branch 'release/0.350'
+- Remove docs
+- Update changelog, bump version
 - Remove broken badges
 - Phase 1: TCF v2.3 Support & Logic Alignment (Re-issue) 
 
