@@ -60,4 +60,24 @@ subtest 'CLI --vendor-id option' => sub {
     unlike( $out, qr/"23":true/, 'CLI output does NOT contain other vendors' );
 };
 
+subtest 'CLI --strict option' => sub {
+    my $bin  = File::Spec->catfile( 'bin', 'iabtcfv2' );
+    my $perl = $^X;
+
+    # TCF v2.3 string without DV segment (CP188...)
+    my $tc_v23_no_dv =
+      'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA';
+
+    my $out_lenient = `$perl -Ilib $bin dump $tc_v23_no_dv`;
+    like( $out_lenient, qr/"tc_string":/i, 'Lenient mode (default) succeeds' );
+
+    my $out_strict = `$perl -Ilib $bin dump --strict $tc_v23_no_dv`;
+    like(
+        $out_strict,
+        qr/Disclosed Vendors segment is mandatory/,
+        'Strict mode fails for v2.3 without DV'
+    );
+};
+
+
 done_testing();
