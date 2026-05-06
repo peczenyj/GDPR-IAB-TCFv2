@@ -323,6 +323,50 @@ by F<.github/workflows/docker.yml> on the same C<v*> tag push.
 
 =back
 
+=head2 Pre-release review (and why we don't use draft GitHub Releases)
+
+GitHub supports B<draft> releases that you can review before publishing.
+For most projects this is a useful pre-publish review gate. For B<this>
+project it is not, and the doc deliberately omits the pattern. Two reasons:
+
+=over 4
+
+=item 1.
+
+B<PAUSE upload is irreversible.> Once F<release.yml> uploads
+F<GDPR-IAB-TCFv2-0.360.tar.gz> to PAUSE, the version number is burned
+forever — you can delete the file but can't re-upload a new tarball
+under the same version. So a "review the GitHub Release before it goes
+out" gate doesn't actually protect the thing that matters
+(the CPAN-distributed artifact); it only protects the rendered
+release-notes page.
+
+=item 2.
+
+B<The current F<release.yml> hard-codes C<draft: false>.> If you created
+a draft release with C<gh release create --draft> and then pushed the
+tag, the workflow's C<softprops/action-gh-release@v2> step would update
+the release and flip C<draft> to false — closing the review window the
+moment the workflow finishes (~3 minutes). Conversely, if you let
+C<gh release create --target main --draft> create the tag via the REST
+API instead of pushing it via C<git>, F<release.yml> would B<not> fire
+at all (push events from API-created tags don't trigger workflows), and
+your tarball would never reach PAUSE.
+
+=back
+
+The review gate that actually buys you something is the B<release-prep
+PR> in the vanilla-git path of step 8: opening C<release/0.360 → devel>
+and C<devel → main> as PRs lets a reviewer (or future-you) catch a typo
+in the changelog, an off-by-one in C<$VERSION>, or a stale README
+B<before> the merge that triggers the unstoppable downstream automation.
+Use that path when you want pre-release review.
+
+If you ever do want the draft-release pattern to work properly, it
+needs a workflow tweak: add C<release: { types: [published] }> to
+F<release.yml>'s C<on:> triggers, and remove C<draft: false> from the
+softprops step. The doc does not include that variant today.
+
 =head2 Hotfix releases
 
 For an urgent fix that has to skip C<devel> and ship straight from C<main>:
