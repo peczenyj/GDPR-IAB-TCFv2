@@ -45,6 +45,44 @@ subtest 'fallback path returns plain scalars (no blessed Math::BigInt)' =>
     }
   };
 
+subtest 'fallback path returns correct 36-bit timestamp values' => sub {
+
+    # Regression for CPAN Testers report 3e3e8fca-4988-11f1-843a-...
+    # on armv6l-linux (Perl 5.42.2 with use64bitint=undef, ivsize=4).
+    #
+    # TCF v2 stores Created/LastUpdated as a 36-bit deciseconds-since-epoch
+    # field, which doesn't fit in a 32-bit signed IV.  When the BigInt
+    # fallback is in use, get_uint36 returns the value as an NV via
+    # Math::BigInt->numify -- but the file-level `use integer` in
+    # GDPR::IAB::TCFv2 was forcing the subsequent `/ 10` and `% 10` to
+    # coerce that NV back to a 32-bit IV, overflowing and producing
+    # `created => 0` and `nanoseconds => -100000000` on armv6l.
+    #
+    # This subtest forces the fallback path on every Perl so the bug is
+    # caught on 64-bit smokers too.
+
+    local $GDPR::IAB::TCFv2::BitUtils::CAN_PACK_QUADS       = 0;
+    local $GDPR::IAB::TCFv2::BitUtils::CAN_FORCE_BIG_ENDIAN = 0;
+
+    my $consent = GDPR::IAB::TCFv2->Parse($tc_string);
+
+    is $consent->created, 1228644257,
+      'created returns the correct epoch in scalar context';
+    is $consent->last_updated, 1326215413,
+      'last_updated returns the correct epoch in scalar context';
+
+    {
+        my ( $sec, $nsec ) = $consent->created;
+        is $sec,  1228644257, 'created seconds in list context';
+        is $nsec, 700000000,  'created nanoseconds in list context';
+    }
+    {
+        my ( $sec, $nsec ) = $consent->last_updated;
+        is $sec,  1326215413, 'last_updated seconds in list context';
+        is $nsec, 400000000,  'last_updated nanoseconds in list context';
+    }
+};
+
 subtest 'fallback values JSON-encode without convert_blessed' => sub {
     local $GDPR::IAB::TCFv2::BitUtils::CAN_PACK_QUADS       = 0;
     local $GDPR::IAB::TCFv2::BitUtils::CAN_FORCE_BIG_ENDIAN = 0;

@@ -163,12 +163,22 @@ sub last_updated {
 sub _get_epoch {
     my ( $self, $offset ) = @_;
 
+    # Drop the file-level `use integer` for this scope. TCF v2 stores
+    # Created and LastUpdated as a 36-bit deciseconds-since-epoch field,
+    # which exceeds a 32-bit signed IV. On a Perl built without 64-bit
+    # ints (e.g. the armv6l smokers), `get_uint36` returns the value as
+    # an NV via Math::BigInt->numify; the C-integer `/` and `%` of
+    # `use integer` would then coerce that NV back into an overflowing
+    # 32-bit IV. NV float math keeps full precision (36 bits fits in
+    # the 53-bit mantissa) and lands a correct integer result via int().
+    no integer;
+
     my $deciseconds = scalar( get_uint36( $self->{core_data}, $offset ) );
 
-    return (
-        ( $deciseconds / 10 ),
-        ( ( $deciseconds % 10 ) * 100_000_000 ),
-    );
+    my $seconds     = int( $deciseconds / 10 );
+    my $nanoseconds = int( ( $deciseconds - $seconds * 10 ) * 100_000_000 );
+
+    return ( $seconds, $nanoseconds );
 }
 
 sub cmp_id {
