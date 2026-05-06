@@ -205,10 +205,14 @@ GDPR::IAB::TCFv2::Validator - declarative compliance checks for TC strings
         vendor_id                       => 284,
         consent_purpose_ids             => [ 1, 3, 9 ],
         legitimate_interest_purpose_ids => [ 10 ],
-        flexible_purpose_ids            => [
-            { purpose_id => 2, default_is_li => 1 },
-        ],
+        flexible_purpose_ids            => [ 10 ],
         check_disclosed_vendors         => 1,
+    );
+
+    # Or, from a parsed IAB GVL vendor entry:
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry($vendor_entry),
+        check_disclosed_vendors => 1,
     );
 
     # Fail-fast: stops at the first failing rule.
@@ -272,22 +276,28 @@ those are enforced by the underlying parser and surface here as failures.
 
 =item *
 
-C<flexible_purpose_ids> — arrayref of either:
+C<flexible_purpose_ids> — arrayref of purpose IDs that are B<flexible> per
+the vendor's GVL declaration (the basis can flip if a publisher restriction
+is present in the TC string). The default basis is derived structurally
+from the other two lists:
 
 =over 8
 
 =item *
 
-a plain integer (purpose ID, default legal basis = consent), or
+If the purpose ID also appears in C<consent_purpose_ids>, the default basis
+is consent.
 
 =item *
 
-a hashref C<< { purpose_id => N, default_is_li => 0|1 } >> for explicit
-control over the default legal basis.
+If the purpose ID also appears in C<legitimate_interest_purpose_ids>, the
+default basis is legitimate interest.
 
 =back
 
-Validated via L<GDPR::IAB::TCFv2/is_vendor_allowed_for_flexible_purpose>.
+A purpose listed in C<flexible_purpose_ids> must also appear in exactly one
+of the other two lists, or the constructor C<croak>s. Validated via
+L<GDPR::IAB::TCFv2/is_vendor_allowed_for_flexible_purpose>.
 
 =item *
 
@@ -329,6 +339,45 @@ is being validated against multiple policies.
 Identical to L</validate> but runs B<every> rule and accumulates all
 failures into the result. Use when you want a complete error report
 rather than the first failure.
+
+=head1 FUNCTIONS
+
+=head2 from_gvl_vendor_entry
+
+    my %args = GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry($vendor_entry);
+    my $validator = GDPR::IAB::TCFv2::Validator->new( %args, strict => 1 );
+
+Maps a parsed IAB Global Vendor List vendor-entry hashref to the constructor
+arguments L</new> expects. Field aliases:
+
+=over 4
+
+=item *
+
+C<id> ⟶ C<vendor_id>
+
+=item *
+
+C<purposes> ⟶ C<consent_purpose_ids>
+
+=item *
+
+C<legIntPurposes> ⟶ C<legitimate_interest_purpose_ids>
+
+=item *
+
+C<flexiblePurposes> ⟶ C<flexible_purpose_ids>
+
+=back
+
+Returns a list (key-value pairs), so callers can splat into the constructor
+alongside additional keys like C<strict> and C<check_disclosed_vendors>.
+Other fields on the vendor entry (C<name>, C<policyUrl>, etc.) are ignored —
+they aren't relevant to validation.
+
+C<croak>s only when C<id> is missing. Missing list fields default to empty
+arrayrefs, since the GVL schema permits a vendor to declare no
+legitimate-interest or flexible purposes.
 
 =head1 SEE ALSO
 
