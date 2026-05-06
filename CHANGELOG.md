@@ -1,3 +1,252 @@
+## [0.370] - 2026-05-06
+
+### Bug Fixes
+
+- Avoid 32-bit IV overflow when decoding 36-bit timestamps 
+
+### Other
+
+- Phase 2: The Validator Interface (rebased + reviewed) 
+
+* Phase 2: The Validator Interface
+
+* Refactor Validator to reduce complexity (fix perlcritic)
+
+* Phase 2: review fixups for the Validator interface
+
+Three must-fix changes plus expanded test coverage that came out of
+the deep review on PR #35:
+
+  * Encapsulation: _check_disclosed used to reach into the parser's
+    private hash (\$tc->{disclosed_vendors_data}).  Replace with the
+    public predicate \$tc->has_vendor_disclosure (added in Phase 1).
+
+  * Test regex bug (t/06-validator.t):
+        qr/purpose 1.* | .*purpose 7/
+    has an unescaped pipe inside qr//, so it parsed as alternation
+    rather than a literal " | " separator.  The test passed even
+    when the \$\\-aware joining didn't work, leaving the headline
+    feature unverified.  Fix:
+        qr/purpose 1.*\\Q | \\E.*purpose 7/
+
+  * POD: previously zero documentation.  Phase 1 set the bar; add
+    full POD for both modules with SYNOPSIS, DESCRIPTION, every
+    constructor key, both methods, the boolean/stringification
+    overloads, and the \$\\-aware separator behaviour.
+
+Test coverage added for previously-uncovered paths:
+
+  * Pre-parsed GDPR::IAB::TCFv2 object as input
+  * Missing vendor_id (croak) plus override fill-in
+  * legitimate_interest_purpose_ids (pass + spec-forbidden P1)
+  * flexible_purpose_ids scalar form
+  * flexible_purpose_ids hashref form (both default_is_li values)
+  * strict-mode override (warn path via Test::Warn + croak path)
+  * validate_all accumulating reasons across all three rule families
+
+MANIFEST: add lib/GDPR/IAB/TCFv2/Validator.pm,
+lib/GDPR/IAB/TCFv2/Validator/Result.pm, and t/06-validator.t
+(missing from the original Phase 2 commits).
+
+t/06-validator.t now has 11 subtests (was 4); 8287 tests pass
+overall (was 8280).  perlcritic + perltidy clean.
+
+* refactor(validator): derive flexible-purpose default basis from membership
+
+flexible_purpose_ids is now a flat ArrayRef[Int].  The default
+legal basis for each flexible purpose is derived structurally:
+
+  * Purpose in consent_purpose_ids   AND flexible_purpose_ids
+        -> flexible with default consent
+  * Purpose in legitimate_interest_purpose_ids AND flexible_purpose_ids
+        -> flexible with default legitimate interest
+
+This mirrors the IAB GVL vendor-entry schema 1:1 (purposes /
+legIntPurposes / flexiblePurposes) and removes the mixed-shape
+parameter that accepted both scalars and {purpose_id, default_is_li}
+hashrefs.  Constructor builds a private _flexible_set hash for O(1)
+lookup; _check_consent_purposes and _check_li_purposes dispatch to
+is_vendor_allowed_for_flexible_purpose when the purpose is flexible.
+
+The standalone _check_flexible_purposes helper is removed and its
+call site in _run_validation deleted.  Failure reasons now read
+"(consent)" or "(legitimate interest)" -- the basis used for the
+check -- regardless of whether the purpose was flexible.
+
+Tests in t/06-validator.t updated for the new shape:
+  * The two old "flexible_purpose_ids - {scalar,hashref} form"
+    subtests collapsed into one "derives default basis from
+    membership" subtest covering both consent-default and LI-default
+    flexible purposes plus a negative case.
+  * The validate_all subtest reworked to demonstrate accumulation
+    across consent + LI rules with one flexible purpose, using
+    vendor 99 (out of range for both bitfields) so all rules fail.
+
+* feat(validator): croak on incoherent purpose-list configurations
+
+Two configurations are now caught at construction time rather than
+silently producing strange validation outcomes:
+
+  1. A purpose listed in both consent_purpose_ids and
+     legitimate_interest_purpose_ids (GVL semantics treat those
+     as mutually exclusive vendor declarations).
+  2. A purpose listed in flexible_purpose_ids but neither of the
+     other two lists (no default basis can be derived).
+
+Both croak with explicit messages naming the offending purpose ID.
+
+* feat(validator): add from_gvl_vendor_entry helper
+
+Maps a parsed IAB GVL vendor entry hashref to the constructor
+arguments Validator->new expects.  Field aliases:
+
+  id               -> vendor_id
+  purposes         -> consent_purpose_ids
+  legIntPurposes   -> legitimate_interest_purpose_ids
+  flexiblePurposes -> flexible_purpose_ids
+
+Returns a list (key-value pairs) so callers can splat into the
+constructor and add extras:
+
+  my \$v = GDPR::IAB::TCFv2::Validator->new(
+      GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry(\$entry),
+      strict => 1,
+  );
+
+Croaks only on missing 'id'.  Missing list fields default to
+empty arrayrefs per the GVL schema (a vendor may legitimately
+have no LI or flexible purposes).
+
+* docs(validator): rewrite flexible_purpose_ids POD for the new shape
+
+Document the structural derivation of default basis (membership in
+consent_purpose_ids vs legitimate_interest_purpose_ids), the
+construction-time coherence checks that croak on incoherent inputs,
+and the new from_gvl_vendor_entry public function in a new
+=head1 FUNCTIONS section.  SYNOPSIS updated to use the flat-int
+flexible_purpose_ids shape and shows the from_gvl_vendor_entry
+splat idiom.
+
+* feat(validator): add min_policy_version rule
+
+Optional min_policy_version constructor arg (positive int; undef = no
+check) gates validation by the parser's policy_version().  The check
+runs FIRST in the rule order -- before disclosed-vendor and the
+purpose checks -- because it's the most fundamental reason to reject
+a TC string.  In fail-fast mode it short-circuits the rest; in
+validate_all mode the other rules still run and accumulate.
+
+Failure reason: 'TC string policy version X is below required
+minimum Y'.  Per-call override via validate($tc, min_policy_version => N)
+is supported, mirroring the other override-able knobs.
+
+* feat(cli): flip dump warnings to opt-in; repurpose --quiet to silence stdout
+
+Path D for the dump subcommand:
+
+  - Add --enable-warnings|-w (default off). The previous --quiet flag
+    silenced human-readable warnings on STDERR, which left CI/pipeline
+    invocations noisy by default. Warnings are now off by default and
+    must be opted into with -w.
+
+  - Repurpose --quiet|-q to suppress all STDOUT for the run, which makes
+    `if iabtcfv2 dump -q "$tc"; then ...` a clean shell idiom — exit
+    code reflects parse success, no output to discard.
+
+Tests in t/09-predicates.t and t/10-cli-iabtcfv2.t are updated for the
+new defaults; POD for the dump subcommand documents the new flag and
+the new --quiet semantics.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+* feat(cli): add validate subcommand with JSON and text output modes
+
+Implement the previously-stubbed `iabtcfv2 validate` subcommand.  It wraps
+GDPR::IAB::TCFv2::Validator with a CLI surface that mirrors the validator's
+constructor:
+
+  -v|--vendor-id ID                   (required)
+  -C|--consent-purposes 1,2,3
+  -L|--legitimate-interest-purposes 1,2,3
+  -F|--flexible-purposes 1,2,3
+  -d|--check-disclosed-vendors
+  -s|--strict
+  -m|--min-policy-version N
+  -a|--all                            (validate_all instead of fail-fast)
+
+Output is one JSON object per TC string by default, or human-readable
+lines with -t|--text.  Failure shape uses a singular `reason` in
+fail-fast mode and a plural `reasons` array in --all mode.
+
+Pipeline ergonomics match the dump subcommand: --json-array,
+--ignore-errors (parse only), --fail-fast (parse OR validation),
+--errors-to-stderr, --enable-warnings (off by default), --quiet
+(suppresses stdout, preserves exit code).
+
+Exit codes: 0 = all valid; 1 = at least one parse or validation
+failure; 2 = bad CLI usage (missing --vendor-id, incoherent purpose
+lists, --text with --json-array).
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+* docs(roadmap): plan Phases 6, 7, 8 in TODO.md
+
+Three new phases tracked after the CMP validator (Phase 5):
+
+  - Phase 6: GVL-aware Validator. Reintroduces the
+    from_gvl_vendor_entry helper deferred from Phase 2 and adds a
+    higher-level from_gvl loader plus a CLI --gvl flag.
+
+  - Phase 7: features, special features, and special purposes.
+    Extends Validator + CLI past the standard purpose taxonomy.
+
+  - Phase 8: CLI configuration loading. Maps flags to environment
+    variables and an optional .iabtcfv2rc / .env file with documented
+    precedence.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+* revert(validator): defer from_gvl_vendor_entry to Phase 6
+
+The from_gvl_vendor_entry helper was added speculatively in this
+branch but its only useful caller — feeding parsed GVL JSON into the
+validator — depends on the GVL infrastructure that lands in Phase 6
+(see TODO.md).  Removing it now keeps Phase 2's API surface focused on
+what is actually exercised by the validate subcommand.
+
+The helper, its POD, and its dedicated subtest will be reintroduced
+together with the rest of the GVL surface in Phase 6.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+* style: perltidy t/10-cli-iabtcfv2.t
+
+xt/tidy.t (Test::PerlTidy under .perltidyrc) was failing on the
+'Perl latest on ubuntu' CI job for PR #54.  Cosmetic-only reflow:
+column alignment between consecutive my() lines, splitting long
+arg-lists across multiple lines, breaking some closing parens onto
+their own line.  No assertions changed.
+
+Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+
+* fix(cli): declare =encoding utf8 in iabtcfv2 POD
+
+The validate subcommand's "Exit codes" section uses em-dashes in
+its prose (B<0> — every input TC string was parsed...).  Without an
+explicit =encoding directive, Test::Pod warns "Non-ASCII character
+seen before =encoding in '—'. Assuming UTF-8" and t/99-pod.t fails
+on smokers running Test::Pod with strict POD validation.
+
+Add =encoding utf8 right after __END__ so the entire POD block is
+declared as UTF-8.  No prose changes.
+
+---------
+
+Co-authored-by: Claude Opus 4.7 <noreply@anthropic.com>
+- Merge tag 'v0.360' into devel
+
+Tagged for release. v0.360
+
 ## [0.360] - 2026-05-06
 
 ### Features
@@ -6,6 +255,7 @@
 
 ### Other
 
+- Release v0.360 -- modernize iabtcfv2 cli
 - Merge tag 'v0.352' into devel
 
 Tagged for release. v0.352
