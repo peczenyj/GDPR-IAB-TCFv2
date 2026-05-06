@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.352] - 2026-05-06
 
 ### Bug Fixes
 
@@ -6,6 +6,7 @@
 
 ### Other
 
+- Update changelog
 - Merge tag 'v0.351' into devel
 
 Tagged for release. v0.351
