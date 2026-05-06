@@ -52,7 +52,11 @@ The corpus lives at `t/corpus/golden.jsonl`; the generator is `t/generate_golden
 
 ## Release flow
 
-Documented in `CONTRIBUTING.pod`. Summary: bump `$VERSION` in `lib/GDPR/IAB/TCFv2.pm`, run `git cliff -o CHANGELOG.md` (config in `cliff.toml` — uses Conventional Commits), regenerate `README.md` from POD with `pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`, then `make dist`. Commits are expected to follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, …) so `git cliff` can group them correctly. Patches target the `devel` branch, not `main`.
+Documented in `CONTRIBUTING.pod`. Summary: bump `$VERSION` in `lib/GDPR/IAB/TCFv2.pm`, run `git cliff -o CHANGELOG.md` (config in `cliff.toml` — uses Conventional Commits), regenerate `README.md` from POD with `pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`. 
+
+The release process is **automated**: once `devel` is merged to `main`, pushing a tag (`v*`) triggers a GitHub Action (`.github/workflows/release.yml`) that builds the distribution, uploads to CPAN (PAUSE), and creates a GitHub Release with the tarball attached.
+
+Commits are expected to follow Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, …) so `git cliff` can group them correctly. Patches target the `devel` branch, not `main`.
 
 ## Architecture
 
@@ -70,7 +74,7 @@ The parser is a single-pass bit-stream decoder over the base64url-decoded TC str
 
 ### Module layout
 
-- `lib/GDPR/IAB/TCFv2.pm` — entry point; `Parse()` constructor, all top-level accessors, JSON serialization (`TO_JSON`), version/policy predicates (`is_v22_plus`, `is_v23`).
+- `lib/GDPR/IAB/TCFv2.pm` — entry point; `Parse()` constructor, all top-level accessors, JSON serialization (`TO_JSON`) with `vendor_id` filtering support, version/policy/structure predicates (`is_v22_plus`, `is_v23`, `has_vendor_disclosure`, `has_publisher_restrictions`).
 - `lib/GDPR/IAB/TCFv2/BitUtils.pm` — pure-function bit readers, exported on demand. Detects `pack 'Q>'` availability at `BEGIN` to handle 32-bit Perls (falls back via `Math::BigInt`).
 - `lib/GDPR/IAB/TCFv2/BitField.pm`, `RangeSection.pm` — vendor-list decoders (see above).
 - `lib/GDPR/IAB/TCFv2/Publisher.pm` — wraps `PublisherRestrictions` (always present in Core) and `PublisherTC` (optional segment type 3).
@@ -88,7 +92,9 @@ The parser is a single-pass bit-stream decoder over the base64url-decoded TC str
 
 ### CLI
 
-`bin/iabtcfv2` is a subcommand-style tool (currently only `dump` is implemented; `validate` is reserved). It uses POD for both `--help` and `perldoc iabtcfv2`, with `Pod::Usage` selecting sections (`SYNOPSIS|OPTIONS|SUBCOMMANDS`, `DUMP`). When adding a subcommand, mirror this pattern: add a `run_<name>` sub, add a `=head1 <NAME>` section to the trailing POD, and dispatch from the top-level `if/elsif` chain. The CLI is included in the dist via `EXE_FILES` in `Makefile.PL` and is the entrypoint of the Docker image.
+`bin/iabtcfv2` is a subcommand-style tool (currently only `dump` is implemented; `validate` is reserved). The `dump` command supports `--strict` (enforces TCF v2.3 rules) and `--vendor-id` (`-v`) to filter output. 
+
+It uses POD for both `--help` and `perldoc iabtcfv2`, with `Pod::Usage` selecting sections (`SYNOPSIS|OPTIONS|SUBCOMMANDS`, `DUMP`). When adding a subcommand, mirror this pattern: add a `run_<name>` sub, add a `=head1 <NAME>` section to the trailing POD, and dispatch from the top-level `if/elsif` chain. The CLI is included in the dist via `EXE_FILES` in `Makefile.PL` and is the entrypoint of the Docker image.
 
 ### Tests
 
