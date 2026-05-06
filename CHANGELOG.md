@@ -2,12 +2,19 @@
 
 ### Bug Fixes
 
-- Restore --version / -V CLI options dropped by PR #44 squash merge
+- Restore --version / -V + bump to v0.351 
 - *(ci)* Drop unused pod2markdown install and use latest Perl in release.yml 
+
+### Documentation
+
+- Track Phase 5 (CMP Validation) in TODO.md 
+- Test::Warn refactor, bug-tracker footer, Docker image name fix 
 
 ### Other
 
 - Merge tag 'v0.350' into devel
+
+Tagged for release. v0.350
 
 ## [0.350] - 2026-05-06
 
