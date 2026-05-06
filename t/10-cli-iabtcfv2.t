@@ -234,10 +234,11 @@ subtest 'validate subcommand' => sub {
     # out-of-range vendor (99999) for any required purpose always fails,
     # which gives stable assertions independent of the GVL contents.
 
-    my $valid_out = `$perl -Ilib $bin validate -v 32 $tc_string`;
+    my $valid_out  = `$perl -Ilib $bin validate -v 32 $tc_string`;
     my $valid_data = decode_helper($valid_out);
     ok( $valid_data, 'validate emits JSON' );
-    is( $valid_data->{valid}, JSON->can('true') ? JSON->true() : JSON::PP::true(),
+    is( $valid_data->{valid},
+        JSON->can('true') ? JSON->true() : JSON::PP::true(),
         'valid case has valid:true'
     );
     is( $valid_data->{vendor_id}, 32, 'valid case echoes vendor_id' );
@@ -249,16 +250,20 @@ subtest 'validate subcommand' => sub {
     ok( $fail_data, 'failing validate emits JSON' );
     is( $fail_data->{valid}, $json_false, 'failing case has valid:false' );
     ok( exists $fail_data->{reason}, 'fail-fast uses singular reason' );
-    ok( !exists $fail_data->{reasons}, 'fail-fast does not emit reasons array' );
+    ok( !exists $fail_data->{reasons},
+        'fail-fast does not emit reasons array'
+    );
     is( $fail_code, 1, 'failing validate exits 1' );
 
     # --all aggregates reasons.
-    my $all_out  = `$perl -Ilib $bin validate -av 99999 -C 1,2 -L 7,8 $tc_string`;
+    my $all_out =
+      `$perl -Ilib $bin validate -av 99999 -C 1,2 -L 7,8 $tc_string`;
     my $all_data = decode_helper($all_out);
     ok( exists $all_data->{reasons}, '--all uses plural reasons array' );
     ok( !exists $all_data->{reason}, '--all does not emit singular reason' );
     is( ref $all_data->{reasons}, 'ARRAY', 'reasons is an array' );
-    cmp_ok( scalar @{ $all_data->{reasons} }, '>=', 2,
+    cmp_ok(
+        scalar @{ $all_data->{reasons} }, '>=', 2,
         '--all aggregates multiple failures'
     );
 
@@ -272,9 +277,10 @@ subtest 'validate subcommand' => sub {
         '--text fail line shape'
     );
 
-    my $text_all = `$perl -Ilib $bin validate -atv 99999 -C 1,2 $tc_string`;
+    my $text_all   = `$perl -Ilib $bin validate -atv 99999 -C 1,2 $tc_string`;
     my @text_lines = split /\n/, $text_all;
-    cmp_ok( scalar @text_lines, '>=', 2,
+    cmp_ok(
+        scalar @text_lines, '>=', 2,
         '--text --all spans multiple lines'
     );
     like(
@@ -296,8 +302,10 @@ subtest 'validate subcommand' => sub {
     is( $? >> 8,     1,  '--quiet on failure still exits 1' );
 
     # Missing --vendor-id: exit 2 with diagnostic on STDERR.
-    my $missing_v_stderr = File::Spec->catfile( File::Spec->tmpdir(),
-        "tcf_missing_v_$$" );
+    my $missing_v_stderr = File::Spec->catfile(
+        File::Spec->tmpdir(),
+        "tcf_missing_v_$$"
+    );
     my $missing_v_stdout =
       `$perl -Ilib $bin validate $tc_string 2>$missing_v_stderr`;
     is( $? >> 8, 2, 'missing --vendor-id exits 2' );
