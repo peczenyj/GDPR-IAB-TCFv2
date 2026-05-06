@@ -860,6 +860,10 @@ sub _parse_allowed_vendors {
     );
 }
 
+# Returns only $vendors_section -- unlike _parse_bitfield_or_range, which
+# yields ($section, $next_offset) so the caller can keep parsing the core
+# segment.  Disclosed/Allowed Vendors live in their own base64 segment
+# with nothing trailing the bitfield/range, so there is no offset to chain.
 sub _parse_vendor_bitfield_or_range {
     my ( $self, $data, $expected_segment_type ) = @_;
 
