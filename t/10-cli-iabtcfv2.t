@@ -136,4 +136,18 @@ subtest 'Help System' => sub {
     is( $help_cmd, $dump_help, "'help dump' is same as 'dump --help'" );
 };
 
+# Test Version Option
+subtest 'Version Option' => sub {
+    my $version_output = `$perl -Ilib $bin --version`;
+    like(
+        $version_output, qr/iabtcfv2 version \d+\.\d+/,
+        "--version prints version string"
+    );
+
+    my $short_version_output = `$perl -Ilib $bin -V`;
+    is( $short_version_output, $version_output,
+        "-V is alias for --version"
+    );
+};
+
 done_testing();
