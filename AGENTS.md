@@ -2,9 +2,18 @@
 
 This file provides guidance to coding agents (Claude Code, Copilot CLI, Codex, Gemini CLI, etc.) when working with code in this repository.
 
-## Project
+## Operational Boundaries
 
-`GDPR::IAB::TCFv2` is a pure-Perl parser for IAB Transparency & Consent Framework (TCF) v2 / v2.2 / v2.3 consent strings. The library has no XS dependencies (works back to Perl 5.008) and ships a CLI (`bin/iabtcfv2`) plus a Docker image (`peczenyj/iabtcfv2`).
+To maintain project integrity and follow the owner's preferred release workflow, **Agents must follow these strict rules**:
+
+1. **NO DIRECT COMMITS TO `devel` OR `main`**: Never commit directly to these branches.
+2. **NO MERGING INTO `devel` OR `main`**: Never execute merge commands targeting these branches.
+3. **NO TAGGING**: Never create or push git tags.
+4. **FEATURE BRANCH WORKFLOW ONLY**:
+   - Always work in a dedicated feature branch (`feat/*` or `fix/*`).
+   - Sync with `devel` by rebasing or merging `devel` *into* your feature branch if needed.
+   - Pushing to the remote feature branch is encouraged for CI verification.
+5. **HANDOFF**: Once a task is complete, notify the user or ensure the Pull Request is updated. The project owner will handle all merges and releases.
 
 The canonical IAB spec lives at <https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md> — keep it in mind when reasoning about bit offsets, segment types, or restriction semantics.
 
