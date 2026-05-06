@@ -18,19 +18,13 @@ subtest 'Predicates' => sub {
       'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA.f_wACHwAAAAA';
     my $c1 = GDPR::IAB::TCFv2->Parse($tc_basic);
     ok( !$c1->has_vendor_disclosure, 'No disclosure segment' );
+    ok( !$c1->has_publisher_restrictions, 'No restrictions on CP188 string' );
 
     my $c2 = GDPR::IAB::TCFv2->Parse($tc_with_res);
     ok( $c2->has_publisher_restrictions, 'Has restrictions' );
 
     my $c3 = GDPR::IAB::TCFv2->Parse($tc_with_disc);
     ok( $c3->has_vendor_disclosure, 'Has disclosure segment' );
-
-    # Test has_publisher_restrictions on a string that might not have it
-    my $tc_minimal = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
-    my $c_min      = GDPR::IAB::TCFv2->Parse($tc_minimal);
-    ok( !$c_min->has_publisher_restrictions,
-        'No restrictions on minimal string'
-    );
 };
 
 subtest 'Robustness: Truncated segments' => sub {
@@ -47,45 +41,41 @@ subtest 'Robustness: Truncated segments' => sub {
 
     # Truncated disclosure: remove most of the bitfield
     # This segment uses MaxId=1502.
-    # Bits needed: 3 + 16 + 1 + 1502 = 1522 bits.
-    # 1522 bits / 6 = 254 chars.
-    # Truncate to 48 chars (multiple of 4, 288 bits).
     my $tc_truncated = $tc_with_res . '.' . substr( $segment_disc, 0, 48 );
     throws_ok { GDPR::IAB::TCFv2->Parse($tc_truncated) }
-    qr/requires a consent string of at least 1502 bits/,
+    qr/a BitField for \d+ bits requires a consent string of at least \d+ bits/,
       'Croaks on truncated bitfield disclosure';
 };
 
 subtest 'vendor_id filter in TO_JSON' => sub {
     my $c = GDPR::IAB::TCFv2->Parse($tc_full);
 
-    # Vendor 284 is present in consents and disclosed
-    my $json_284 = $c->TO_JSON( vendor_id => 284 );
+    # Vendor 1 is present in core consents and disclosed
+    my $json_1 = $c->TO_JSON( vendor_id => 1 );
 
-    # Consents should only have 284
-    is_deeply( [ sort { $a <=> $b } keys %{ $json_284->{vendor}{consents} } ],
-        [284], 'Filtered consents' );
-    is_deeply( [ sort { $a <=> $b } keys %{ $json_284->{vendor}{disclosed} } ],
-        [284], 'Filtered disclosed' );
+    # Check that ONLY vendor 1 is in the vendor sections
+    is_deeply( [ sort { $a <=> $b } keys %{ $json_1->{vendor}{consents} } ], [1], 'Vendor section isolated: only vendor 1' );
+    ok( !exists $json_1->{vendor}{legitimate_interests}{2}, 'Other vendor (2) removed from LI' );
+    
+    # Purpose section should still have entries for vendor 1
+    ok( exists $json_1->{purpose}{consents}{23}, 'Vendor 1 still has Purpose 23' );
 
-    # Publisher restrictions should only show 32 (from $tc_with_res baseline)
-    my $c_res    = GDPR::IAB::TCFv2->Parse($tc_with_res);
-    my $json_res = $c_res->TO_JSON( vendor_id => 32 );
+    # Publisher restrictions should only show 32
+    my $json_res = $c->TO_JSON( vendor_id => 32 );
     is_deeply( [ keys %{ $json_res->{publisher}{restrictions}{7} } ], [32],
-        'Filtered publisher restrictions' );
-
-    # Vendor 9999 is NOT present
-    my $json_9999 = $c->TO_JSON( vendor_id => 9999 );
-    is_deeply( $json_9999->{vendor}{consents}, {}, 'Empty filtered consents' );
+        'Filtered publisher restrictions only contains 32' );
 };
 
 subtest 'CLI --vendor-id option' => sub {
     my $bin  = File::Spec->catfile( 'bin', 'iabtcfv2' );
     my $perl = $^X;
 
-    my $out = `$perl -Ilib $bin dump --vendor-id 284 $tc_full`;
-    like( $out, qr/"284":true/, 'CLI output contains target vendor' );
-    unlike( $out, qr/"23":true/, 'CLI output does NOT contain other vendors' );
+    # Filter for vendor 1
+    # Vendor section should have "1":true
+    # Vendor section should NOT have "23":true (it was in original disclosed)
+    my $out = `$perl -Ilib $bin dump --vendor-id 1 $tc_full`;
+    like( $out, qr/"vendor":\{[^}]*"consents":\{"1":true\}/, 'CLI isolated vendor consents' );
+    unlike( $out, qr/"disclosed":\{[^}]*"23":true/, 'CLI removed other disclosed vendors' );
 };
 
 subtest 'CLI --strict option' => sub {

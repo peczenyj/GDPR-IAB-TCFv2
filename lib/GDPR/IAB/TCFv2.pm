@@ -640,6 +640,26 @@ sub TO_JSON {
     my $created      = $self->_format_date( $self->created );
     my $last_updated = $self->_format_date( $self->last_updated );
 
+    my $purpose_consents = $self->_format_json_subsection(
+        map {
+            my $id     = $_;
+            my $status = $filter_id
+              ? $self->is_vendor_allowed_for_any_basis( $filter_id, $id )
+              : $self->_safe_is_purpose_consent_allowed($id);
+            [ $id => $status ? $true : $false ]
+        } 1 .. MAX_PURPOSE_ID,
+    );
+
+    my $purpose_li = $self->_format_json_subsection(
+        map {
+            my $id     = $_;
+            my $status = $filter_id
+              ? $self->is_vendor_legitimate_interest_allowed( $filter_id, $id )
+              : $self->_safe_is_purpose_legitimate_interest_allowed($id);
+            [ $id => $status ? $true : $false ]
+        } 1 .. MAX_PURPOSE_ID,
+    );
+
     return {
         tc_string               => $self->tc_string,
         version                 => $self->version,
@@ -666,24 +686,8 @@ sub TO_JSON {
             } 1 .. MAX_SPECIAL_FEATURE_ID
         ),
         purpose => {
-            consents => $self->_format_json_subsection(
-                map {
-                    [     $_ => $self->_safe_is_purpose_consent_allowed($_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
-            legitimate_interests => $self->_format_json_subsection(
-                map {
-                    [   $_ =>
-                          $self->_safe_is_purpose_legitimate_interest_allowed(
-                            $_)
-                        ? $true
-                        : $false
-                    ]
-                } 1 .. MAX_PURPOSE_ID,
-            ),
+            consents             => $purpose_consents,
+            legitimate_interests => $purpose_li,
         },
         vendor => {
             consents => $self->{vendor_consents}->TO_JSON($filter_id),
