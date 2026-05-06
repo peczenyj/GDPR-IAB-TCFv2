@@ -408,7 +408,7 @@ sub check_publisher_restriction {
 
 sub has_publisher_restrictions {
     my $self = shift;
-    return $self->{publisher}->has_restrictions;
+    return $self->{publisher} ? $self->{publisher}->has_restrictions : 0;
 }
 
 sub publisher_restrictions {
@@ -743,11 +743,11 @@ sub _validate_and_decode_base64 {
     # see: https://www.perlmonks.org/?node_id=775820
     croak "invalid base64 format" unless $s =~ m{
         ^
-        (?: [A-Za-z0-9-_]{4} )*
+        (?:[-A-Za-z0-9_]{4})*
         (?:
-            [A-Za-z0-9-_]{2} [AEIMQUYcgkosw048]
+            [-A-Za-z0-9_]{2}[AEIMQUYcgkosw048]
         |
-            [A-Za-z0-9-_] [AQgw]
+            [-A-Za-z0-9_][AQgw]
         )?
         \z
     }x;
@@ -757,7 +757,7 @@ sub _validate_and_decode_base64 {
 
 sub _decode_base64url {
     my $s = shift;
-    $s =~ tr[-_][+/];
+    $s =~ tr/-_/+\//;
     $s .= '=' while length($s) % 4;
     return decode_base64($s);
 }
@@ -858,34 +858,34 @@ sub _parse_vendor_bitfield_or_range {
 
     my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
 
-    my $something;
+    my $vendors_section;
     if ($is_range) {
-        my $data_size = length($data);
-        ( $something, ) = GDPR::IAB::TCFv2::RangeSection->Parse(
-            data      => substr( $data, $bf_offset ),
-            data_size => $data_size,
+        my $range_data = substr( $data, $bf_offset );
+        ( $vendors_section, ) = GDPR::IAB::TCFv2::RangeSection->Parse(
+            data      => $range_data,
+            data_size => length($range_data),
             offset    => 0,
             max_id    => $max_id,
             options   => $self->{options},
         );
     }
     else {
-        my $data_size = length($data);
-        ( $something, ) = GDPR::IAB::TCFv2::BitField->Parse(
-            data      => substr( $data, $bf_offset, $max_id ),
-            data_size => $data_size,
+        my $bitfield_data = substr( $data, $bf_offset, $max_id );
+        ( $vendors_section, ) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => $bitfield_data,
+            data_size => length($bitfield_data),
             max_id    => $max_id,
             options   => $self->{options},
         );
     }
 
-    return $something;
+    return $vendors_section;
 }
 
 sub _parse_bitfield_or_range {
     my ( $self, $offset, $validate_next_offset ) = @_;
 
-    my $something;
+    my $vendors_section;
 
     my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
 
@@ -899,19 +899,19 @@ sub _parse_bitfield_or_range {
     );
 
     if ($is_range) {
-        ( $something, $next_offset ) = $self->_parse_range_section(
+        ( $vendors_section, $next_offset ) = $self->_parse_range_section(
             $max_id,
             $next_offset,
         );
     }
     else {
-        ( $something, $next_offset ) = $self->_parse_bitfield(
+        ( $vendors_section, $next_offset ) = $self->_parse_bitfield(
             $max_id,
             $next_offset,
         );
     }
 
-    return wantarray ? ( $something, $next_offset ) : $something;
+    return wantarray ? ( $vendors_section, $next_offset ) : $vendors_section;
 }
 
 sub _parse_range_section {
@@ -1155,6 +1155,8 @@ Parse may receive an optional hash with the following parameters:
 
 On C<strict> mode we will validate if the version of the consent string is the version 2 (or die with an exception).
 
+Additionally, for TCF v2.3 strings (Policy Version 5+), C<strict> mode will enforce that the B<Disclosed Vendors> segment is present.
+
 The C<strict> mode is disabled by default.
 
 =item *
@@ -1196,6 +1198,10 @@ If omit, we will try to use C<JSON::false> and C<JSON::true> if the package L<JS
 C<date_format> if present accepts two kinds of value: an C<string> (to be used on C<POSIX::strftime>) or a code reference to a subroutine that
 will be called with two arguments: epoch in seconds and nanoseconds. If omitted the format L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601> will be used
 except if the option C<use_epoch> is true.
+
+=item *
+
+C<vendor_id> if present, filters the JSON output to only include data for the specific vendor ID. This affects the C<vendor> and C<publisher/restrictions> sections, drastically reducing the size of the output.
 
 =back
 
@@ -1269,6 +1275,14 @@ Version of the GVL used to create this TC String.
 Version of policy used within L<GVL|https://github.com/InteractiveAdvertisingBureau/GDPR-Transparency-and-Consent-Framework/blob/master/TCFv2/IAB%20Tech%20Lab%20-%20Consent%20string%20and%20vendor%20list%20formats%20v2.md#the-global-vendor-list>.
 
 From the corresponding field in the GVL that was used for obtaining consent.
+
+=head2 is_v22_plus
+
+Returns true if the TC string uses Policy Version 4 or higher (TCF v2.2+).
+
+=head2 is_v23
+
+Returns true if the TC string uses Policy Version 5 or higher (TCF v2.3).
 
 =head2 is_service_specific
 
@@ -1355,6 +1369,22 @@ The legitimate interest value for each Vendor ID
 
     my $ok = $instance->vendor_legitimate_interest(284); # if true, legitimate interest established for Weborama (vendor id 284).
 
+=head2 disclosed_vendor
+
+If true, the vendor was disclosed to the user (Segment 1 or 5).
+
+    say "Vendor 284 was disclosed" if $consent->disclosed_vendor(284);
+
+=head2 has_vendor_disclosure
+
+Returns true (1) if the TC string contains a "Disclosed Vendors" segment (ID 1 or 5), and false (0) otherwise.
+
+=head2 allowed_vendor
+
+If true, the vendor is in the "Allowed Vendors" segment (Segment 2). This is typically used for service-specific TC strings.
+
+    say "Vendor 284 is allowed" if $consent->allowed_vendor(284);
+
 =head2 is_vendor_consent_allowed
 
 Check if a vendor has consent for a list of purposes, respecting publisher restrictions.
@@ -1378,6 +1408,10 @@ Check if a vendor has either consent or legitimate interest for a list of purpos
     if ($consent->is_vendor_allowed_for_any_basis(284, 1, 2)) {
         # ...
     }
+
+=head2 has_publisher_restrictions
+
+Returns true (1) if the TC string contains a "Publisher Restrictions" section, and false (0) otherwise.
 
 =head2 check_publisher_restriction
 

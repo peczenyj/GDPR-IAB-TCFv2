@@ -24,12 +24,9 @@ sub Parse {
     my $max_id    = $args{max_id};
     my $options   = $args{options};
 
-    # add 7 to force rounding to next integer value
-    my $bytes_required = ( $max_id + 7 ) / 8;
-
     croak
-      "a BitField for $max_id requires a consent string of $bytes_required bytes. This consent string had $data_size"
-      if $data_size < $bytes_required;
+      "a BitField for $max_id bits requires a consent string of at least $max_id bits. This consent string only had $data_size bits"
+      if $data_size < $max_id;
 
     my $self = {
         data    => substr( $data, $offset, $max_id ),
