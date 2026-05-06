@@ -843,9 +843,10 @@ sub _parse_disclosed_vendors {
 
     return unless defined $self->{disclosed_vendors_data};
 
-    $self->{disclosed_vendors} =
-      $self->_parse_vendor_bitfield_or_range(
-        $self->{disclosed_vendors_data} );
+    $self->{disclosed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{disclosed_vendors_data},
+        SEGMENT_TYPES->{DISCLOSED_VENDORS},
+    );
 }
 
 sub _parse_allowed_vendors {
@@ -853,16 +854,41 @@ sub _parse_allowed_vendors {
 
     return unless defined $self->{allowed_vendors_data};
 
-    $self->{allowed_vendors} =
-      $self->_parse_vendor_bitfield_or_range( $self->{allowed_vendors_data} );
+    $self->{allowed_vendors} = $self->_parse_vendor_bitfield_or_range(
+        $self->{allowed_vendors_data},
+        SEGMENT_TYPES->{ALLOWED_VENDORS},
+    );
 }
 
+# Returns only $vendors_section -- unlike _parse_bitfield_or_range, which
+# yields ($section, $next_offset) so the caller can keep parsing the core
+# segment.  Disclosed/Allowed Vendors live in their own base64 segment
+# with nothing trailing the bitfield/range, so there is no offset to chain.
 sub _parse_vendor_bitfield_or_range {
-    my ( $self, $data ) = @_;
+    my ( $self, $data, $expected_segment_type ) = @_;
 
-    my $offset = 3;    # segment type
+    my ( $segment_type, $offset ) = get_uint3( $data, 0 );
+
+    croak
+      "invalid segment type $segment_type: expected $expected_segment_type"
+      if defined $expected_segment_type
+      && $segment_type != $expected_segment_type;
 
     my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
+
+    # Spec: MaxVendorId == 0 means "field unused".  Skip the IsRange flag
+    # and any trailing payload entirely; return an empty BitField so that
+    # has_vendor_disclosure() still reports the segment as present while
+    # contains() always returns false for any vendor id.
+    if ( $max_id == 0 ) {
+        my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
+            data      => '',
+            data_size => 0,
+            max_id    => 0,
+            options   => $self->{options},
+        );
+        return $empty_section;
+    }
 
     my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
 
@@ -925,13 +951,12 @@ sub _parse_bitfield_or_range {
 sub _parse_range_section {
     my ( $self, $max_id, $range_section_start_offset ) = @_;
 
-    my $data      = substr( $self->{core_data}, $range_section_start_offset );
-    my $data_size = length( $self->{core_data} );
+    my $data = substr( $self->{core_data}, $range_section_start_offset );
 
     my ( $range_section, $next_offset ) =
       GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         offset    => 0,
         max_id    => $max_id,
         options   => $self->{options},
@@ -947,11 +972,10 @@ sub _parse_bitfield {
     my ( $self, $max_id, $bitfield_start_offset ) = @_;
 
     my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
-    my $data_size = length( $self->{core_data} );
 
     my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
         data      => $data,
-        data_size => $data_size,
+        data_size => length($data),
         max_id    => $max_id,
         options   => $self->{options},
     );

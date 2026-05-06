@@ -10,6 +10,8 @@
 
 **Operational note:** Per `AGENTS.md`, all work happens on a feature branch (`fix/vendor-segment-parser-cleanup`). Do not commit to `devel`/`main`, do not merge into them, do not create tags. Hand off via PR when complete.
 
+**Style strictness reminder:** CI runs `xt/critic.t` (`Test::Perl::Critic`) and `xt/tidy.t` (`Test::PerlTidy`) and they fail the build on violations — see commit `0a3297c` which had to ship a follow-up fix for exactly these checks. Run `make tidy` and `prove -lr xt` before every commit; delete the `.bak` files perltidy leaves behind (already excluded via `MANIFEST.SKIP`, but never stage them).
+
 **Branch naming:** `fix/vendor-segment-parser-cleanup`. Branch from current `devel`.
 
 **Pre-flight (run before Task 1):**
@@ -19,9 +21,13 @@ git fetch origin
 git checkout -b fix/vendor-segment-parser-cleanup origin/devel
 perl Makefile.PL && make
 prove -lr t          # baseline: must be green before any change
+prove -lr xt         # baseline for author tests too
 ```
 
 If baseline is not green, stop and investigate — no point fixing cleanup issues on top of a broken tree.
+
+**Existing coverage to be aware of (do NOT duplicate):**
+- `t/09-predicates.t` already has a `"Robustness: Truncated segments"` subtest that exercises the *new* `_parse_vendor_bitfield_or_range` helper's slice-aligned size guard (added in `460aaa9` and tightened in `7926ebc`). Task 1 below targets the **core** helpers (`_parse_bitfield` / `_parse_range_section`), which still pass the un-aligned `data_size`; its test must use a TC string with no auxiliary segments so the truncation lands on the core bitfield, not the disclosure segment.
 
 ---
 
@@ -30,46 +36,47 @@ If baseline is not green, stop and investigate — no point fixing cleanup issue
 **Issue addressed:** Residual #1 from the review — `_parse_bitfield` and `_parse_range_section` pass `data_size => length($self->{core_data})` (full core, in bits) alongside a sliced `$data`. The new `_parse_vendor_bitfield_or_range` already does the right thing (`length($slice)`); this task ports the pattern back so `data_size` faithfully describes what the callee receives. For typical valid TC strings this is purely cosmetic; for truncated cores with very small `max_id` it tightens the existing `data_size < $max_id` guard in `BitField->Parse`.
 
 **Files:**
-- Modify: `lib/GDPR/IAB/TCFv2.pm:921-936` (`_parse_range_section`)
-- Modify: `lib/GDPR/IAB/TCFv2.pm:942-954` (`_parse_bitfield`)
+- Modify: `lib/GDPR/IAB/TCFv2.pm:925-944` (`_parse_range_section`)
+- Modify: `lib/GDPR/IAB/TCFv2.pm:946-962` (`_parse_bitfield`)
 - Test: `t/05-tcf-v23.t` (append a new subtest)
 
 - [ ] **Step 1: Inspect both helpers and confirm current line ranges**
 
 ```bash
 grep -n "^sub _parse_bitfield\b\|^sub _parse_range_section" lib/GDPR/IAB/TCFv2.pm
-sed -n '921,955p' lib/GDPR/IAB/TCFv2.pm
+sed -n '925,965p' lib/GDPR/IAB/TCFv2.pm
 ```
 
 Expected output: two helpers, each computing `my $data_size = length( $self->{core_data} );` then passing it through to `BitField->Parse` / `RangeSection->Parse`.
 
+If the line numbers have shifted, update the `Files:` references above before continuing — the surrounding code on this branch evolves quickly (`7926ebc` and `0a3297c` already moved things since this plan was written).
+
 - [ ] **Step 2: Write the failing test**
 
-Append the following subtest to `t/05-tcf-v23.t` (just before `done_testing` if present, otherwise at the end of the file):
+Append the following subtest to `t/05-tcf-v23.t` (just before `done_testing` if present, otherwise at the end of the file). The test deliberately uses a **single-segment core-only** TC string so the truncation lands on the *core* bitfield (which goes through `_parse_bitfield`), not on a Disclosed Vendors segment (which is already covered by `t/09-predicates.t :: "Robustness: Truncated segments"` via the new helper).
 
 ```perl
-subtest "BitField data_size reflects slice length, not full core" => sub {
-    # Construct a malformed Core that claims max_id_consent = 24 (the
-    # purpose-allowed field width happens to leave 24 bits) but truncates
-    # the bitfield payload. With the OLD code, data_size = length(core)
-    # could exceed max_id and let the truncation slip past Parse;
-    # with the NEW code, data_size == slice length and the croak fires.
+subtest "Core BitField data_size reflects slice length, not full core" => sub {
+    # The fixture below is the same single-segment v2.0 string used
+    # elsewhere in the suite.  It has NO disclosure/allowed/publisher_tc
+    # segments, so a truncation falls squarely on the core bitfield and
+    # exercises _parse_bitfield (NOT _parse_vendor_bitfield_or_range).
     #
-    # We build the smallest reproducible case: take a known-good v2.0
-    # consent string and chop bytes off the END, leaving the bitfield
-    # claim intact but the payload short.
-    my $good =
-      'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+    # OLD behavior: data_size = length(core_data) which is larger than
+    # max_id, so the BitField size guard never fires; downstream
+    # contains() calls silently under-read.
+    # NEW behavior: data_size = length(slice), guard fires and the
+    # parser croaks with the standard "requires N bits" message.
+    my $good = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-    # Sanity: the unmodified string parses cleanly.
-    lives_ok { GDPR::IAB::TCFv2->Parse($good) } 'baseline parses';
+    lives_ok { GDPR::IAB::TCFv2->Parse($good) } 'baseline parses cleanly';
 
-    # Truncate by removing the trailing 4 base64 chars (~24 bits payload).
+    # Trim 4 base64 chars (~24 bits of payload) off the end.
     my $truncated = substr( $good, 0, length($good) - 4 );
 
     throws_ok { GDPR::IAB::TCFv2->Parse($truncated) }
-      qr/BitField for \d+ bits requires a consent string of at least \d+ bits/,
-      'truncated bitfield is rejected with slice-aware size in error message';
+      qr/a BitField for \d+ bits requires a consent string of at least \d+ bits/,
+      'truncated core bitfield is rejected with slice-aware size guard';
 };
 ```
 
@@ -77,11 +84,11 @@ subtest "BitField data_size reflects slice length, not full core" => sub {
 
 Run: `prove -lv t/05-tcf-v23.t`
 
-Expected: the new subtest may pass *or* fail today depending on whether the truncation is large enough to fall under either size. Note the actual outcome — if it already passes, that proves the existing code happens to catch this case via a different bound; the data_size alignment is then pure cleanup. If it fails, the alignment fix in Step 4 will make it pass.
+Expected: the new subtest **fails** — the unmodified `_parse_bitfield` passes the full-core bit-length as `data_size`, the BitField guard does not fire, and `Parse` returns silently instead of croaking. If the test unexpectedly passes, the truncation may have happened to fall into a different bounds check (e.g., the range section's `_parse_range`); inspect the actual exception (or absence) before proceeding to Step 4.
 
 - [ ] **Step 4: Update `_parse_range_section` to pass slice length**
 
-Edit `lib/GDPR/IAB/TCFv2.pm:921-936`. Replace:
+Edit `lib/GDPR/IAB/TCFv2.pm:925-944`. Replace:
 
 ```perl
 sub _parse_range_section {
@@ -132,7 +139,7 @@ sub _parse_range_section {
 
 - [ ] **Step 5: Update `_parse_bitfield` to pass slice length**
 
-Edit `lib/GDPR/IAB/TCFv2.pm:942-954`. Replace:
+Edit `lib/GDPR/IAB/TCFv2.pm:946-962`. Replace:
 
 ```perl
 sub _parse_bitfield {
@@ -207,7 +214,7 @@ already used in _parse_vendor_bitfield_or_range."
 **Issue addressed:** Residual #2 — the helper trusts `_decode_tc_string_segments` to have routed the segment correctly, but never validates that bits 0-2 of the slice actually equal the expected segment type. `PublisherTC->Parse` does this defensively; this task brings the new helper to parity.
 
 **Files:**
-- Modify: `lib/GDPR/IAB/TCFv2.pm:837-883` (`_parse_disclosed_vendors`, `_parse_allowed_vendors`, `_parse_vendor_bitfield_or_range`)
+- Modify: `lib/GDPR/IAB/TCFv2.pm:841-891` (`_parse_disclosed_vendors`, `_parse_allowed_vendors`, `_parse_vendor_bitfield_or_range`)
 - Test: `t/05-tcf-v23.t` (extend the existing "TCF v2.3 segments" subtest or add a new one)
 
 - [ ] **Step 1: Write the failing test**
@@ -250,7 +257,7 @@ Expected: FAIL — current helper signature does not accept an expected-type arg
 
 - [ ] **Step 3: Add expected-type parameter and assertion**
 
-Edit `lib/GDPR/IAB/TCFv2.pm:856-883`. Replace the signature line and add a header check immediately after reading `$max_id`:
+Edit `lib/GDPR/IAB/TCFv2.pm:860-891`. Replace the signature line and add a header check immediately after reading `$max_id`:
 
 ```perl
 sub _parse_vendor_bitfield_or_range {
@@ -300,7 +307,7 @@ Note: `get_uint3` must already be in the import list at the top of the module (i
 
 - [ ] **Step 4: Update both callers to pass the expected type**
 
-Edit `lib/GDPR/IAB/TCFv2.pm:837-850`. Replace:
+Edit `lib/GDPR/IAB/TCFv2.pm:841-858`. Replace:
 
 ```perl
 sub _parse_disclosed_vendors {
@@ -380,7 +387,7 @@ might bypass _decode_tc_string_segments routing."
 **Issue addressed:** Residual #3 — the new helper returns `$vendors_section` only, while the older `_parse_bitfield_or_range` returns `($vendors_section, $next_offset)`. The asymmetry is correct (each Disclosed/Allowed segment is its own decode unit, with no trailing payload to chain into), but a future maintainer might be confused. A short comment locks in the rationale.
 
 **Files:**
-- Modify: `lib/GDPR/IAB/TCFv2.pm:856` (just above the `_parse_vendor_bitfield_or_range` signature, after Task 2 lands)
+- Modify: `lib/GDPR/IAB/TCFv2.pm:860` (just above the `_parse_vendor_bitfield_or_range` signature, after Task 2 lands)
 
 **No test required:** comment-only change.
 
@@ -415,7 +422,7 @@ git commit -m "docs: explain single-return shape of vendor-segment helper"
 **Issue addressed:** Residual #4 — the spec allows `MaxVendorId = 0` ("field unused"). The bitfield branch already handles it gracefully (empty slice, `contains` early-exits on `$id > max_id`). The range branch does NOT: `RangeSection->Parse` would happily try to read `num_entries` and any trailing range tuples even though, per spec, none should be present. This task short-circuits both branches to a uniform empty result before the sub-parsers run.
 
 **Files:**
-- Modify: `lib/GDPR/IAB/TCFv2.pm:856-...` (`_parse_vendor_bitfield_or_range`, post-Task-2 shape)
+- Modify: `lib/GDPR/IAB/TCFv2.pm:860-...` (`_parse_vendor_bitfield_or_range`, post-Task-2 shape)
 - Test: `t/05-tcf-v23.t`
 
 - [ ] **Step 1: Write the failing test**
@@ -565,6 +572,13 @@ new error messages and the new test cases in `t/05-tcf-v23.t`.
 
 **3. Type/symbol consistency:**
 - `_parse_vendor_bitfield_or_range` signature evolves across Tasks 2 and 4: Task 2 introduces `$expected_segment_type` as the second positional arg; Task 4 inserts the `max_id == 0` short-circuit *after* the `get_uint16` line introduced in Task 2. Step 3 of Task 4 references this post-Task-2 shape explicitly. ✓
-- `SEGMENT_TYPES->{DISCLOSED_VENDORS}` / `->{ALLOWED_VENDORS}` are the literal constants defined in `lib/GDPR/IAB/TCFv2.pm:39-44`. ✓
+- `SEGMENT_TYPES->{DISCLOSED_VENDORS}` / `->{ALLOWED_VENDORS}` are the literal constants defined in `lib/GDPR/IAB/TCFv2.pm` (use `grep -n 'SEGMENT_TYPES' lib/GDPR/IAB/TCFv2.pm` to find current line — was 39-44 at plan-write time, may have shifted). ✓
 - The test cases in Task 2 and Task 4 call the private helper directly via `$consent->_parse_vendor_bitfield_or_range(...)`. The package fully-qualified constant access `GDPR::IAB::TCFv2::SEGMENT_TYPES->{...}` works because `SEGMENT_TYPES` is defined as a `use constant` and is accessible via fully-qualified name. ✓
 - Variable rename in Task 2 (`$next_offset` → `$next_offset_after_max`) is preserved in Task 4's short-circuit insertion point. ✓
+
+**4. Rebase status (re-review on 2026-05-06 after `7926ebc`/`dd427da`/`0a3297c`):**
+- Line numbers shifted ~+4 lines for all targeted helpers; updated throughout the plan above.
+- `_parse_vendor_bitfield_or_range` body is **unchanged** since `460aaa9` — Task 2's diff still applies cleanly.
+- `t/09-predicates.t` already exercises the *new helper's* slice-aligned size guard (`"Robustness: Truncated segments"` subtest); Task 1's test is therefore scoped to a **core-only** TC string that hits `_parse_bitfield`, avoiding overlap.
+- `TO_JSON` was rewritten in `7926ebc` to introduce `$purpose_consents` / `$purpose_li` lexicals when `vendor_id` is set; this changes the *meaning* of `purpose.consents[$id]` under the filter (now reflects vendor allowance) but does not affect any code path touched by this plan.
+- CI is now strict on perlcritic + perltidy after `0a3297c`. Every task's last-but-one step (`prove -lr xt`) gates this; if violations appear, run `make tidy` and re-stage.

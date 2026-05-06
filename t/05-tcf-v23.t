@@ -94,4 +94,82 @@ subtest "TCF v2.2/v2.3 Legitimate Interest Restrictions" => sub {
     );
 };
 
+subtest "MaxVendorId == 0 yields an empty vendor section" => sub {
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA');
+
+    # Hand-built Disclosed Vendors segment:
+    #   segment_type      = 001 (=1)
+    #   max_vendor_id     = 16 zero bits
+    #   is_range_encoding = 1
+    #   num_entries       = 12 zero bits
+    # With IsRange=1 and max_id=0, RangeSection->Parse would parse the
+    # 12-bit num_entries from the trailing zeros (NumEntries=0, harmless
+    # here, but a malicious payload could declare NumEntries>0).  The
+    # short-circuit must skip RangeSection entirely and return an empty
+    # BitField regardless of the IsRange flag.
+    my $segment = '001' . ( '0' x 16 ) . '1' . ( '0' x 12 );
+
+    my $section;
+    lives_ok {
+        $section = $consent->_parse_vendor_bitfield_or_range(
+            $segment,
+            GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},
+        );
+    }
+    'max_id=0 segment parses without error';
+
+    ok defined $section, 'returns a defined section';
+    is $section->max_id, 0, 'max_id is 0';
+    ok !$section->contains(1),
+      'contains(1) returns falsey (early-exit on id > max_id)';
+};
+
+subtest "Disclosed Vendors helper rejects mis-typed payload" => sub {
+
+    # Hand-craft a "Disclosed Vendors" segment whose first 3 bits claim
+    # segment_type=2 (Allowed Vendors) instead of 1.  The router would
+    # never feed this through _parse_disclosed_vendors today, but the
+    # helper itself should still reject it as defense-in-depth.
+    my $consent = GDPR::IAB::TCFv2->Parse(
+        'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA');
+
+    # 3 bits = 010 (=2), then a benign MaxVendorId=0, IsRangeEncoding=0 tail.
+    my $bad = '010' . ( '0' x 16 ) . '0';
+
+    throws_ok {
+        $consent->_parse_vendor_bitfield_or_range(
+            $bad,
+            GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},
+        );
+    }
+    qr/invalid segment type/,
+      'helper croaks when payload header does not match expected type';
+};
+
+subtest "Core BitField data_size reflects slice length, not full core" => sub {
+
+    # Single-segment v2.0 string with a sizeable core bitfield
+    # (max_vendor_id_consent = 115).  Truncating 4 base64 chars chops
+    # ~24 bits off the bitfield tail.
+    #
+    # OLD behavior: data_size = length(core_data) > max_id, so the
+    # BitField guard never fires; the parser stumbles forward and
+    # eventually croaks deep in _parse_publisher_section with a
+    # misleading "missing 'core_data'" error.
+    # NEW behavior: data_size = length(slice) < max_id, the guard
+    # fires immediately with a clear "requires N bits" message that
+    # points at the actual problem.
+    my $good =
+      'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
+
+    lives_ok { GDPR::IAB::TCFv2->Parse($good) } 'baseline parses cleanly';
+
+    my $truncated = substr( $good, 0, length($good) - 4 );
+
+    throws_ok { GDPR::IAB::TCFv2->Parse($truncated) }
+    qr/a BitField for \d+ bits requires a consent string of at least \d+ bits/,
+      'truncated core bitfield is rejected with slice-aware size guard';
+};
+
 done_testing;
