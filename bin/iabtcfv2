@@ -21,6 +21,10 @@ sub _json_false {
     return JSON->can('false') ? JSON->false() : JSON::PP::false();
 }
 
+sub _json_true {
+    return JSON->can('true') ? JSON->true() : JSON::PP::true();
+}
+
 my %global_opts;
 GetOptions(
     'help|h'    => \$global_opts{help},
@@ -38,17 +42,7 @@ if ( $global_opts{version} ) {
 }
 
 if ( $global_opts{help} ) {
-    my $topic = $ARGV[0];
-    if ( $topic && $topic eq 'dump' ) {
-        pod2usage(
-            -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "DUMP|BUGS"
-        );
-    }
-    pod2usage(
-        -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
-    );
+    _show_help( $ARGV[0] );
 }
 pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
   if $global_opts{man};
@@ -59,21 +53,10 @@ if ( $subcommand eq 'dump' ) {
     run_dump(@ARGV);
 }
 elsif ( $subcommand eq 'validate' ) {
-    warn "The 'validate' subcommand is not yet implemented.\n";
-    exit EXIT_PARSE_ERROR;
+    run_validate(@ARGV);
 }
 elsif ( $subcommand eq 'help' ) {
-    my $topic = shift @ARGV;
-    if ( $topic && $topic eq 'dump' ) {
-        pod2usage(
-            -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "DUMP|BUGS"
-        );
-    }
-    pod2usage(
-        -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
-    );
+    _show_help( shift @ARGV );
 }
 else {
     warn "Unknown subcommand: $subcommand\n";
@@ -224,6 +207,287 @@ sub _indent {
     return $text;
 }
 
+sub _show_help {
+    my $topic = shift;
+
+    if ( $topic && $topic eq 'dump' ) {
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "DUMP|BUGS"
+        );
+    }
+    if ( $topic && $topic eq 'validate' ) {
+        pod2usage(
+            -input    => $script_path, -exitval => 1, -verbose => 99,
+            -sections => "VALIDATE|BUGS"
+        );
+    }
+    pod2usage(
+        -input    => $script_path, -exitval => 1, -verbose => 99,
+        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
+    );
+}
+
+sub _parse_id_list {
+    my $s = shift;
+    return [] unless defined $s && length $s;
+    return [ map { 0 + $_ } grep { length $_ } split /\s*,\s*/, $s ];
+}
+
+sub run_validate {
+    my @args = @_;
+    my %opts = (
+        pretty                         => 0,
+        'json-array'                   => 0,
+        'ignore-errors'                => 0,
+        'fail-fast'                    => 0,
+        'errors-to-stderr'             => 0,
+        quiet                          => 0,
+        'enable-warnings'              => 0,
+        'vendor-id'                    => undef,
+        'consent-purposes'             => undef,
+        'legitimate-interest-purposes' => undef,
+        'flexible-purposes'            => undef,
+        'check-disclosed-vendors'      => 0,
+        strict                         => 0,
+        'min-policy-version'           => undef,
+        all                            => 0,
+        text                           => 0,
+    );
+
+    GetOptionsFromArray(
+        \@args,
+        'pretty|p'                         => \$opts{pretty},
+        'json-array'                       => \$opts{'json-array'},
+        'ignore-errors|i'                  => \$opts{'ignore-errors'},
+        'fail-fast|f'                      => \$opts{'fail-fast'},
+        'errors-to-stderr|e'               => \$opts{'errors-to-stderr'},
+        'quiet|q'                          => \$opts{quiet},
+        'enable-warnings|w'                => \$opts{'enable-warnings'},
+        'vendor-id|v=i'                    => \$opts{'vendor-id'},
+        'consent-purposes|C=s'             => \$opts{'consent-purposes'},
+        'legitimate-interest-purposes|L=s' =>
+          \$opts{'legitimate-interest-purposes'},
+        'flexible-purposes|F=s'     => \$opts{'flexible-purposes'},
+        'check-disclosed-vendors|d' => \$opts{'check-disclosed-vendors'},
+        'strict|s'                  => \$opts{strict},
+        'min-policy-version|m=i'    => \$opts{'min-policy-version'},
+        'all|a'                     => \$opts{all},
+        'text|t'                    => \$opts{text},
+        'help|h'                    => sub {
+            pod2usage(
+                -input    => $script_path, -exitval => 1, -verbose => 99,
+                -sections => "VALIDATE|BUGS"
+            );
+        },
+      )
+      or pod2usage(
+        -input    => $script_path, -exitval => 2, -verbose => 99,
+        -sections => "VALIDATE|BUGS"
+      );
+
+    unless ( defined $opts{'vendor-id'} ) {
+        warn "validate: --vendor-id|-v is required\n";
+        pod2usage(
+            -input    => $script_path, -exitval => 2, -verbose => 99,
+            -sections => "VALIDATE|BUGS"
+        );
+    }
+
+    if ( $opts{'json-array'} && $opts{text} ) {
+        warn "validate: --text and --json-array are mutually exclusive\n";
+        pod2usage(
+            -input    => $script_path, -exitval => 2, -verbose => 99,
+            -sections => "VALIDATE|BUGS"
+        );
+    }
+
+    require GDPR::IAB::TCFv2::Validator;
+
+    my %vargs = (
+        vendor_id               => $opts{'vendor-id'},
+        check_disclosed_vendors => $opts{'check-disclosed-vendors'},
+        strict                  => $opts{strict},
+    );
+    $vargs{consent_purpose_ids} = _parse_id_list( $opts{'consent-purposes'} )
+      if defined $opts{'consent-purposes'};
+    $vargs{legitimate_interest_purpose_ids} =
+      _parse_id_list( $opts{'legitimate-interest-purposes'} )
+      if defined $opts{'legitimate-interest-purposes'};
+    $vargs{flexible_purpose_ids} = _parse_id_list( $opts{'flexible-purposes'} )
+      if defined $opts{'flexible-purposes'};
+    $vargs{min_policy_version} = $opts{'min-policy-version'}
+      if defined $opts{'min-policy-version'};
+
+    my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
+    if ( my $err = $@ ) {
+        chomp $err;
+        warn "validate: $err\n";
+        exit 2;
+    }
+
+    my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
+    my $json     = $json_pkg->new->utf8;
+    if ( $opts{pretty} ) {
+        $json->pretty(1);
+        $json->indent_length(4) if $json->isa('JSON::PP');
+    }
+
+    my $array_brackets =
+      $opts{'json-array'} && !$opts{quiet} && !$opts{text};
+
+    print "[\n" if $array_brackets;
+
+    my $state = {
+        count    => 0,
+        line_num => 0,
+        any_fail => 0,
+    };
+
+    if (@args) {
+        foreach my $str (@args) {
+            $state->{line_num}++;
+            _validate_string( $str, $state, \%opts, $json, $validator );
+        }
+    }
+    else {
+        binmode( STDIN, ':utf8' ) if -t STDIN;
+        while ( my $line = <STDIN> ) {
+            $state->{line_num}++;
+            chomp $line;
+            next unless $line =~ /\S/;
+            _validate_string( $line, $state, \%opts, $json, $validator );
+        }
+    }
+
+    print "\n]\n" if $array_brackets;
+
+    exit( $state->{any_fail} ? EXIT_PARSE_ERROR : EXIT_SUCCESS );
+}
+
+sub _validate_string {
+    my ( $str, $state, $o, $j, $validator ) = @_;
+
+    my $result = eval {
+        $o->{all}
+          ? $validator->validate_all($str)
+          : $validator->validate($str);
+    };
+    if ( my $err = $@ ) {
+        $state->{any_fail} = 1;
+
+        if ( $o->{'fail-fast'} ) {
+            warn
+              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
+              if $o->{'enable-warnings'};
+            exit EXIT_PARSE_ERROR;
+        }
+
+        warn
+          "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
+          if $o->{'enable-warnings'};
+
+        return if $o->{'ignore-errors'};
+
+        chomp $err;
+        my $output_data = {
+            tc_string => $str,
+            error     => $err,
+            success   => _json_false(),
+        };
+
+        if ( $o->{'errors-to-stderr'} ) {
+            if ( $o->{text} ) {
+                warn "ERROR  $str: $err\n";
+            }
+            else {
+                warn $j->encode($output_data) . "\n";
+            }
+            return;
+        }
+
+        return if $o->{quiet};
+        _emit_validate( $output_data, $state, $o, $j );
+        return;
+    }
+
+    my $output_data;
+    if ( $result->is_valid ) {
+        $output_data = {
+            tc_string => $str,
+            vendor_id => $o->{'vendor-id'},
+            valid     => _json_true(),
+        };
+    }
+    else {
+        $state->{any_fail} = 1;
+        my @reasons = $result->reasons;
+        $output_data = {
+            tc_string => $str,
+            vendor_id => $o->{'vendor-id'},
+            valid     => _json_false(),
+            $o->{all} ? ( reasons => \@reasons ) : ( reason => $reasons[0] ),
+        };
+    }
+
+    return if $o->{quiet};
+
+    _emit_validate( $output_data, $state, $o, $j );
+
+    if ( !$result->is_valid && $o->{'fail-fast'} ) {
+        print "\n]\n" if $o->{'json-array'} && !$o->{text};
+        exit EXIT_PARSE_ERROR;
+    }
+
+    return;
+}
+
+sub _emit_validate {
+    my ( $output_data, $state, $o, $j ) = @_;
+
+    if ( $o->{text} ) {
+        my $tc  = $output_data->{tc_string};
+        my $vid = $output_data->{vendor_id};
+        my $line;
+        if ( exists $output_data->{error} ) {
+            $line = "ERROR  $tc: $output_data->{error}";
+        }
+        elsif ( $output_data->{valid} ) {
+            $line = "OK     $tc vendor $vid";
+        }
+        else {
+            my @reasons =
+              $o->{all}
+              ? @{ $output_data->{reasons} || [] }
+              : ( $output_data->{reason} );
+            if ( @reasons == 1 ) {
+                $line = "FAIL   $tc vendor $vid: $reasons[0]";
+            }
+            else {
+                $line = join "\n",
+                  "FAIL   $tc vendor $vid:",
+                  map { "  - $_" } @reasons;
+            }
+        }
+        print "$line\n";
+        $state->{count}++;
+        return;
+    }
+
+    my $out = $j->encode($output_data);
+
+    if ( $o->{'json-array'} ) {
+        print ",\n" if $state->{count} > 0;
+        print $o->{pretty} ? _indent($out) : $out;
+    }
+    else {
+        print "$out\n";
+    }
+    $state->{count}++;
+
+    return;
+}
+
 __END__
 
 =head1 NAME
@@ -262,7 +526,8 @@ Parses TC strings and outputs them as JSON.
 
 =item B<validate>
 
-Validates TC strings against provided business rules (Stub).
+Validates TC strings against a vendor identity and a set of purpose lists,
+emitting one JSON record per string (or text lines with B<--text>).
 
 =back
 
@@ -373,7 +638,180 @@ To type strings manually:
 
 =head1 VALIDATE
 
-Validates TC strings against provided business rules. (Not yet implemented).
+Validates TC strings against a vendor identity and a set of declared purpose
+lists. The vendor must be allowed for every purpose in C<--consent-purposes>
+on a consent basis, and for every purpose in
+C<--legitimate-interest-purposes> on a legitimate-interest basis. Purposes
+listed in C<--flexible-purposes> are checked using the GVL flexible-purpose
+semantics, with the default basis derived from which list also contains the
+purpose. See L<GDPR::IAB::TCFv2::Validator> for the underlying rule engine.
+
+By default the subcommand emits one JSON object per input TC string on
+B<STDOUT>. With B<--text> it emits one human-readable line per string
+instead.
+
+=head2 Output shape
+
+A successful validation produces:
+
+    {"tc_string":"CO...","vendor_id":32,"valid":true}
+
+A failure in default (fail-fast) mode produces a singular C<reason>:
+
+    {"tc_string":"CO...","vendor_id":32,"valid":false,
+     "reason":"vendor 32 not allowed for purpose 1 (consent)"}
+
+A failure in B<--all> mode produces a plural C<reasons> array:
+
+    {"tc_string":"CO...","vendor_id":32,"valid":false,
+     "reasons":["...","..."]}
+
+A parse error produces the same shape as the C<dump> subcommand:
+
+    {"tc_string":"INVALID","error":"...","success":false}
+
+=head2 Required options
+
+=over 4
+
+=item B<--vendor-id>, B<-v> I<ID>
+
+The numeric vendor ID to validate against. Required.
+
+=back
+
+=head2 Purpose options
+
+=over 4
+
+=item B<--consent-purposes>, B<-C> I<1,2,3>
+
+Comma-separated list of purpose IDs that the vendor must be allowed to
+process on a B<consent> basis.
+
+=item B<--legitimate-interest-purposes>, B<-L> I<1,2,3>
+
+Comma-separated list of purpose IDs that the vendor must be allowed to
+process on a B<legitimate interest> basis.
+
+=item B<--flexible-purposes>, B<-F> I<1,2,3>
+
+Comma-separated list of purpose IDs that the vendor declared as flexible.
+Each ID listed here MUST also appear in either C<--consent-purposes> or
+C<--legitimate-interest-purposes>; the membership determines the default
+legal basis used for the flexible-purpose check.
+
+=back
+
+=head2 Rule options
+
+=over 4
+
+=item B<--check-disclosed-vendors>, B<-d>
+
+Require the vendor to appear in the Disclosed Vendors segment when the TC
+string carries one. Off by default.
+
+=item B<--strict>, B<-s>
+
+Enable strict spec validation in the underlying parser (see C<dump --strict>).
+
+=item B<--min-policy-version>, B<-m> I<N>
+
+Reject TC strings whose Global Vendor List policy version is below I<N>.
+Checked first, before any vendor- or purpose-level rules.
+
+=item B<--all>, B<-a>
+
+Accumulate every failing rule into a C<reasons> array instead of
+short-circuiting on the first failure. The output JSON uses plural
+C<reasons> (array) instead of singular C<reason> (string).
+
+=back
+
+=head2 Output options
+
+=over 4
+
+=item B<--pretty>, B<-p>
+
+Output human-readable, indented JSON.
+
+=item B<--json-array>
+
+Output a single JSON array containing all validation records.
+
+=item B<--text>, B<-t>
+
+Output one human-readable line per TC string instead of JSON. Format:
+
+    OK     <tc>  vendor <id>
+    FAIL   <tc>  vendor <id>: <reason>
+    ERROR  <tc>: <parse error>
+
+In B<--all> mode, multi-reason failures span multiple indented lines.
+Mutually exclusive with C<--json-array>.
+
+=item B<--ignore-errors>, B<-i>
+
+Skip parse errors silently (still bumps the exit code). Validation failures
+are still emitted.
+
+=item B<--fail-fast>, B<-f>
+
+Exit immediately on the first parse error or the first invalid TC string.
+Validation failures are emitted before exiting; parse errors are not (matches
+the C<dump> contract).
+
+=item B<--errors-to-stderr>, B<-e>
+
+Route parse-error records to B<STDERR> instead of B<STDOUT>.
+
+=item B<--enable-warnings>, B<-w>
+
+Emit human-readable warning messages on B<STDERR> when a TC string fails to
+parse. Off by default.
+
+=item B<--quiet>, B<-q>
+
+Suppress all output on B<STDOUT>. The exit code still reflects validity,
+which is convenient for shell-style C<if iabtcfv2 validate -q -v 32 ... "$tc">
+checks.
+
+=back
+
+=head2 Exit codes
+
+=over 4
+
+=item *
+
+B<0> — every input TC string was parsed and validated cleanly.
+
+=item *
+
+B<1> — at least one TC string failed validation or could not be parsed.
+
+=item *
+
+B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists,
+mutually exclusive flags).
+
+=back
+
+=head2 Examples
+
+    # Single string, fail-fast
+    iabtcfv2 validate -v 32 -C 1,3 -L 7 CO...AAA
+
+    # All reasons, pretty JSON, text-friendly
+    iabtcfv2 validate -av 32 -C 1,3 -L 7 -t CO...AAA
+
+    # Pipeline-friendly: just the exit code
+    if iabtcfv2 validate -q -v 32 -C 1,3 "$tc"; then ...
+
+    # Many strings as a single JSON array
+    iabtcfv2 validate -v 32 -C 1,3 --json-array CO...AAA CO...BBB
 
 =head1 DESCRIPTION
 
