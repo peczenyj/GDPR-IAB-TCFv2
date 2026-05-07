@@ -188,8 +188,14 @@ sub TO_JSON {
         %map = map { $_ => $false } 1 .. $self->{max_id};
     }
 
+    # Direct hash-element assignment per range; the previous form
+    # `%map = ( %map, map { $_ => $true } ... )` re-copied the running
+    # hash into a list every iteration, accidentally O(n^2) over the
+    # number of vendor IDs already accumulated.
     foreach my $range ( @{ $self->{ranges} } ) {
-        %map = ( %map, map { $_ => $true } $range->[0] .. $range->[1] );
+        for my $id ( $range->[0] .. $range->[1] ) {
+            $map{$id} = $true;
+        }
     }
 
     return \%map;
