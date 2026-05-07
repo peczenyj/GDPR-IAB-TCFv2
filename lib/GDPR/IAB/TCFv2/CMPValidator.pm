@@ -3,8 +3,9 @@ package GDPR::IAB::TCFv2::CMPValidator;
 use strict;
 use warnings;
 
-use Carp     qw<croak carp>;
-use JSON::PP ();
+use Carp         qw<croak carp>;
+use JSON::PP     ();
+use Scalar::Util qw<blessed>;
 use Time::Piece;
 
 our $VERSION = '0.001';
@@ -12,10 +13,15 @@ our $VERSION = '0.001';
 sub new {
     my ( $klass, %args ) = @_;
 
+    _validate_http_options( \%args );
+
     my $self = {
         cmps         => {},
         last_updated => undef,
         now          => $args{now},
+        verify_ssl   => exists $args{verify_ssl} ? $args{verify_ssl} : 1,
+        timeout      => exists $args{timeout}    ? $args{timeout}    : 30,
+        http_client  => $args{http_client},
     };
     bless $self, $klass;
 
@@ -43,6 +49,24 @@ sub new {
     return $self;
 }
 
+sub _validate_http_options {
+    my ($args) = @_;
+
+    return unless exists $args->{http_client};
+
+    my $client = $args->{http_client};
+    croak
+      "http_client must be a blessed object responding to ->get(\$url); got "
+      . ( ref($client) || ( defined $client ? "a non-reference" : "undef" ) )
+      unless blessed($client) && $client->can('get');
+
+    croak
+      "http_client and verify_ssl/timeout are mutually exclusive: configure SSL/timeout on the http_client itself"
+      if exists $args->{verify_ssl} || exists $args->{timeout};
+
+    return;
+}
+
 sub load_from_file {
     my ( $self, $path ) = @_;
 
@@ -57,11 +81,23 @@ sub load_from_file {
 sub load_from_url {
     my ( $self, $url ) = @_;
 
-    eval { require HTTP::Tiny; 1 }
-      or croak "HTTP::Tiny is required to load CMP list from URL. "
-      . "Please install it or use a local file instead.";
+    my $client = $self->{http_client} // do {
+        eval { require HTTP::Tiny; 1 }
+          or croak "HTTP::Tiny is required to load CMP list from URL. "
+          . "Please install it or use a local file instead.";
 
-    my $response = HTTP::Tiny->new->get($url);
+        # env_proxy => 1: honor https_proxy / http_proxy / no_proxy.
+        # verify_SSL => 1 (default): pin the secure default regardless
+        # of the installed HTTP::Tiny version (older versions defaulted
+        # to 0).
+        HTTP::Tiny->new(
+            env_proxy  => 1,
+            verify_SSL => $self->{verify_ssl},
+            timeout    => $self->{timeout},
+        );
+    };
+
+    my $response = $client->get($url);
     croak "Failed to fetch CMP list from '$url': $response->{reason}"
       unless $response->{success};
 
@@ -235,8 +271,34 @@ than dialing out.
 
 =item *
 
-C<now> -- override the wall clock.  Useful for deterministic tests
+C<verify_ssl> -- boolean, default C<1>.  Convenience option for the
+default L<HTTP::Tiny> client: when true, server certificates are
+verified.  Disable only when targeting a CMP server with a self-signed
+or otherwise non-public-CA certificate.  Mutually exclusive with
+C<http_client> (configure SSL on the injected client itself).
+
+=item *
+
+C<timeout> -- integer seconds, default C<30>.  Convenience option for
+the default L<HTTP::Tiny> client.  Mutually exclusive with
+C<http_client>.
+
+=item *
+
+C<http_client> -- a pre-built object that responds to
+C<-E<gt>get($url)> in the L<HTTP::Tiny>-compatible shape (see
+L</INJECTING AN HTTP CLIENT>).  When provided, the validator uses this
+object verbatim and does not construct its own L<HTTP::Tiny>; the
+C<verify_ssl> and C<timeout> options are not accepted in this case
+(passing either alongside C<http_client> croaks).
+
+=item *
+
+C<now> -- B<test only.>  Override the wall clock used for
+C<deletedDate> comparisons and the 28-day staleness check
 (e.g. C<now =E<gt> 1776254400> pins comparisons to 2026-04-15).
+Production code should leave this unset; the validator reads the real
+wall clock by default.
 
 =back
 
@@ -268,7 +330,72 @@ Re-load from a raw JSON string.
 
 Fetch and load from C<$url>.  Bypasses the C<network_ok> gate -- the
 intent is that the caller has already validated they want to make a
-network call.  Requires L<HTTP::Tiny>.
+network call.  Uses the C<http_client> passed to the constructor when
+present; otherwise constructs a default L<HTTP::Tiny> with
+C<env_proxy =E<gt> 1>, C<verify_SSL> from C<verify_ssl>, and C<timeout>
+from C<timeout>.
+
+=head1 NETWORK PROXIES
+
+When C<load_from_url> uses the default L<HTTP::Tiny> client (i.e. no
+C<http_client> was injected), the standard HTTP-proxy environment
+variables are honored automatically:
+
+=over 4
+
+=item *
+
+C<https_proxy> -- proxy for C<https://> URLs.
+
+=item *
+
+C<http_proxy> -- proxy for C<http://> URLs.
+
+=item *
+
+C<all_proxy> -- fallback for both.
+
+=item *
+
+C<no_proxy> -- comma-separated host/domain patterns to bypass
+(e.g. C<localhost,*.internal>).
+
+=back
+
+Lowercase names are the canonical form.  HTTP::Tiny accepts uppercase
+as well, but the lowercase variants are preferred (some hardened
+environments treat the uppercase form as a security risk because of
+historical CGI injection bugs).
+
+When an injected C<http_client> is used, this module does no proxy
+configuration of its own: configure the client however you need before
+handing it in.
+
+=head1 INJECTING AN HTTP CLIENT
+
+For test fakes, custom CA bundles, signed-request middleware, or any
+other case the convenience options do not cover, hand the validator a
+pre-built object via C<http_client>:
+
+    package FakeHttp;
+    sub new { bless { responses => $_[1] }, $_[0] }
+    sub get { my $self = shift; shift @{ $self->{responses} } }
+
+    my $cmp_v = GDPR::IAB::TCFv2::CMPValidator->new(
+        url         => 'https://does-not-matter.example/',
+        network_ok  => 1,
+        http_client => FakeHttp->new( [
+            { success => 1, content => '{"cmps": {"7": {"id": 7}}}' },
+        ] ),
+    );
+
+The injected object must be a blessed reference that responds to a
+C<-E<gt>get($url)> method returning a hashref in the L<HTTP::Tiny>
+shape: at minimum, C<success> (boolean), C<content> (response body on
+success), and C<reason> (error text on failure).  The constructor
+verifies the object is blessed and L<UNIVERSAL/can> a C<get> method,
+so AUTOLOAD-using classes must override C<can> to advertise their
+methods (the standard Perl convention).
 
 =head1 STALE DATA WARNING
 
