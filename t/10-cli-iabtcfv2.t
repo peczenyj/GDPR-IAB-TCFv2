@@ -343,4 +343,115 @@ subtest 'validate subcommand' => sub {
     is( $? >> 8,     1,  '--ignore-errors still exits 1' );
 };
 
+subtest '--cmp-list integration' => sub {
+    my $cmp_file   = File::Spec->catfile( 't', 'corpus', 'cmp-list.json' );
+    my $tc_known   = $tc_string;    # CMP 21, present in fixture
+    my $tc_unknown = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+
+    # Known CMP: should still validate.
+    my $ok_out =
+      `$perl -Ilib $bin validate -v 1 --cmp-list $cmp_file $tc_known 2>$devnull`;
+    my $ok_data = decode_helper($ok_out);
+    ok( $ok_data, "known-CMP validate emits JSON" );
+    is( $ok_data->{valid},
+        JSON->can('true') ? JSON->true() : JSON::PP::true(),
+        "known CMP passes the cmp_validator rule"
+    );
+
+    # Unknown CMP: should fail with an unknown-CMP reason.
+    my $bad_out =
+      `$perl -Ilib $bin validate -v 1 --cmp-list $cmp_file $tc_unknown 2>$devnull`;
+    my $bad_code = $? >> 8;
+    my $bad_data = decode_helper($bad_out);
+    ok( $bad_data, "unknown-CMP validate emits JSON" );
+    is( $bad_data->{valid}, $json_false, "unknown CMP fails validation" );
+    like(
+        $bad_data->{reason},
+        qr/CMP\s+\d+\s+is not valid/,
+        "reason names the bad CMP"
+    );
+    is( $bad_code, 1, "unknown CMP exits 1" );
+
+    # URL without --cmp-list-network-ok: refused (exit 2, message on stderr).
+    my $stderr_capture = File::Spec->catfile(
+        File::Spec->tmpdir(),
+        "tcf_cmp_url_stderr_$$"
+    );
+    my $url_out =
+      `$perl -Ilib $bin validate -v 1 --cmp-list https://example.invalid/x.json $tc_known 2>$stderr_capture`;
+    my $url_code = $? >> 8;
+    is( $url_code, 2,
+        "URL without --cmp-list-network-ok exits 2 (bad usage)"
+    );
+    is( $url_out, '', "URL refusal emits no stdout" );
+    open my $fh, '<', $stderr_capture
+      or die "Could not read $stderr_capture: $!";
+    my $stderr = do { local $/ = undef; <$fh> };
+    close $fh;
+    unlink $stderr_capture;
+    like(
+        $stderr, qr/network_ok was not set/,
+        "URL refusal mentions network_ok in the diagnostic"
+    );
+
+    # --no-cmp-list-verify-ssl is accepted as a flag (file path makes
+    # the SSL setting moot at runtime, but Getopt::Long must accept it).
+    my $no_verify_out =
+      `$perl -Ilib $bin validate -v 1 --cmp-list $cmp_file --no-cmp-list-verify-ssl $tc_known 2>$devnull`;
+    my $no_verify_data = decode_helper($no_verify_out);
+    ok( $no_verify_data, "--no-cmp-list-verify-ssl is accepted" );
+    is( $no_verify_data->{valid},
+        JSON->can('true') ? JSON->true() : JSON::PP::true(),
+        "--no-cmp-list-verify-ssl does not affect file-path use"
+    );
+
+    # --cmp-list-timeout takes an integer.
+    my $timeout_out =
+      `$perl -Ilib $bin validate -v 1 --cmp-list $cmp_file --cmp-list-timeout 5 $tc_known 2>$devnull`;
+    ok( decode_helper($timeout_out), "--cmp-list-timeout is accepted" );
+};
+
+subtest '--cmp-list staleness warning gate' => sub {
+    my $cmp_file = File::Spec->catfile( 't', 'corpus', 'cmp-list.json' );
+
+    # Fixture lastUpdated is 2026-04-01. The repo policy is that this
+    # gets older over time — we rely on that fact for this test. Skip
+    # if for any reason we are running before the fixture turned 28
+    # days old (would never happen on the maintained line, but keeps
+    # the test honest if someone backports it onto an older snapshot).
+    plan skip_all => "fixture not yet 28 days stale (future-dated run?)"
+      if time() < ( 1743465600 + 28 * 86400 );    # 2026-04-01 + 28d
+
+    my $stderr_quiet = File::Spec->catfile(
+        File::Spec->tmpdir(),
+        "tcf_cmp_stale_quiet_$$"
+    );
+    my $stderr_loud = File::Spec->catfile(
+        File::Spec->tmpdir(),
+        "tcf_cmp_stale_loud_$$"
+    );
+
+    # Without --enable-warnings: staleness carp is suppressed.
+    `$perl -Ilib $bin validate -v 1 --cmp-list $cmp_file $tc_string 2>$stderr_quiet`;
+    open my $qfh, '<', $stderr_quiet or die "open $stderr_quiet: $!";
+    my $quiet = do { local $/ = undef; <$qfh> };
+    close $qfh;
+    unlink $stderr_quiet;
+    unlike(
+        $quiet, qr/CMP list is older than 28 days/,
+        "no staleness warning without --enable-warnings"
+    );
+
+    # With --enable-warnings: staleness carp surfaces on stderr.
+    `$perl -Ilib $bin validate -wv 1 --cmp-list $cmp_file $tc_string 2>$stderr_loud`;
+    open my $lfh, '<', $stderr_loud or die "open $stderr_loud: $!";
+    my $loud = do { local $/ = undef; <$lfh> };
+    close $lfh;
+    unlink $stderr_loud;
+    like(
+        $loud, qr/CMP list is older than 28 days/,
+        "staleness warning surfaces with --enable-warnings"
+    );
+};
+
 done_testing();
