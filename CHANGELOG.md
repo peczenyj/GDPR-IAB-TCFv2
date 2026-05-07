@@ -1,3 +1,17 @@
+## [0.391] - 2026-05-07
+
+### Features
+
+- *(cli)* Integrate CMPValidator into iabtcfv2 validate 
+- *(cmp-validator)* Http_client injection + verify_ssl/timeout/env_proxy 
+- *(validator)* Add Validator::Reason constants module (Phase 6.1) 
+
+### Other
+
+- Merge tag 'v0.390' into devel
+
+Tagged for release. v0.390
+
 ## [0.390] - 2026-05-07
 
 ### Features
@@ -6,6 +20,7 @@
 
 ### Other
 
+- Release v0.390 - add cmp validator
 - Update manifest
 - Include docs/ in gitignore
 - Update changelog
