@@ -1,3 +1,19 @@
+## [0.380] - 2026-05-07
+
+### Features
+
+- *(constants)* TCF v2.3 spec-aligned long-form aliases 
+
+### Other
+
+- Merge tag 'v0.370' into devel
+
+Tagged for release. v0.370
+
+### Performance
+
+- *(range-section)* Avoid O(n^2) hash rebuild in TO_JSON 
+
 ## [0.370] - 2026-05-06
 
 ### Bug Fixes
@@ -6,6 +22,7 @@
 
 ### Other
 
+- Release v0.370 add gdpr consent string validator package and subcommand.
 - Phase 2: The Validator Interface (rebased + reviewed) 
 
 * Phase 2: The Validator Interface
