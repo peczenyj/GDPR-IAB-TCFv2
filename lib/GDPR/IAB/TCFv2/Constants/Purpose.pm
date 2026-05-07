@@ -6,6 +6,9 @@ require Exporter;
 use base qw<Exporter>;
 
 use constant {
+
+    # Short, established names -- supported indefinitely.  Used by examples
+    # and tests across the distribution.
     InfoStorageAccess        => 1,
     BasicAdserving           => 2,
     PersonalizationProfile   => 3,
@@ -17,6 +20,22 @@ use constant {
     MarketResearch           => 9,
     DevelopImprove           => 10,
     SelectContent            => 11,
+
+    # TCF v2.3 spec-aligned long-form aliases (Phase 3).  Each name tracks
+    # the canonical wording from the IAB Global Vendor List JSON for the
+    # corresponding purpose.id.  Both names resolve to the same integer and
+    # are interchangeable everywhere a Purpose constant is accepted.
+    StoreAndOrAccessInformationOnDevice        => 1,
+    UseLimitedDataToSelectAdvertising          => 2,
+    CreateProfilesForPersonalisedAdvertising   => 3,
+    UseProfilesToSelectPersonalisedAdvertising => 4,
+    CreateProfilesToPersonaliseContent         => 5,
+    UseProfilesToSelectPersonalisedContent     => 6,
+    MeasureAdvertisingPerformance              => 7,
+    MeasureContentPerformance                  => 8,
+    UnderstandAudiences                        => 9,
+    DevelopAndImproveServices                  => 10,
+    UseLimitedDataToSelectContent              => 11,
 };
 
 use constant PurposeDescription => {
@@ -47,6 +66,17 @@ our @EXPORT_OK = qw<
   MarketResearch
   DevelopImprove
   SelectContent
+  StoreAndOrAccessInformationOnDevice
+  UseLimitedDataToSelectAdvertising
+  CreateProfilesForPersonalisedAdvertising
+  UseProfilesToSelectPersonalisedAdvertising
+  CreateProfilesToPersonaliseContent
+  UseProfilesToSelectPersonalisedContent
+  MeasureAdvertisingPerformance
+  MeasureContentPerformance
+  UnderstandAudiences
+  DevelopAndImproveServices
+  UseLimitedDataToSelectContent
   PurposeDescription
 >;
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
@@ -54,6 +84,9 @@ our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 1;
 
 __END__
+
+=encoding utf8
+
 =head1 NAME
 
 GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.3 purposes
@@ -302,3 +335,72 @@ A sports news mobile app has started a new section of articles covering the most
 =head2 PurposeDescription
 
 Returns a hashref with a mapping between all purpose ids and their description.
+
+=head1 NAME ALIASES
+
+In addition to the short names documented above, every purpose is also
+exported under a long-form alias that tracks the canonical wording of the
+IAB Global Vendor List for TCF v2.3. Both names resolve to the same integer
+and may be used interchangeably anywhere a Purpose constant is accepted
+(C<is_purpose_consent_allowed>, C<is_vendor_consent_allowed>, etc.).
+
+    use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
+
+    # Equivalent:
+    $consent->is_purpose_consent_allowed( InfoStorageAccess );
+    $consent->is_purpose_consent_allowed( StoreAndOrAccessInformationOnDevice );
+
+The full mapping:
+
+=over 4
+
+=item *
+
+C<InfoStorageAccess> — C<StoreAndOrAccessInformationOnDevice> (id 1)
+
+=item *
+
+C<BasicAdserving> — C<UseLimitedDataToSelectAdvertising> (id 2)
+
+=item *
+
+C<PersonalizationProfile> — C<CreateProfilesForPersonalisedAdvertising> (id 3)
+
+=item *
+
+C<PersonalizationSelection> — C<UseProfilesToSelectPersonalisedAdvertising> (id 4)
+
+=item *
+
+C<ContentProfile> — C<CreateProfilesToPersonaliseContent> (id 5)
+
+=item *
+
+C<ContentSelection> — C<UseProfilesToSelectPersonalisedContent> (id 6)
+
+=item *
+
+C<AdPerformance> — C<MeasureAdvertisingPerformance> (id 7)
+
+=item *
+
+C<ContentPerformance> — C<MeasureContentPerformance> (id 8)
+
+=item *
+
+C<MarketResearch> — C<UnderstandAudiences> (id 9)
+
+=item *
+
+C<DevelopImprove> — C<DevelopAndImproveServices> (id 10)
+
+=item *
+
+C<SelectContent> — C<UseLimitedDataToSelectContent> (id 11)
+
+=back
+
+The short names are the historical established forms and are supported
+indefinitely. The long-form aliases are provided for callers who prefer
+to mirror the IAB spec wording verbatim (e.g. when generating policy
+documents or audit logs).

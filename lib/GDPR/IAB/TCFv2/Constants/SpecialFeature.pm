@@ -6,8 +6,14 @@ require Exporter;
 use base qw<Exporter>;
 
 use constant {
+
+    # Short, established names -- supported indefinitely.
     Geolocation => 1,
-    DeviceScan  => 2
+    DeviceScan  => 2,
+
+    # TCF v2.3 spec-aligned long-form aliases (Phase 3).
+    UsePreciseGeolocationData                          => 1,
+    ActivelyScanDeviceCharacteristicsForIdentification => 2,
 };
 
 use constant SpecialFeatureDescription => {
@@ -18,6 +24,8 @@ use constant SpecialFeatureDescription => {
 our @EXPORT_OK = qw<
   Geolocation
   DeviceScan
+  UsePreciseGeolocationData
+  ActivelyScanDeviceCharacteristicsForIdentification
   SpecialFeatureDescription
 >;
 
@@ -26,6 +34,8 @@ our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 1;
 
 __END__
+
+=encoding utf8
 
 =head1 NAME
 
@@ -66,3 +76,22 @@ With your acceptance, certain characteristics specific to your device might be r
 =head2 SpecialFeatureDescription
 
 Returns a hashref with a mapping between all restriction types and their description.
+
+=head1 NAME ALIASES
+
+Both special features are also exported under long-form aliases that mirror
+the IAB Global Vendor List wording for TCF v2.3:
+
+=over 4
+
+=item *
+
+C<Geolocation> — C<UsePreciseGeolocationData> (id 1)
+
+=item *
+
+C<DeviceScan> — C<ActivelyScanDeviceCharacteristicsForIdentification> (id 2)
+
+=back
+
+Both names resolve to the same integer and are interchangeable.
