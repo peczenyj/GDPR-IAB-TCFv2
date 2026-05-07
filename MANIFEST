@@ -15,6 +15,7 @@ lib/GDPR/IAB/TCFv2/PublisherRestrictions.pm
 lib/GDPR/IAB/TCFv2/PublisherTC.pm
 lib/GDPR/IAB/TCFv2/RangeSection.pm
 lib/GDPR/IAB/TCFv2/Validator.pm
+lib/GDPR/IAB/TCFv2/Validator/Reason.pm
 lib/GDPR/IAB/TCFv2/Validator/Result.pm
 LICENSE
 Makefile.PL
@@ -35,6 +36,7 @@ t/10-cli-iabtcfv2.t
 t/12-bigint-fallback.t
 t/13-constants-aliases.t
 t/14-cmp-validator.t
+t/15-validator-reason.t
 t/90-bugs.t
 t/99-pod.t
 t/corpus/cmp-list.json

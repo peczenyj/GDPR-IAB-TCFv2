@@ -58,7 +58,20 @@
     *   **Tests:** use fixed reference dates so the `deletedDate` / staleness checks are deterministic across execution environments.
 *   **Reference:** PR [#38](https://github.com/peczenyj/GDPR-IAB-TCFv2/pull/38) (`feat/phase-5-cmp-validator`, currently OPEN).
 
-## Phase 6: GVL-Aware Validator
+## Phase 6: Structured Failure Reporting
+*   **Goal:** Bring the Validator's failure-reporting model to parity with the Go `lib-gdpr/validator` package: stable machine-readable codes, structured failure objects, and distinct reasons for each failure mode. Sets the data model for every later phase that introduces new validation rules.
+*   **Depends on:** Phase 2 (Validator Interface).
+*   **Tasks:**
+    *   **6.1 — `Validator::Reason` module:** Create `GDPR::IAB::TCFv2::Validator::Reason` with integer `REASON_*` constants (mirror Go's `code.go` enum: `REASON_NONE`, `REASON_VENDOR_NOT_ALLOWED`, `REASON_VENDOR_NOT_DISCLOSED`, `REASON_PURPOSE_NOT_ALLOWED`, `REASON_VENDOR_NOT_ALLOWED_CONSENT`, `REASON_VENDOR_NOT_ALLOWED_LEGITIMATE_INTEREST`, `REASON_PUBLISHER_RESTRICTION_NOT_ALLOWED`, `REASON_PUBLISHER_RESTRICTION_REQUIRE_CONSENT`, `REASON_PUBLISHER_RESTRICTION_REQUIRE_LEGITIMATE_INTEREST`, `REASON_LEGITIMATE_INTEREST_NOT_PERMITTED_FOR_PURPOSE`, `REASON_POLICY_VERSION_TOO_LOW`, `REASON_MISSING_DISCLOSED_VENDORS`, `REASON_DECODE_ERROR`). Export under `:all`. Provide `reason_string($code)` helper.
+    *   **6.2 — `Validator::Failure` value object + `Result` extension:** Lightweight object with `code`, `message`, `purpose_id`, `vendor_id`, `restriction_type`. Extend `Validator::Result` with `failures()` and `reason_codes()` accessors. `reasons()` and the `bool` / `""` overloads stay back-compatible.
+    *   **6.3 — TCF carve-out reason:** Detect Purpose 1 LI (always) and Purposes 3-6 LI on policy ≥ 4 in the Validator and emit `REASON_LEGITIMATE_INTEREST_NOT_PERMITTED_FOR_PURPOSE` directly instead of the generic "not allowed (legitimate interest)".
+    *   **6.4 — Distinct publisher-restriction reasons:** Have the Validator inspect publisher restrictions itself before delegating to `is_vendor_*_allowed`, so each restriction-type failure surfaces its own reason. Refines the human-readable strings on `reasons()` output (note in `Changes`).
+    *   **6.5 — Per-call list overrides:** Allow `validate(..., consent_purpose_ids => [...], legitimate_interest_purpose_ids => [...], flexible_purpose_ids => [...])`. Coherence enforced silently by orphan-drop at runtime (constructor-time still croaks). Empty `[]` distinct from omitted key.
+    *   **(Follow-up, non-blocking):** Migrate `CMPValidator` (Phase 5) to emit `Validator::Failure` objects with a `REASON_CMP_*` family (`REASON_INVALID_CMP`, `REASON_CMP_DELETED`, `REASON_CMP_UNKNOWN`).
+    *   **Tests:** `t/15-validator-reason.t` (round-trip codes), `t/16-validator-failures.t` (table-driven matrix mirroring the Go `validator_strict_internal_test.go`: list membership × flex flag × restriction type × policy version), per-call-override tests.
+*   **Versioning:** ships as **v0.400**.
+
+## Phase 7: GVL-Aware Validator
 *   **Goal:** Bridge the IAB Global Vendor List schema to the Phase 2 validator so callers do not have to translate vendor entries by hand.
 *   **Depends on:** Phase 2 (Validator Interface).
 *   **Tasks:**
@@ -68,17 +81,17 @@
     *   CLI integration: `iabtcfv2 validate --gvl path/to/gvl.json -v 32 ...` derives the purpose lists from the GVL entry instead of requiring `-C` / `-L` / `-F` on the command line.
     *   **Tests:** golden GVL fixture covering vendors with and without flexible purposes; round-trip `from_gvl_vendor_entry` against a hand-crafted entry.
 
-## Phase 7: Features, Special Features, and Special Purposes
+## Phase 8: Features, Special Features, and Special Purposes
 *   **Goal:** Extend the validator beyond standard purposes to cover the rest of the TCF taxonomy.
-*   **Depends on:** Phase 2 (Validator Interface).
+*   **Depends on:** Phase 2 (Validator Interface), Phase 6 (Structured Failure Reporting — new rules emit `REASON_*` codes from day one).
 *   **Tasks:**
     *   Validator support for **Special Features** (opt-in, e.g. precise geolocation): require the bit to be set in the TC string when listed.
-    *   Validator support for **Features** (vendor-declared): no consent required, but cross-check that the vendor declares the feature in the GVL once Phase 6 lands.
+    *   Validator support for **Features** (vendor-declared): no consent required, but cross-check that the vendor declares the feature in the GVL once Phase 7 lands.
     *   Validator support for **Special Purposes**: legitimate-interest-only by spec; check vendor declaration without requiring a consent bit.
     *   Surface these on the CLI as `--special-features`, `--features`, `--special-purposes` (comma-separated, same shape as `-C` / `-L`).
     *   **Tests:** extend `t/06-validator.t` with subtests per category; add CLI subtests in `t/10-cli-iabtcfv2.t`.
 
-## Phase 8: CLI Configuration Loading
+## Phase 9: CLI Configuration Loading
 *   **Goal:** Reduce boilerplate on the command line by letting common flags come from the environment or a config file.
 *   **Tasks:**
     *   Map a curated set of environment variables to CLI flags (e.g. `IABTCFV2_VENDOR_ID`, `IABTCFV2_CONSENT_PURPOSES`, `IABTCFV2_LEGITIMATE_INTEREST_PURPOSES`, `IABTCFV2_FLEXIBLE_PURPOSES`, `IABTCFV2_MIN_POLICY_VERSION`). Explicit CLI flags always win.
