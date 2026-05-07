@@ -6,6 +6,7 @@ CONTRIBUTING.pod
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
+lib/GDPR/IAB/TCFv2/CMPValidator.pm
 lib/GDPR/IAB/TCFv2/Constants/Purpose.pm
 lib/GDPR/IAB/TCFv2/Constants/RestrictionType.pm
 lib/GDPR/IAB/TCFv2/Constants/SpecialFeature.pm
@@ -33,8 +34,10 @@ t/09-predicates.t
 t/10-cli-iabtcfv2.t
 t/12-bigint-fallback.t
 t/13-constants-aliases.t
+t/14-cmp-validator.t
 t/90-bugs.t
 t/99-pod.t
+t/corpus/cmp-list.json
 t/corpus/gdpr_subset.txt
 t/corpus/golden.jsonl.gz
 t/corpus/validator_scenarios.pl
