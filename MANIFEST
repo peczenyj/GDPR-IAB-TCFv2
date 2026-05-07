@@ -1,3 +1,4 @@
+bench/performance.pl
 bin/iabtcfv2
 CHANGELOG.md
 CODE_OF_CONDUCT.md
@@ -32,6 +33,7 @@ t/08-golden-validator.t
 t/09-predicates.t
 t/10-cli-iabtcfv2.t
 t/12-bigint-fallback.t
+t/13-constants-aliases.t
 t/90-bugs.t
 t/99-pod.t
 t/corpus/gdpr_subset.txt
