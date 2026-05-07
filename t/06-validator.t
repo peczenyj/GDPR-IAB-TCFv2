@@ -133,8 +133,8 @@ subtest "Validator legitimate_interest_purpose_ids" => sub {
     my $result = $validator_fail->validate($tc_string);
     ok !$result,
       'fail for purpose 1 LI (spec forbids LI for Purpose 1 always)';
-    like "$result", qr/purpose 1 \(legitimate interest\)/,
-      'reason names the LI rule type';
+    like "$result", qr/legitimate interest not permitted for purpose 1/,
+      'reason names the carve-out rule (Phase 6.3)';
 };
 
 subtest "Validator min_policy_version" => sub {
