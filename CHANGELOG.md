@@ -1,3 +1,15 @@
+## [unreleased]
+
+### Features
+
+- CMPValidator + cmp_validator rule (Phase 5) 
+
+### Other
+
+- Merge tag 'v0.380' into devel
+
+Tagged for release. v0.380
+
 ## [0.380] - 2026-05-07
 
 ### Features
@@ -6,6 +18,8 @@
 
 ### Other
 
+- Release v0.380 - improvements in performance and changes in cli.
+- Update manifest
 - Merge tag 'v0.370' into devel
 
 Tagged for release. v0.370
