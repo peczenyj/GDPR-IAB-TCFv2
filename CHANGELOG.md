@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.390] - 2026-05-07
 
 ### Features
 
@@ -6,6 +6,9 @@
 
 ### Other
 
+- Update manifest
+- Include docs/ in gitignore
+- Update changelog
 - Merge tag 'v0.380' into devel
 
 Tagged for release. v0.380
