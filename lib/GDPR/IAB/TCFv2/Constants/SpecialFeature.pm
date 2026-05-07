@@ -35,6 +35,8 @@ our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 
 __END__
 
+=encoding utf8
+
 =head1 NAME
 
 GDPR::IAB::TCFv2::Constants::SpecialFeature - TCF v2.3 special features
