@@ -56,6 +56,13 @@ use constant {
     # The consent string could not be decoded (malformed, empty, or
     # unsupported version). Only emitted when explicitly requested.
     ReasonDecodeError => 12,
+
+    # The consent string's CMP ID is not recognized as a valid (active,
+    # non-deleted) entry in the configured CMP registry. The CMPValidator
+    # rule today returns a single boolean; a future refinement may
+    # introduce ReasonCMPDeleted / ReasonCMPUnknown to distinguish the
+    # lifecycle states (codes reserved for that work).
+    ReasonInvalidCMP => 13,
 };
 
 use constant ReasonDescription => {
@@ -78,6 +85,7 @@ use constant ReasonDescription => {
       "legitimate interest not permitted for purpose",
     ReasonPolicyVersionTooLow => "tcf policy version too low",
     ReasonDecodeError         => "decode error",
+    ReasonInvalidCMP          => "invalid cmp id",
 };
 
 # Lazily built reverse map: integer code -> human-readable string.
@@ -113,6 +121,7 @@ our @EXPORT_OK = qw<
   ReasonLegitimateInterestNotPermittedForPurpose
   ReasonPolicyVersionTooLow
   ReasonDecodeError
+  ReasonInvalidCMP
   ReasonDescription
   reason_string
 >;
@@ -232,6 +241,14 @@ configured C<min_policy_version>.
 Code 12. The consent string could not be decoded (malformed, empty, or
 unsupported version). Only emitted when the validator is configured to
 report decode errors as structured failures rather than via C<croak>.
+
+=head2 ReasonInvalidCMP
+
+Code 13. The consent string's CMP ID is not recognized as a valid
+(active, non-deleted) entry in the configured CMP registry. The
+C<CMPValidator> rule today returns a single boolean; a future
+refinement may add C<ReasonCMPDeleted> / C<ReasonCMPUnknown> to
+distinguish lifecycle states (the codes are reserved for that work).
 
 =head2 ReasonDescription
 

@@ -6,6 +6,8 @@ use warnings;
 use Carp         qw<croak>;
 use Scalar::Util qw<blessed>;
 use GDPR::IAB::TCFv2;
+use GDPR::IAB::TCFv2::Validator::Failure;
+use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
 sub new {
@@ -122,74 +124,92 @@ sub _run_validation {
 
     croak "missing vendor_id" unless defined $vendor_id;
 
-    my @reasons;
+    my @failures;
 
-    $self->_check_min_policy_version( $tc, $min_policy_version, \@reasons );
-    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+    $self->_check_min_policy_version( $tc, $min_policy_version, \@failures );
+    return $self->_make_result( 0, \@failures )
+      if $stop_on_first && @failures;
 
-    $self->_check_cmp_validator( $tc, $cmp_validator, \@reasons );
-    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+    $self->_check_cmp_validator( $tc, $cmp_validator, \@failures );
+    return $self->_make_result( 0, \@failures )
+      if $stop_on_first && @failures;
 
-    $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@reasons );
-    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+    $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@failures );
+    return $self->_make_result( 0, \@failures )
+      if $stop_on_first && @failures;
 
     $self->_check_consent_purposes(
-        $tc, $vendor_id, $strict, \@reasons,
+        $tc, $vendor_id, $strict, \@failures,
         $stop_on_first
     );
-    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+    return $self->_make_result( 0, \@failures )
+      if $stop_on_first && @failures;
 
     $self->_check_li_purposes(
-        $tc, $vendor_id, $strict, \@reasons,
+        $tc, $vendor_id, $strict, \@failures,
         $stop_on_first
     );
 
-    if (@reasons) {
-        return $self->_make_result( 0, \@reasons );
+    if (@failures) {
+        return $self->_make_result( 0, \@failures );
     }
 
     return $self->_make_result( 1, [] );
 }
 
 sub _check_cmp_validator {
-    my ( $self, $tc, $cmp_validator, $reasons ) = @_;
+    my ( $self, $tc, $cmp_validator, $failures ) = @_;
 
     return unless defined $cmp_validator;
 
     my $cmp_id = $tc->cmp_id;
     unless ( $cmp_validator->is_valid($cmp_id) ) {
-        push @{$reasons}, "CMP $cmp_id is not valid/disclosed";
+        push @{$failures},
+          GDPR::IAB::TCFv2::Validator::Failure->new(
+            code    => ReasonInvalidCMP,
+            message => "CMP $cmp_id is not valid/disclosed",
+            cmp_id  => $cmp_id,
+          );
     }
     return;
 }
 
 sub _check_min_policy_version {
-    my ( $self, $tc, $min_policy_version, $reasons ) = @_;
+    my ( $self, $tc, $min_policy_version, $failures ) = @_;
 
     return unless defined $min_policy_version;
 
     my $actual = $tc->policy_version;
     if ( $actual < $min_policy_version ) {
-        push @{$reasons},
-          "TC string policy version $actual is below required minimum $min_policy_version";
+        push @{$failures},
+          GDPR::IAB::TCFv2::Validator::Failure->new(
+            code    => ReasonPolicyVersionTooLow,
+            message =>
+              "TC string policy version $actual is below required minimum $min_policy_version",
+          );
     }
     return;
 }
 
 sub _check_disclosed {
-    my ( $self, $tc, $vendor_id, $check_disclosed, $reasons ) = @_;
+    my ( $self, $tc, $vendor_id, $check_disclosed, $failures ) = @_;
 
     return unless $check_disclosed;
     return unless $tc->has_vendor_disclosure;
 
     unless ( $tc->disclosed_vendor($vendor_id) ) {
-        push @{$reasons}, "vendor $vendor_id not disclosed";
+        push @{$failures},
+          GDPR::IAB::TCFv2::Validator::Failure->new(
+            code      => ReasonVendorNotDisclosed,
+            message   => "vendor $vendor_id not disclosed",
+            vendor_id => $vendor_id,
+          );
     }
     return;
 }
 
 sub _check_consent_purposes {
-    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
+    my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
 
     foreach my $pid ( @{ $self->{consent_purpose_ids} } ) {
         my $allowed = $self->{_flexible_set}->{$pid}
@@ -203,8 +223,14 @@ sub _check_consent_purposes {
           );
 
         unless ($allowed) {
-            push @{$reasons},
-              "vendor $vendor_id not allowed for purpose $pid (consent)";
+            push @{$failures},
+              GDPR::IAB::TCFv2::Validator::Failure->new(
+                code    => ReasonVendorNotAllowedConsent,
+                message =>
+                  "vendor $vendor_id not allowed for purpose $pid (consent)",
+                purpose_id => $pid,
+                vendor_id  => $vendor_id,
+              );
             return if $stop_on_first;
         }
     }
@@ -212,7 +238,7 @@ sub _check_consent_purposes {
 }
 
 sub _check_li_purposes {
-    my ( $self, $tc, $vendor_id, $strict, $reasons, $stop_on_first ) = @_;
+    my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
 
     foreach my $pid ( @{ $self->{legitimate_interest_purpose_ids} } ) {
         my $allowed = $self->{_flexible_set}->{$pid}
@@ -226,8 +252,14 @@ sub _check_li_purposes {
           );
 
         unless ($allowed) {
-            push @{$reasons},
-              "vendor $vendor_id not allowed for purpose $pid (legitimate interest)";
+            push @{$failures},
+              GDPR::IAB::TCFv2::Validator::Failure->new(
+                code    => ReasonVendorNotAllowedLegitimateInterest,
+                message =>
+                  "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
+                purpose_id => $pid,
+                vendor_id  => $vendor_id,
+              );
             return if $stop_on_first;
         }
     }
@@ -236,11 +268,11 @@ sub _check_li_purposes {
 
 
 sub _make_result {
-    my ( $self, $ok, $reasons ) = @_;
+    my ( $self, $ok, $failures ) = @_;
 
     return GDPR::IAB::TCFv2::Validator::Result->new(
-        ok      => $ok,
-        reasons => $reasons,
+        ok       => $ok,
+        failures => $failures,
     );
 }
 
