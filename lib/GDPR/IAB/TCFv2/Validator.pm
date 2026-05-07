@@ -3,7 +3,8 @@ package GDPR::IAB::TCFv2::Validator;
 use strict;
 use warnings;
 
-use Carp qw<croak>;
+use Carp         qw<croak>;
+use Scalar::Util qw<blessed>;
 use GDPR::IAB::TCFv2;
 use GDPR::IAB::TCFv2::Validator::Result;
 
@@ -16,6 +17,12 @@ sub new {
 
     _check_coherence( $consent, $legitimate_interest, $flexible );
 
+    # Compute cmp_validator in scalar context so a bare `return` from the
+    # coercer correctly yields undef -- a list-context call inside the
+    # anonymous-hash construction below would collapse the key/value
+    # pair instead.
+    my $cmp_v = _coerce_cmp_validator( $args{cmp_validator} );
+
     my $self = {
         vendor_id                       => $args{vendor_id},
         consent_purpose_ids             => $consent,
@@ -24,10 +31,33 @@ sub new {
         _flexible_set                   => { map { $_ => 1 } @{$flexible} },
         check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
         min_policy_version              => $args{min_policy_version},
+        cmp_validator                   => $cmp_v,
         strict => exists $args{strict} ? $args{strict} : 0,
     };
 
     return bless $self, $klass;
+}
+
+# Accept either a CMPValidator object, a hashref of constructor args
+# (auto-instantiated lazily on the first call), or undef.  Defer the
+# `require` so callers who never opt into the CMP rule never pay for
+# loading JSON::PP / Time::Piece.
+sub _coerce_cmp_validator {
+    my ($spec) = @_;
+
+    # Bare `return` is fine -- callers always invoke this in scalar
+    # context (see the explicit `my $cmp_v = ...` in `new` and the
+    # `my $cmp_validator = ...` in `_run_validation`).
+    return unless defined $spec;
+    return $spec
+      if blessed($spec) && $spec->isa('GDPR::IAB::TCFv2::CMPValidator');
+
+    croak "cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator object "
+      . "or a hashref of constructor arguments"
+      unless ref($spec) eq 'HASH';
+
+    require GDPR::IAB::TCFv2::CMPValidator;
+    return GDPR::IAB::TCFv2::CMPValidator->new( %{$spec} );
 }
 
 sub _check_coherence {
@@ -85,12 +115,19 @@ sub _run_validation {
       exists $overrides{min_policy_version}
       ? $overrides{min_policy_version}
       : $self->{min_policy_version};
+    my $cmp_validator =
+      exists $overrides{cmp_validator}
+      ? _coerce_cmp_validator( $overrides{cmp_validator} )
+      : $self->{cmp_validator};
 
     croak "missing vendor_id" unless defined $vendor_id;
 
     my @reasons;
 
     $self->_check_min_policy_version( $tc, $min_policy_version, \@reasons );
+    return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
+
+    $self->_check_cmp_validator( $tc, $cmp_validator, \@reasons );
     return $self->_make_result( 0, \@reasons ) if $stop_on_first && @reasons;
 
     $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@reasons );
@@ -112,6 +149,18 @@ sub _run_validation {
     }
 
     return $self->_make_result( 1, [] );
+}
+
+sub _check_cmp_validator {
+    my ( $self, $tc, $cmp_validator, $reasons ) = @_;
+
+    return unless defined $cmp_validator;
+
+    my $cmp_id = $tc->cmp_id;
+    unless ( $cmp_validator->is_valid($cmp_id) ) {
+        push @{$reasons}, "CMP $cmp_id is not valid/disclosed";
+    }
+    return;
 }
 
 sub _check_min_policy_version {

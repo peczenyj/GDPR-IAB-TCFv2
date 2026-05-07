@@ -1,3 +1,7 @@
+use strict;
+use warnings;
+use FindBin;
+
 # Canonical list of Validator scenarios driven against every TC string in
 # the golden corpus.  This file is `do`-loaded by both
 # t/generate_golden.pl (which writes the expected outcomes into
@@ -21,6 +25,13 @@
 #   - Two flexible-purpose scenarios exist (consent default vs LI
 #     default) so the corpus exercises is_vendor_allowed_for_flexible_purpose
 #     for both default bases.
+#   - The cmp_validator scenario uses the small fixture in
+#     t/corpus/cmp-list.json with `now` pinned so the deletedDate /
+#     stale-warning checks are deterministic.
+
+# Both consumers (t/generate_golden.pl and t/08-golden-validator.t) live
+# in t/, so $FindBin::Bin resolves to that directory.
+my $cmp_file = "$FindBin::Bin/corpus/cmp-list.json";
 
 return [
     {   name => 'v284_baseline',
@@ -68,6 +79,15 @@ return [
         args => {
             vendor_id               => 284,
             check_disclosed_vendors => 1,
+        },
+    },
+    {   name => 'v284_cmp_registry',
+        args => {
+            vendor_id     => 284,
+            cmp_validator => {
+                file => $cmp_file,
+                now  => 1776254400,    # 2026-04-15, fixture is fresh
+            },
         },
     },
 ];
