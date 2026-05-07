@@ -1145,8 +1145,11 @@ Parses TC strings and output them as JSON.
     # Pretty printed JSON
     iabtcfv2 dump --pretty "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
 
-    # Stream multiple strings from STDIN to a JSON array
-    cat strings.txt | iabtcfv2 dump --json-array
+    # Stream multiple strings from STDIN as JSON Lines
+    cat strings.txt | iabtcfv2 dump
+
+    # Pipe through `jq -s` if you need a single JSON array
+    cat strings.txt | iabtcfv2 dump | jq -s .
 
     # Short flags can be bundled (the last bundled short may take a value)
     iabtcfv2 dump -pi "CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA"
@@ -1187,8 +1190,9 @@ valid, C<1> on any parse or validation failure, C<2> on bad CLI usage.
         echo "ok"
     fi
 
-    # Stream multiple strings from STDIN as a JSON array
-    cat strings.txt | iabtcfv2 validate -v 284 -C 1,3 --json-array
+    # Stream multiple strings from STDIN as JSON Lines (pipe through
+    # `jq -s` if you need a single JSON array)
+    cat strings.txt | iabtcfv2 validate -v 284 -C 1,3
 
 See C<iabtcfv2 --help> or C<perldoc iabtcfv2> for more details.
 

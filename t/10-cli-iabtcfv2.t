@@ -49,12 +49,18 @@ is_deeply(
     "Short -p alias produces logically same output as --pretty"
 );
 
-# Test array output
-my $array_output = `$perl -Ilib $bin dump --json-array $tc_string $tc_string`;
-my $array_json   = decode_helper($array_output);
-ok( $array_json, "Output is valid JSON array" );
-is( ref($array_json),     'ARRAY', "Root is an array" );
-is( scalar(@$array_json), 2,       "Array contains two elements" );
+# Test JSON Lines output: dumping multiple strings emits one JSON object
+# per line (the `--json-array` flag was removed; `jq -s .` does the wrap).
+my $multi_output = `$perl -Ilib $bin dump $tc_string $tc_string`;
+my @multi_lines  = grep {/\S/} split /\n/, $multi_output;
+is( scalar @multi_lines, 2, "Two TC strings yield two output lines" );
+for my $i ( 0 .. $#multi_lines ) {
+    my $obj = decode_helper( $multi_lines[$i] );
+    ok( $obj && ref($obj) eq 'HASH',
+        "Line " . ( $i + 1 ) . " is a JSON object"
+    );
+    is( $obj->{version}, 2, "Line " . ( $i + 1 ) . " parsed as version 2" );
+}
 
 # Test STDIN (using Perl to avoid shell-specific echo/heredoc issues)
 my $stdin_output = `$perl -e "print '$tc_string'" | $perl -Ilib $bin dump`;
@@ -126,11 +132,8 @@ subtest 'Help System' => sub {
     my $dump_help = `$perl -Ilib $bin dump --help`;
     like( $dump_help, qr/DUMP/i,      "Subcommand help header found" );
     like( $dump_help, qr/--compact/i, "Subcommand help lists --compact" );
-    like(
-        $dump_help, qr/--json-array/i,
-        "Subcommand help lists --json-array"
-    );
-    like( $dump_help, qr/Examples/i, "Subcommand help shows examples" );
+    like( $dump_help, qr/--pretty/i,  "Subcommand help lists --pretty" );
+    like( $dump_help, qr/Examples/i,  "Subcommand help shows examples" );
 
     # 3. Help Subcommand
     my $help_cmd = `$perl -Ilib $bin help dump`;
