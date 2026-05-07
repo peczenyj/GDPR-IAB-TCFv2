@@ -15,6 +15,7 @@ lib/GDPR/IAB/TCFv2/PublisherRestrictions.pm
 lib/GDPR/IAB/TCFv2/PublisherTC.pm
 lib/GDPR/IAB/TCFv2/RangeSection.pm
 lib/GDPR/IAB/TCFv2/Validator.pm
+lib/GDPR/IAB/TCFv2/Validator/Failure.pm
 lib/GDPR/IAB/TCFv2/Validator/Reason.pm
 lib/GDPR/IAB/TCFv2/Validator/Result.pm
 LICENSE
@@ -37,6 +38,7 @@ t/12-bigint-fallback.t
 t/13-constants-aliases.t
 t/14-cmp-validator.t
 t/15-validator-reason.t
+t/16-validator-failures.t
 t/90-bugs.t
 t/99-pod.t
 t/corpus/cmp-list.json

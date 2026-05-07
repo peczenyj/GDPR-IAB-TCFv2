@@ -23,9 +23,10 @@ subtest 'all reason codes are distinct non-negative integers' => sub {
         ReasonLegitimateInterestNotPermittedForPurpose(),
         ReasonPolicyVersionTooLow(),
         ReasonDecodeError(),
+        ReasonInvalidCMP(),
     );
 
-    is( scalar(@codes), 13, 'all 13 reason codes accounted for' );
+    is( scalar(@codes), 14, 'all 14 reason codes accounted for' );
 
     is( ReasonNone, 0, 'ReasonNone is zero (sentinel for success)' );
 
@@ -68,6 +69,7 @@ subtest 'reason_string returns the canonical description for each code' =>
         ],
         [ ReasonPolicyVersionTooLow(), "tcf policy version too low" ],
         [ ReasonDecodeError(),         "decode error" ],
+        [ ReasonInvalidCMP(),          "invalid cmp id" ],
     );
 
     for my $case (@cases) {
