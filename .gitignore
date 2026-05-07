@@ -36,3 +36,5 @@ inc/
 
 # backups from perltidy
 *.bak
+# where ai store documents and plans
+docs/
