@@ -226,6 +226,10 @@ sub run_validate {
         'check-disclosed-vendors'      => 0,
         strict                         => 0,
         'min-policy-version'           => undef,
+        'cmp-list'                     => undef,
+        'cmp-list-network-ok'          => 0,
+        'cmp-list-verify-ssl'          => 1,
+        'cmp-list-timeout'             => 30,
         all                            => 0,
         text                           => 0,
     );
@@ -246,6 +250,10 @@ sub run_validate {
         'check-disclosed-vendors|d' => \$opts{'check-disclosed-vendors'},
         'strict|s'                  => \$opts{strict},
         'min-policy-version|m=i'    => \$opts{'min-policy-version'},
+        'cmp-list=s'                => \$opts{'cmp-list'},
+        'cmp-list-network-ok'       => \$opts{'cmp-list-network-ok'},
+        'cmp-list-verify-ssl!'      => \$opts{'cmp-list-verify-ssl'},
+        'cmp-list-timeout=i'        => \$opts{'cmp-list-timeout'},
         'all|a'                     => \$opts{all},
         'text|t'                    => \$opts{text},
         'help|h'                    => sub {
@@ -284,6 +292,49 @@ sub run_validate {
       if defined $opts{'flexible-purposes'};
     $vargs{min_policy_version} = $opts{'min-policy-version'}
       if defined $opts{'min-policy-version'};
+
+    if ( defined $opts{'cmp-list'} ) {
+        require GDPR::IAB::TCFv2::CMPValidator;
+
+        my $src      = $opts{'cmp-list'};
+        my %cmp_args = (
+            verify_ssl => $opts{'cmp-list-verify-ssl'},
+            timeout    => $opts{'cmp-list-timeout'},
+        );
+
+        if ( $src =~ m{^https?://}i ) {
+            $cmp_args{url}        = $src;
+            $cmp_args{network_ok} = 1 if $opts{'cmp-list-network-ok'};
+        }
+        else {
+            $cmp_args{file} = $src;
+        }
+
+        # The CMPValidator emits a `carp` when the registry is older
+        # than 28 days. Surface that warning only when the user has
+        # opted into warnings (--enable-warnings); otherwise filter it
+        # out so routine CLI use stays quiet. Other warnings flow
+        # through unchanged.
+        my $cmp_v;
+        {
+            local $SIG{__WARN__} = sub {
+                my $msg = $_[0] // '';
+                return if $msg =~ /CMP list is older than 28 days/;
+                warn @_;
+              }
+              if !$opts{'enable-warnings'};
+
+            $cmp_v = eval { GDPR::IAB::TCFv2::CMPValidator->new(%cmp_args) };
+        }
+
+        if ( my $err = $@ ) {
+            chomp $err;
+            warn "validate: $err\n";
+            exit 2;
+        }
+
+        $vargs{cmp_validator} = $cmp_v;
+    }
 
     my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
     if ( my $err = $@ ) {
@@ -328,7 +379,7 @@ sub _validate_string {
     my ( $str, $state, $o, $j, $validator ) = @_;
 
     my $result = eval {
-        $o->{all}
+            $o->{all}
           ? $validator->validate_all($str)
           : $validator->validate($str);
     };
@@ -422,7 +473,7 @@ sub _emit_validate {
             else {
                 $line = join "\n",
                   "FAIL   $tc vendor $vid:",
-                  map { "  - $_" } @reasons;
+                  map {"  - $_"} @reasons;
             }
         }
         print "$line\n";
@@ -670,6 +721,37 @@ Enable strict spec validation in the underlying parser (see C<dump --strict>).
 Reject TC strings whose Global Vendor List policy version is below I<N>.
 Checked first, before any vendor- or purpose-level rules.
 
+=item B<--cmp-list> I<PATH-OR-URL>
+
+Validate the C<cmp_id> embedded in each TC string against an IAB CMP
+registry snapshot. The argument is detected as a URL when it starts
+with C<http://> or C<https://>, otherwise it is treated as a local
+file path. Failures yield a C<reason> mentioning the unknown or
+deleted CMP id.
+
+When the argument is a URL, the standard HTTP-proxy environment
+variables (C<https_proxy>, C<http_proxy>, C<no_proxy>) are honored
+automatically.
+
+=item B<--cmp-list-network-ok>
+
+Required when B<--cmp-list> is a URL. Without this flag, URL fetching
+is refused (mirrors the library's C<network_ok =E<gt> 1> opt-in:
+fetching from an arbitrary URL is intentional, never accidental).
+Has no effect when B<--cmp-list> is a file path.
+
+=item B<--cmp-list-verify-ssl>, B<--no-cmp-list-verify-ssl>
+
+Verify TLS certificates when fetching from an HTTPS URL. On by default;
+disable with B<--no-cmp-list-verify-ssl> only when targeting a server
+with a self-signed or otherwise non-public-CA certificate. Has no
+effect when B<--cmp-list> is a file path.
+
+=item B<--cmp-list-timeout> I<SECONDS>
+
+Per-request timeout for the URL fetch, in seconds. Defaults to 30.
+Has no effect when B<--cmp-list> is a file path.
+
 =item B<--all>, B<-a>
 
 Accumulate every failing rule into a C<reasons> array instead of
@@ -714,7 +796,8 @@ Route parse-error records to B<STDERR> instead of B<STDOUT>.
 =item B<--enable-warnings>, B<-w>
 
 Emit human-readable warning messages on B<STDERR> when a TC string fails to
-parse. Off by default.
+parse, and when the B<--cmp-list> registry snapshot is older than 28 days.
+Off by default.
 
 =item B<--quiet>, B<-q>
 
@@ -738,7 +821,8 @@ B<1> — at least one TC string failed validation or could not be parsed.
 
 =item *
 
-B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists).
+B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists,
+unreachable C<--cmp-list> source).
 
 =back
 
@@ -757,6 +841,17 @@ B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists).
     # `jq -s` if you need a single JSON array.
     iabtcfv2 validate -v 32 -C 1,3 CO...AAA CO...BBB
     iabtcfv2 validate -v 32 -C 1,3 CO...AAA CO...BBB | jq -s .
+
+    # Reject TC strings that name an unknown or deleted CMP, using a
+    # local snapshot of the IAB CMP registry.
+    iabtcfv2 validate -v 32 --cmp-list /etc/iab/cmp-list.json CO...AAA
+
+    # Same, but fetching the registry over HTTPS through whatever
+    # proxy `https_proxy` points at.
+    iabtcfv2 validate -v 32 \
+        --cmp-list https://cmplist.consensu.org/v2/cmp-list.json \
+        --cmp-list-network-ok \
+        CO...AAA
 
 =head1 DESCRIPTION
 

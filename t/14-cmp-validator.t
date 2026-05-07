@@ -200,4 +200,174 @@ subtest "Validator integration: bad cmp_validator value croaks" => sub {
       "non-object, non-hashref cmp_validator croaks";
 };
 
+# A minimal HTTP::Tiny-compatible fake. One method (get); returns a
+# pre-canned response. Used to test the http_client injection path
+# without doing real network IO.
+{
+
+    package FakeHttp;
+
+    sub new {
+        my ( $klass, $response ) = @_;
+        bless { response => $response, calls => [] }, $klass;
+    }
+
+    sub get {
+        my ( $self, $url ) = @_;
+        push @{ $self->{calls} }, $url;
+        return $self->{response};
+    }
+}
+
+# A blessed object that does NOT respond to ->get. Used to assert the
+# constructor's can('get') validation.
+{
+
+    package NoGetMethod;
+    sub new { bless {}, shift }
+}
+
+subtest "CMPValidator: HTTP options round-trip" => sub {
+    my $v = GDPR::IAB::TCFv2::CMPValidator->new(
+        file => $cmp_file,
+        now  => $now_fresh,
+    );
+    is( $v->{verify_ssl}, 1,  "verify_ssl defaults to 1" );
+    is( $v->{timeout},    30, "timeout defaults to 30" );
+
+    my $v2 = GDPR::IAB::TCFv2::CMPValidator->new(
+        file       => $cmp_file,
+        now        => $now_fresh,
+        verify_ssl => 0,
+        timeout    => 60,
+    );
+    is( $v2->{verify_ssl}, 0,  "verify_ssl override accepted" );
+    is( $v2->{timeout},    60, "timeout override accepted" );
+};
+
+subtest "CMPValidator: http_client must be a blessed object with ->get" =>
+  sub {
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/',
+            network_ok  => 1,
+            http_client => { not_blessed => 1 },
+        );
+    }
+    qr/http_client must be a blessed object responding to ->get.*got HASH/,
+      "unblessed hashref croaks";
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/',
+            network_ok  => 1,
+            http_client => "a string",
+        );
+    }
+    qr/http_client must be a blessed object responding to ->get.*got a non-reference/,
+      "non-reference scalar croaks";
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/',
+            network_ok  => 1,
+            http_client => NoGetMethod->new,
+        );
+    }
+    qr/http_client must be a blessed object responding to ->get.*got NoGetMethod/,
+      "blessed object without a get method croaks";
+  };
+
+subtest "CMPValidator: http_client and verify_ssl/timeout are exclusive" =>
+  sub {
+    my $fake = FakeHttp->new( { success => 1, content => '{"cmps":{}}' } );
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/',
+            network_ok  => 1,
+            http_client => $fake,
+            verify_ssl  => 0,
+        );
+    }
+    qr/http_client and verify_ssl\/timeout are mutually exclusive/,
+      "http_client + verify_ssl croaks";
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/',
+            network_ok  => 1,
+            http_client => $fake,
+            timeout     => 60,
+        );
+    }
+    qr/http_client and verify_ssl\/timeout are mutually exclusive/,
+      "http_client + timeout croaks";
+  };
+
+subtest "CMPValidator: http_client injection drives load_from_url" => sub {
+
+    # Stable raw JSON for two known CMPs; lastUpdated kept fresh so no
+    # staleness warning leaks into the test output.
+    my $json = '{"lastUpdated":"2026-04-01T00:00:00Z",'
+      . '"cmps":{"7":{"id":7},"42":{"id":42}}}';
+
+    my $fake = FakeHttp->new( { success => 1, content => $json } );
+
+    my $v = GDPR::IAB::TCFv2::CMPValidator->new(
+        url         => 'https://does-not-matter.example/cmp.json',
+        network_ok  => 1,
+        http_client => $fake,
+        now         => $now_fresh,
+    );
+
+    is_deeply $fake->{calls},
+      ['https://does-not-matter.example/cmp.json'],
+      "the URL passed to ->get was the URL given to the constructor";
+
+    ok $v->is_valid(7),   "CMP 7 from injected response is valid";
+    ok $v->is_valid(42),  "CMP 42 from injected response is valid";
+    ok !$v->is_valid(99), "CMP 99 is unknown (proves the response was used)";
+};
+
+subtest "CMPValidator: failed http_client response croaks with the reason" =>
+  sub {
+    my $fake = FakeHttp->new(
+        { success => 0, status => 599, reason => "Connection refused" } );
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url         => 'https://example.invalid/cmp.json',
+            network_ok  => 1,
+            http_client => $fake,
+        );
+    }
+    qr/Failed to fetch CMP list.*Connection refused/,
+      "failed response surfaces the reason text";
+  };
+
+subtest "CMPValidator: env_proxy is honored on the default client" => sub {
+
+    # Proves the default HTTP::Tiny is constructed with env_proxy => 1
+    # by setting an unreachable proxy and asserting the failure mentions
+    # it. Skip if the surrounding environment already has a real proxy
+    # configured -- we don't want to disturb the user's shell.
+    plan skip_all => "http_proxy already set in env"
+      if $ENV{http_proxy} || $ENV{HTTP_PROXY};
+    plan skip_all => "HTTP::Tiny not installed"
+      unless eval { require HTTP::Tiny; 1 };
+
+    local $ENV{http_proxy} = 'http://127.0.0.1:1';
+
+    throws_ok {
+        GDPR::IAB::TCFv2::CMPValidator->new(
+            url        => 'http://example.invalid/cmp.json',
+            network_ok => 1,
+            timeout    => 2,
+        );
+    }
+    qr/Failed to fetch CMP list/,
+      "fetch fails with the unreachable proxy in env (env_proxy was applied)";
+};
+
 done_testing;
