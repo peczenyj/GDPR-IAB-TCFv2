@@ -141,6 +141,72 @@ subtest
     );
   };
 
+subtest
+  'Validator::Result: P1 LI carve-out emits ReasonLegitimateInterestNotPermittedForPurpose'
+  => sub {
+
+    # Policy version 2 fixture; vendor 1 has the LI bit but the spec
+    # forbids LI for Purpose 1 regardless of the bit. The validator
+    # detects this *before* delegating to the parser, so the failure
+    # carries the carve-out code and not the generic LI vendor code.
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 1,
+        legitimate_interest_purpose_ids => [1],
+    );
+    my $result = $validator->validate($tc_string);
+
+    ok( !$result, 'P1 LI is rejected at any policy version' );
+
+    my @failures = $result->failures;
+    is( scalar @failures, 1, 'fail-fast yields exactly one failure' );
+
+    is( $failures[0]->code, ReasonLegitimateInterestNotPermittedForPurpose,
+        'code is ReasonLegitimateInterestNotPermittedForPurpose'
+    );
+    is( $failures[0]->purpose_id, 1, 'purpose_id is 1' );
+    is( $failures[0]->vendor_id,  1, 'vendor_id is set on the failure' );
+    is( $failures[0]->message,
+        'legitimate interest not permitted for purpose 1',
+        'message describes the carve-out'
+    );
+  };
+
+subtest
+  'Validator::Result: P3 LI carve-out only fires on TCF v2.2+ (policy >= 4)'
+  => sub {
+
+    # Policy version 5 fixture (TCF v2.2+). Vendor 32 has both consent
+    # and LI bits, but the spec forbids LI for Purposes 3-6 at this
+    # policy version regardless of the bit.
+    my $tc_v22 =
+      'CP188cAQKFpAAAHABBENBSFsAP_gAEPgAAiQKqNX_H__bW9r8X73aft0eY1P9_j77uQxBhfJE-4FzLvW_JwXx2ExNA36tqIKmRIEu3bBIQNlHJHUTVigaogVryHMak2cpTNKJ6BkiFMRM2dYCF5vm4tj-QKY5_r993dx2D-t_dv83dzyz81Hn3f5_2e0eLCdQ5-tDfv9bROb-9IPd_78v4v8_l_rk2_eT1n_tevr7D_-ft8__XW_9_fff_9Pn_-uB_-_3_vf_EFUwCTDQqIA-wJCQg0DCKBACoKwgIoFAQAAJA0QEAJgwKdgYALrCRACAFAAMEAIAAQZAAgAAAgAQiACQAoEAAEAgUAAYAEAwEABAwAAgAsBAIAAQHQMUwIIFAsIEjMioUwIQoEggJbKhBICgQVwhCLPAIgERMFAAgAAAVgACAsFgcSSAlQkECXUG0AABAAgFEIFQgk9MAAwJmy1B4MG0ZWmAYPmCRDTAMgCIIyEAAAA.f_wACHwAAAAA';
+
+    my $validator_v22 = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 32,
+        legitimate_interest_purpose_ids => [3],
+    );
+    my $result_v22 = $validator_v22->validate($tc_v22);
+
+    ok( !$result_v22, 'P3 LI rejected at policy 5' );
+    my @f22 = $result_v22->failures;
+    is( $f22[0]->code, ReasonLegitimateInterestNotPermittedForPurpose,
+        'P3 at policy 5 → carve-out reason'
+    );
+    is( $f22[0]->purpose_id, 3, 'purpose_id is 3' );
+
+    # Same purpose ID against the policy-2 fixture: carve-out does NOT
+    # apply (P3-6 carve-out only kicks in at policy >= 4). Vendor 1 has
+    # both purpose 3 LI and vendor LI in this fixture, so this should
+    # actually pass — confirming the carve-out is policy-version gated.
+    my $validator_v20 = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 1,
+        legitimate_interest_purpose_ids => [3],
+    );
+    my $result_v20 = $validator_v20->validate($tc_string);
+
+    ok( $result_v20, 'P3 LI passes at policy 2 (carve-out does not apply)' );
+  };
+
 subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
     require GDPR::IAB::TCFv2::CMPValidator;
 

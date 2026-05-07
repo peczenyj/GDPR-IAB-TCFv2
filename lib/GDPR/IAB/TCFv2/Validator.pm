@@ -240,8 +240,35 @@ sub _check_consent_purposes {
 sub _check_li_purposes {
     my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
 
+    my $policy_version = $tc->policy_version;
+
     foreach my $pid ( @{ $self->{legitimate_interest_purpose_ids} } ) {
-        my $allowed = $self->{_flexible_set}->{$pid}
+        my $is_flexible = $self->{_flexible_set}->{$pid};
+
+        # TCF carve-out: legitimate interest is never permitted for
+        # Purpose 1, and is forbidden for Purposes 3-6 in TCF v2.2+
+        # (TcfPolicyVersion >= 4). When the configured basis is LI and
+        # the purpose is not flexible, this is a configuration the
+        # spec cannot satisfy regardless of the vendor's signals; emit
+        # the dedicated reason instead of the generic LI failure so
+        # callers can distinguish "spec forbids this" from "vendor
+        # missing the LI bit".
+        if ( !$is_flexible
+            && _li_carve_out_applies( $pid, $policy_version ) )
+        {
+            push @{$failures},
+              GDPR::IAB::TCFv2::Validator::Failure->new(
+                code    => ReasonLegitimateInterestNotPermittedForPurpose,
+                message =>
+                  "legitimate interest not permitted for purpose $pid",
+                purpose_id => $pid,
+                vendor_id  => $vendor_id,
+              );
+            return if $stop_on_first;
+            next;
+        }
+
+        my $allowed = $is_flexible
           ? $tc->is_vendor_allowed_for_flexible_purpose(
             $vendor_id, $pid, 1,
             strict => $strict
@@ -264,6 +291,14 @@ sub _check_li_purposes {
         }
     }
     return;
+}
+
+sub _li_carve_out_applies {
+    my ( $pid, $policy_version ) = @_;
+
+    return 1 if $pid == 1;
+    return 1 if $pid >= 3 && $pid <= 6 && $policy_version >= 4;
+    return 0;
 }
 
 
