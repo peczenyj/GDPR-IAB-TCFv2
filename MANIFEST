@@ -46,3 +46,4 @@ t/corpus/gdpr_subset.txt
 t/corpus/golden.jsonl.gz
 t/corpus/validator_scenarios.pl
 t/generate_golden.pl
+TODO.pod

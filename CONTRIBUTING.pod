@@ -21,6 +21,21 @@ to render it in a terminal:
 
     perldoc CONTRIBUTING.pod
 
+=head1 PROJECT STATUS
+
+As of 2026-05-08 (the v0.400 release), C<GDPR-IAB-TCFv2> is in
+B<maintenance mode>. Bug fixes, security fixes, CPAN-tester
+regressions, and IAB-spec updates remain in scope. Larger feature work
+-- roadmap Phases 7-9, the distribution items (DockerHub automation,
+Debian package), and the sister-distribution ideas -- is now tracked
+as B<help-wanted> issues on GitHub.
+
+If you are looking for a place to contribute, the
+L<help-wanted issues|https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=is%3Aopen+label%3Ahelp-wanted>
+are the curated entry point. F<TODO.pod> at the repository root has
+the full ecosystem and roadmap context, including suggested API
+sketches and test scopes for each item.
+
 =head1 PATCHING, STEP BY STEP
 
 =over 4
