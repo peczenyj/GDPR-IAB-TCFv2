@@ -25,6 +25,9 @@ sub _clean_error {
   my $err = shift;
   return "" unless defined $err;
 
+  # If it's a reference (e.g. an exception object), return it as-is
+  return $err if ref $err;
+
   # Strip Perl/Carp's automatic " at ... line ..." location suffix
   $err =~ s/ at \S+ line \d+\.?\n?\z//;
   chomp $err;
