@@ -106,6 +106,14 @@
     *   Add `iabtcfv2 config` (or `validate --print-config`) to dump the resolved configuration as JSON for debugging.
     *   **Tests:** a CLI subtest that sets the env vars, runs `validate` without the matching flags, and asserts the same outcome as the explicit invocation.
 
+## Phase 10: Advanced Error Handling
+*   **Goal:** Modernize exception handling across the library.
+*   **Tasks:**
+    *   [ ] Implement `GDPR::IAB::TCFv2::Error` exception objects.
+    *   [ ] Overload stringification to provide clean messages while retaining metadata (code, file, line).
+    *   [ ] Refactor `croak`/`die` calls in the library to throw objects.
+    *   [ ] Update CLI to catch objects and simplify its sanitization logic.
+
 ## Distribution
 *   [ ] Distribute CLI tool as Docker image via DockerHub.
     *   Create multi-stage `Dockerfile`.
