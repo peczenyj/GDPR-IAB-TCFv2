@@ -144,14 +144,19 @@ GDPR::IAB::TCFv2::PublisherRestrictions - TCF v2.3 publisher restrictions parser
 
 =head1 SYNOPSIS
 
+    use GDPR::IAB::TCFv2::PublisherRestrictions;
+    my $data = '...'; # raw binary data
+
     my $publisher_restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data      => substr($self->{data}, OFFSET ),
-        data_size => length($self->{data}),
-        options => { json => ... },
+        data      => $data,
+        data_size => length($data),
+        offset    => 213,
+        options   => { json => {} },
     );
 
-    say "there is publisher restriction on purpose id 1, type 0 on vendor 284"
-        if $publisher_restrictions->check_restriction(1, 0, 284);
+    if ($publisher_restrictions->check_restriction(1, 0, 284)) {
+        # ...
+    }
 
 =head1 CONSTRUCTOR
 
