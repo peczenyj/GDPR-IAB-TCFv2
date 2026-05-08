@@ -104,7 +104,8 @@ sub reason_string {
         }
     }
 
-    return $_CODE_TO_STRING{$code} // "unknown validation failure";
+    my $string = $_CODE_TO_STRING{$code};
+    return defined($string) ? $string : "unknown validation failure";
 }
 
 our @EXPORT_OK = qw<

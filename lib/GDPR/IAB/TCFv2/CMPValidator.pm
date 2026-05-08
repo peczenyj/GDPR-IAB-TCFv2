@@ -4,9 +4,14 @@ use strict;
 use warnings;
 
 use Carp         qw<croak carp>;
-use JSON::PP     ();
 use Scalar::Util qw<blessed>;
-use Time::Piece;
+
+
+# JSON::PP and Time::Piece are loaded lazily (see load_from_data and
+# _parse_date). They are listed under META "recommends" rather than
+# hard-required so the base parser doesn't pull them in for callers
+# that never opt into CMPValidator. The HTTP::Tiny dependency is
+# handled the same way in load_from_url.
 
 sub new {
     my ( $klass, %args ) = @_;
@@ -79,7 +84,8 @@ sub load_from_file {
 sub load_from_url {
     my ( $self, $url ) = @_;
 
-    my $client = $self->{http_client} // do {
+    my $client = $self->{http_client};
+    unless ( defined $client ) {
         eval { require HTTP::Tiny; 1 }
           or croak "HTTP::Tiny is required to load CMP list from URL. "
           . "Please install it or use a local file instead.";
@@ -88,12 +94,12 @@ sub load_from_url {
         # verify_SSL => 1 (default): pin the secure default regardless
         # of the installed HTTP::Tiny version (older versions defaulted
         # to 0).
-        HTTP::Tiny->new(
+        $client = HTTP::Tiny->new(
             env_proxy  => 1,
             verify_SSL => $self->{verify_ssl},
             timeout    => $self->{timeout},
         );
-    };
+    }
 
     my $response = $client->get($url);
     croak "Failed to fetch CMP list from '$url': $response->{reason}"
@@ -104,6 +110,10 @@ sub load_from_url {
 
 sub load_from_data {
     my ( $self, $json_text ) = @_;
+
+    eval { require JSON::PP; 1 }
+      or croak "JSON::PP is required to decode the CMP list. "
+      . "Please install it (it is core in Perl 5.14+).";
 
     my $data = eval { JSON::PP->new->utf8->decode($json_text) };
     croak "Failed to decode CMP list JSON: $@" if $@;
@@ -166,6 +176,11 @@ sub _parse_date {
     # and the timezone suffix (always Z in the IAB feed) before handing
     # to Time::Piece, which doesn't grok %z portably.
     if ( $date_str =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/ ) {
+        eval { require Time::Piece; 1 }
+          or croak "Time::Piece is required to parse the CMP list "
+          . "lastUpdated timestamp. Please install it (it is core in "
+          . "Perl 5.10+).";
+
         my $t_str = "$1-$2-$3 $4:$5:$6";
         my $epoch =
           eval { Time::Piece->strptime( $t_str, "%Y-%m-%d %H:%M:%S" )->epoch; };

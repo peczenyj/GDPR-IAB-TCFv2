@@ -9,7 +9,16 @@ WriteMakefile(
     MIN_PERL_VERSION => 5.008,
     EXE_FILES        => ['bin/iabtcfv2'],
     TEST_REQUIRES    => {
+
+        # JSON::PP and Time::Piece are listed here (rather than under
+        # PREREQ_PM) because they are runtime deps of the optional
+        # CMPValidator feature only. The lib/ side lazy-requires them
+        # at first use; we still need them installed in the test
+        # environment so t/14-cmp-validator.t can exercise the feature.
+        # End-user installs that opt into CMPValidator should also pull
+        # them in via the META `recommends` block.
         'JSON::PP'               => 0,
+        'Time::Piece'            => 0,
         'Test::Exception'        => 0.43,
         'Test::More'             => 0.94,
         'Test::Pod'              => 0,
@@ -38,6 +47,16 @@ WriteMakefile(
                     },
                 },
                 recommends => {
+
+                    # CMPValidator opt-in feature: lazy-required at first
+                    # use, with a clear croak when missing. Listed here
+                    # so toolchains that honor `recommends` install them
+                    # automatically; base parser users do not pay the
+                    # dep cost.
+                    'JSON::PP'    => 0,
+                    'Time::Piece' => 0,
+                    'HTTP::Tiny'  => 0,
+
                     'JSON'               => 0,
                     'JSON::XS'           => 0,
                     'DateTimeX::TO_JSON' => 0,
