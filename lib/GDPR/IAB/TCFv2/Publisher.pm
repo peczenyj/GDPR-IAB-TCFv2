@@ -105,15 +105,22 @@ Combines the creation of L<GDPR::IAB::TCFv2::PublisherRestrictions> and L<GDPR::
 
 =head1 SYNOPSIS
 
+    use GDPR::IAB::TCFv2::Publisher;
+    my $core_data = '...'; # raw binary
+    my $core_data_size = length($core_data);
+    my $publisher_tc_data = '...';
+
     my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
         core_data         => $core_data,
         core_data_size    => $core_data_size,
+        offset            => 284,
         publisher_tc_data => $publisher_tc_data, # optional
-        options           => { json => ... },
+        options           => { json => {} },
     );
 
-    say "there is publisher restriction on purpose id 1, type 0 on vendor_id 284"
-        if $publisher->check_restriction(1, 0, 284);
+    if ($publisher->check_restriction(1, 0, 284)) {
+        # ...
+    }
 
 =head1 CONSTRUCTOR
 

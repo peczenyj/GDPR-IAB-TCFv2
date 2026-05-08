@@ -22,6 +22,7 @@ WriteMakefile(
     'Test::Exception'        => 0.43,
     'Test::More'             => 0.94,
     'Test::Pod'              => 0,
+    'Test::Synopsis'         => 0,
     'Test::Warn'             => 0.30,
     'IO::Compress::Gzip'     => 0,
     'IO::Uncompress::Gunzip' => 0,

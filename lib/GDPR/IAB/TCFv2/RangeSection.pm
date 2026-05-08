@@ -215,19 +215,22 @@ GDPR::IAB::TCFv2::RangeSection - TCF v2.3 range section parser
 
 =head1 SYNOPSIS
 
-    my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
+    use GDPR::IAB::TCFv2::RangeSection;
+    my $data = '...'; # raw binary data
     
-    my $max_id_consent = << get 16 bits from $data offset 213 >>
+    my $max_id_consent = 100;
 
     my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
         data      => $data,
         data_size => length($data),
         offset    => 230,             # offset for vendor ranges
         max_id    => $max_id_consent,
-        prefetch  => 284,             # will cache the result of vendor id 284
+        options   => { json => {} },
     );
 
-    say "range section contains id 284" if $range_section->contains(284);
+    if ($range_section->contains(284)) {
+        # ...
+    }
 
 =head1 CONSTRUCTOR
 

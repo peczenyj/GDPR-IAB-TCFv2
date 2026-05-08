@@ -50,6 +50,7 @@ GDPR::IAB::TCFv2::Validator::Result - outcome object returned by L<GDPR::IAB::TC
 
 =head1 SYNOPSIS
 
+    my ($validator, $tc_string) = ('...', '...');
     my $result = $validator->validate($tc_string);
 
     if ($result) {
@@ -57,7 +58,9 @@ GDPR::IAB::TCFv2::Validator::Result - outcome object returned by L<GDPR::IAB::TC
     }
     else {
         warn "$result\n";                 # one reason per line by default
-        for my $reason ( $result->reasons ) { ... }
+        for my $reason ( $result->reasons ) {
+             warn $reason;
+        }
     }
 
     # Use Perl's output record separator to control how reasons join:

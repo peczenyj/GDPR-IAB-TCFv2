@@ -958,9 +958,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say $consent->consent_language;    # "EN"
     say $consent->vendor_list_version; # 23
 
-    use List::MoreUtils qw<all>;
-
-    say "find consent for purpose ids 1, 3, 9 and 10" if all {
+    say "find consent for purpose ids 1, 3, 9 and 10" if 4 == grep {
         $consent->is_purpose_consent_allowed($_)
     } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
         InfoStorageAccess,       #  1
@@ -992,15 +990,16 @@ the predicates above together by hand:
         legitimate_interest_purpose_ids => [ 7 ],
     );
 
-    my $result = $validator->validate($consent);   # fail-fast
-    # ...or $validator->validate_all($consent) to accumulate every reason
+    my $tc_string = '...';
+    my $result = $validator->validate($tc_string);   # fail-fast
+    # ...or $validator->validate_all($tc_string) to accumulate every reason
 
     if ($result) {
         # vendor 284 has every required permission
     }
     else {
         warn "compliance failed: $result\n";   # stringifies to the reasons
-        log_failure($_) for $result->reasons;
+        warn $_ for $result->reasons;
     }
 
 =head1 COMMAND LINE TOOLS

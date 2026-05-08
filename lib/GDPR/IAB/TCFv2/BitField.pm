@@ -117,18 +117,21 @@ GDPR::IAB::TCFv2::BitField - TCF v2.3 bitfield parser
 
 =head1 SYNOPSIS
 
-    my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
+    use GDPR::IAB::TCFv2::BitField;
+    my $data = '...'; # raw binary data
     
-    my $max_id_consent = << get 16 bits from $data offset 213 >>
+    my $max_id_consent = 100;
 
-    my $bit_field = GDPR::IAB::TCFv2::BitField->Parse(
-        data      => substr($data, OFFSET),
+    my ($bit_field) = GDPR::IAB::TCFv2::BitField->Parse(
+        data      => $data,
         data_size => length($data),
         max_id    => $max_id_consent,
-        options   => { json => ... },
+        options   => { json => {} },
     );
 
-    say "bit field contains id 284" if $bit_field->contains(284);
+    if ($bit_field->contains(284)) {
+        # ...
+    }
 
 =head1 CONSTRUCTOR
 

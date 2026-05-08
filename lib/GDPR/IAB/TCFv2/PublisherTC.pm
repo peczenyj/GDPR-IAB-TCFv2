@@ -167,16 +167,20 @@ GDPR::IAB::TCFv2::PublisherTC - TCF v2.3 publisher TC section parser
 
 =head1 SYNOPSIS
 
+    use GDPR::IAB::TCFv2::PublisherTC;
+    my $publisher_tc_data = '...';
+
     my $publisher_tc = GDPR::IAB::TCFv2::PublisherTC->Parse(
         data         => $publisher_tc_data,
-        data_size    => length($publisher_tc_data),
-        options      => { json => ... },
+        data_size    => length($publisher_tc_data) * 8,
+        options      => { json => {} },
     );
 
-    say "publisher declares ", $publisher_tc->num_custom_purposes, " custom purposes";
+    my $num = $publisher_tc->num_custom_purposes;
 
-    say "publisher consents to purpose 1"
-        if $publisher_tc->is_purpose_consent_allowed(1);
+    if ($publisher_tc->is_purpose_consent_allowed(1)) {
+        # ...
+    }
 
 =head1 CONSTRUCTOR
 
