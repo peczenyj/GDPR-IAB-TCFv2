@@ -149,6 +149,10 @@ Key C<data_size> is the original binary data size
 
 =item *
 
+Key C<offset> is the bit offset. Optional (defaults to 0).
+
+=item *
+
 Key C<max_id> is the max id (used to validate the ranges if all data is between 1 and  C<max_id>)
 
 =item *

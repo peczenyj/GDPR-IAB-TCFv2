@@ -11,7 +11,6 @@ use POSIX        qw<strftime>;
 
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
-  get_uint2
   get_uint3
   get_uint6
   get_uint12

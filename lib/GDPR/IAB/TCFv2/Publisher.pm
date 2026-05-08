@@ -138,6 +138,10 @@ Key C<core_data_size> is the original binary core data size
 
 =item *
 
+Key C<offset> is the bit offset where the publisher section starts
+
+=item *
+
 Key C<publisher_tc_data> is the binary publisher data. Optional.
 
 =item *
