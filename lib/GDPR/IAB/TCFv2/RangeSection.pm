@@ -8,197 +8,176 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
 use Carp                       qw<croak>;
 
 sub Parse {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    croak "missing 'data'"      unless defined $args{data};
-    croak "missing 'data_size'" unless defined $args{data_size};
-    croak "missing 'offset'"    unless defined $args{offset};
-    croak "missing 'max_id'"
-      unless defined $args{max_id};
+  croak "missing 'data'"      unless defined $args{data};
+  croak "missing 'data_size'" unless defined $args{data_size};
+  croak "missing 'offset'"    unless defined $args{offset};
+  croak "missing 'max_id'"    unless defined $args{max_id};
 
-    croak "missing 'options'"      unless defined $args{options};
-    croak "missing 'options.json'" unless defined $args{options}->{json};
+  croak "missing 'options'"      unless defined $args{options};
+  croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $data      = $args{data};
-    my $data_size = $args{data_size};
-    my $offset    = $args{offset};
-    my $max_id    = $args{max_id};
-    my $options   = $args{options};
+  my $data      = $args{data};
+  my $data_size = $args{data_size};
+  my $offset    = $args{offset};
+  my $max_id    = $args{max_id};
+  my $options   = $args{options};
 
-    Carp::confess
-      "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
-      if $data_size < 31;
+  Carp::confess "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
+    if $data_size < 31;
 
-    my %prefetch;
-    my %cache;
+  my %prefetch;
+  my %cache;
 
-    if ( exists $options->{prefetch} ) {
-        my $vendor_ids = $options->{prefetch};
+  if (exists $options->{prefetch}) {
+    my $vendor_ids = $options->{prefetch};
 
-        foreach my $vendor_id ( @{$vendor_ids} ) {
-            $prefetch{$vendor_id} = 1;
-            $cache{$vendor_id}    = 0;
-        }
+    foreach my $vendor_id (@{$vendor_ids}) {
+      $prefetch{$vendor_id} = 1;
+      $cache{$vendor_id}    = 0;
     }
+  }
 
-    my $self = {
-        ranges  => [],
-        cache   => \%cache,
-        max_id  => $max_id,
-        options => $options,
-    };
+  my $self = {ranges => [], cache => \%cache, max_id => $max_id, options => $options,};
 
-    bless $self, $klass;
+  bless $self, $klass;
 
-    my $next_offset = $self->_parse( $data, $data_size, $offset, \%prefetch );
+  my $next_offset = $self->_parse($data, $data_size, $offset, \%prefetch);
 
-    return ( $self, $next_offset );
+  return ($self, $next_offset);
 }
 
 sub _parse {
-    my ( $self, $data, $data_size, $offset, $prefetch ) = @_;
+  my ($self, $data, $data_size, $offset, $prefetch) = @_;
 
-    my ( $num_entries, $next_offset ) = get_uint12( $data, $offset );
+  my ($num_entries, $next_offset) = get_uint12($data, $offset);
 
-    foreach my $i ( 1 .. $num_entries ) {
-        $next_offset = $self->_parse_range(
-            $data,
-            $data_size,
-            $next_offset,
-            $prefetch,
-        );
-    }
+  foreach my $i (1 .. $num_entries) {
+    $next_offset = $self->_parse_range($data, $data_size, $next_offset, $prefetch,);
+  }
 
-    return $next_offset;
+  return $next_offset;
 }
 
 sub _parse_range {
-    my ( $self, $data, $data_size, $offset, $prefetch ) = @_;
+  my ($self, $data, $data_size, $offset, $prefetch) = @_;
 
-    croak
-      "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
-      if $data_size <= $offset / 8;
+  croak "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
+    if $data_size <= $offset / 8;
 
-    my $max_id = $self->{max_id};
+  my $max_id = $self->{max_id};
 
-    # If the first bit is set, it's a Range of IDs
-    my ( $is_range, $next_offset ) = is_set $data, $offset;
-    if ($is_range) {
-        my ( $start, $end );
+  # If the first bit is set, it's a Range of IDs
+  my ($is_range, $next_offset) = is_set $data, $offset;
+  if ($is_range) {
+    my ($start, $end);
 
-        ( $start, $next_offset ) = get_uint16( $data, $next_offset );
-        ( $end,   $next_offset ) = get_uint16( $data, $next_offset );
+    ($start, $next_offset) = get_uint16($data, $next_offset);
+    ($end,   $next_offset) = get_uint16($data, $next_offset);
 
-        croak
-          "bit $offset range entry exclusion starts at $start, but the min vendor ID is 1"
-          if 1 > $start;
+    croak "bit $offset range entry exclusion starts at $start, but the min vendor ID is 1" if 1 > $start;
 
-        croak
-          "bit $offset range entry exclusion ends at $end, but the max vendor ID is $max_id"
-          if $end > $max_id;
+    croak "bit $offset range entry exclusion ends at $end, but the max vendor ID is $max_id" if $end > $max_id;
 
-        croak "start $start can't be bigger than end $end" if $start > $end;
+    croak "start $start can't be bigger than end $end" if $start > $end;
 
-        push @{ $self->{ranges} }, [ $start, $end ];
+    push @{$self->{ranges}}, [$start, $end];
 
-        foreach my $vendor_id ( keys %{$prefetch} ) {
-            $self->{cache}->{$vendor_id} = delete( $prefetch->{$vendor_id} )
-              if $start <= $vendor_id && $vendor_id <= $end;
-        }
-
-        return $next_offset;
+    foreach my $vendor_id (keys %{$prefetch}) {
+      $self->{cache}->{$vendor_id} = delete($prefetch->{$vendor_id}) if $start <= $vendor_id && $vendor_id <= $end;
     }
 
-    my $vendor_id;
-
-    ( $vendor_id, $next_offset ) = get_uint16( $data, $next_offset );
-
-    croak
-      "bit $offset range entry exclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
-      if 1 > $vendor_id || $vendor_id > $max_id;
-
-    push @{ $self->{ranges} }, [ $vendor_id, $vendor_id ];
-
-    $self->{cache}->{$vendor_id} = delete( $prefetch->{$vendor_id} )
-      if exists $prefetch->{$vendor_id};
-
     return $next_offset;
+  }
+
+  my $vendor_id;
+
+  ($vendor_id, $next_offset) = get_uint16($data, $next_offset);
+
+  croak "bit $offset range entry exclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
+    if 1 > $vendor_id || $vendor_id > $max_id;
+
+  push @{$self->{ranges}}, [$vendor_id, $vendor_id];
+
+  $self->{cache}->{$vendor_id} = delete($prefetch->{$vendor_id}) if exists $prefetch->{$vendor_id};
+
+  return $next_offset;
 }
 
 sub max_id {
-    my $self = shift;
+  my $self = shift;
 
-    return $self->{max_id};
+  return $self->{max_id};
 }
 
 sub contains {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    croak "invalid vendor id $id: must be positive integer bigger than 0"
-      if $id < 1;
+  croak "invalid vendor id $id: must be positive integer bigger than 0" if $id < 1;
 
-    return $self->{cache}->{$id} if exists $self->{cache}->{$id};
+  return $self->{cache}->{$id} if exists $self->{cache}->{$id};
 
-    return if $id > $self->{max_id};
+  return if $id > $self->{max_id};
 
-    foreach my $range ( @{ $self->{ranges} } ) {
-        return 1 if $range->[0] <= $id && $id <= $range->[1];
-    }
+  foreach my $range (@{$self->{ranges}}) {
+    return 1 if $range->[0] <= $id && $id <= $range->[1];
+  }
 
-    return 0;
+  return 0;
 }
 
 sub all {
-    my $self = shift;
+  my $self = shift;
 
-    my @vendors;
-    foreach my $range ( @{ $self->{ranges} } ) {
-        push @vendors, $range->[0] .. $range->[1];
-    }
+  my @vendors;
+  foreach my $range (@{$self->{ranges}}) {
+    push @vendors, $range->[0] .. $range->[1];
+  }
 
-    return \@vendors;
+  return \@vendors;
 }
 
 sub TO_JSON {
-    my ( $self, $filter_id ) = @_;
+  my ($self, $filter_id) = @_;
 
-    if ( defined $filter_id ) {
-        my $val = $self->contains($filter_id);
+  if (defined $filter_id) {
+    my $val = $self->contains($filter_id);
 
-        if ( !!$self->{options}->{json}->{compact} ) {
-            return $val ? [$filter_id] : [];
-        }
-
-        my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
-        my $bool_val = $val ? $true : $false;
-
-        if ( !!$self->{options}->{json}->{verbose} ) {
-            return { $filter_id => $bool_val };
-        }
-
-        return $val ? { $filter_id => $true } : {};
+    if (!!$self->{options}->{json}->{compact}) {
+      return $val ? [$filter_id] : [];
     }
 
-    return $self->all if !!$self->{options}->{json}->{compact};
+    my ($false, $true) = @{$self->{options}->{json}->{boolean_values}};
+    my $bool_val = $val ? $true : $false;
 
-    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
-
-    my %map;
-    if ( !!$self->{options}->{json}->{verbose} ) {
-        %map = map { $_ => $false } 1 .. $self->{max_id};
+    if (!!$self->{options}->{json}->{verbose}) {
+      return {$filter_id => $bool_val};
     }
 
-    # Direct hash-element assignment per range; the previous form
-    # `%map = ( %map, map { $_ => $true } ... )` re-copied the running
-    # hash into a list every iteration, accidentally O(n^2) over the
-    # number of vendor IDs already accumulated.
-    foreach my $range ( @{ $self->{ranges} } ) {
-        for my $id ( $range->[0] .. $range->[1] ) {
-            $map{$id} = $true;
-        }
-    }
+    return $val ? {$filter_id => $true} : {};
+  }
 
-    return \%map;
+  return $self->all if !!$self->{options}->{json}->{compact};
+
+  my ($false, $true) = @{$self->{options}->{json}->{boolean_values}};
+
+  my %map;
+  if (!!$self->{options}->{json}->{verbose}) {
+    %map = map { $_ => $false } 1 .. $self->{max_id};
+  }
+
+  # Direct hash-element assignment per range; the previous form
+  # `%map = ( %map, map { $_ => $true } ... )` re-copied the running
+  # hash into a list every iteration, accidentally O(n^2) over the
+  # number of vendor IDs already accumulated.
+  foreach my $range (@{$self->{ranges}}) {
+    for my $id ($range->[0] .. $range->[1]) {
+      $map{$id} = $true;
+    }
+  }
+
+  return \%map;
 }
 
 1;

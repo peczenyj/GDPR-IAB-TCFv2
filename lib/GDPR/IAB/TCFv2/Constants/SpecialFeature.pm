@@ -7,18 +7,18 @@ use base qw<Exporter>;
 
 use constant {
 
-    # Short, established names -- supported indefinitely.
-    Geolocation => 1,
-    DeviceScan  => 2,
+  # Short, established names -- supported indefinitely.
+  Geolocation => 1,
+  DeviceScan  => 2,
 
-    # TCF v2.3 spec-aligned long-form aliases (Phase 3).
-    UsePreciseGeolocationData                          => 1,
-    ActivelyScanDeviceCharacteristicsForIdentification => 2,
+  # TCF v2.3 spec-aligned long-form aliases (Phase 3).
+  UsePreciseGeolocationData                          => 1,
+  ActivelyScanDeviceCharacteristicsForIdentification => 2,
 };
 
 use constant SpecialFeatureDescription => {
-    Geolocation => "Use precise geolocation data",
-    DeviceScan  => "Actively scan device characteristics for identification"
+  Geolocation => "Use precise geolocation data",
+  DeviceScan  => "Actively scan device characteristics for identification"
 };
 
 our @EXPORT_OK = qw<
@@ -29,7 +29,7 @@ our @EXPORT_OK = qw<
   SpecialFeatureDescription
 >;
 
-our %EXPORT_TAGS = ( all => \@EXPORT_OK );
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 1;
 

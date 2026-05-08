@@ -9,93 +9,85 @@ use GDPR::IAB::TCFv2::PublisherTC;
 
 
 sub Parse {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    croak "missing 'core_data'"      unless defined $args{core_data};
-    croak "missing 'core_data_size'" unless defined $args{core_data_size};
+  croak "missing 'core_data'"      unless defined $args{core_data};
+  croak "missing 'core_data_size'" unless defined $args{core_data_size};
 
-    croak "missing 'options'"      unless defined $args{options};
-    croak "missing 'options.json'" unless defined $args{options}->{json};
+  croak "missing 'options'"      unless defined $args{options};
+  croak "missing 'options.json'" unless defined $args{options}->{json};
 
-    my $core_data      = $args{core_data};
-    my $core_data_size = $args{core_data_size};
+  my $core_data      = $args{core_data};
+  my $core_data_size = $args{core_data_size};
 
-    my $restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
-        data      => $core_data,
-        data_size => $core_data_size,
-        options   => $args{options},
+  my $restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
+    data      => $core_data,
+    data_size => $core_data_size,
+    options   => $args{options},
+  );
+
+  my $self = {restrictions => $restrictions, publisher_tc => undef,};
+
+  if (defined $args{publisher_tc_data}) {
+    my $publisher_tc_data      = $args{publisher_tc_data};
+    my $publisher_tc_data_size = $args{publisher_tc_data_size} || length($publisher_tc_data);
+
+    my $publisher_tc = GDPR::IAB::TCFv2::PublisherTC->Parse(
+      data      => $publisher_tc_data,
+      data_size => $publisher_tc_data_size,
+      options   => $args{options},
     );
 
-    my $self = {
-        restrictions => $restrictions,
-        publisher_tc => undef,
-    };
+    $self->{publisher_tc} = $publisher_tc;
+  }
 
-    if ( defined $args{publisher_tc_data} ) {
-        my $publisher_tc_data = $args{publisher_tc_data};
-        my $publisher_tc_data_size =
-          $args{publisher_tc_data_size} || length($publisher_tc_data);
+  bless $self, $klass;
 
-        my $publisher_tc = GDPR::IAB::TCFv2::PublisherTC->Parse(
-            data      => $publisher_tc_data,
-            data_size => $publisher_tc_data_size,
-            options   => $args{options},
-        );
-
-        $self->{publisher_tc} = $publisher_tc;
-    }
-
-    bless $self, $klass;
-
-    return $self;
+  return $self;
 }
 
 sub check_restriction {
-    my ( $self, $purpose_id, $restriction_type, $vendor_id ) = @_;
+  my ($self, $purpose_id, $restriction_type, $vendor_id) = @_;
 
-    return 0 unless defined $self->{restrictions};
+  return 0 unless defined $self->{restrictions};
 
-    return $self->{restrictions}
-      ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+  return $self->{restrictions}->check_restriction($purpose_id, $restriction_type, $vendor_id);
 }
 
 sub restrictions {
-    my ( $self, $vendor_id ) = @_;
+  my ($self, $vendor_id) = @_;
 
-    return {} unless defined $self->{restrictions};
+  return {} unless defined $self->{restrictions};
 
-    return $self->{restrictions}->restrictions($vendor_id);
+  return $self->{restrictions}->restrictions($vendor_id);
 }
 
 sub has_restrictions {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      defined $self->{restrictions}
-      ? $self->{restrictions}->has_restrictions
-      : 0;
+  return defined $self->{restrictions} ? $self->{restrictions}->has_restrictions : 0;
 }
 
 sub publisher_tc {
-    my ( $self, $callback ) = @_;
+  my ($self, $callback) = @_;
 
-    return $self->{publisher_tc};
+  return $self->{publisher_tc};
 }
 
 sub TO_JSON {
-    my ( $self, $filter_id ) = @_;
+  my ($self, $filter_id) = @_;
 
-    my %tags;
+  my %tags;
 
-    if ( defined $self->{restrictions} ) {
-        $tags{restrictions} = $self->{restrictions}->TO_JSON($filter_id);
-    }
+  if (defined $self->{restrictions}) {
+    $tags{restrictions} = $self->{restrictions}->TO_JSON($filter_id);
+  }
 
-    if ( defined $self->{publisher_tc} ) {
-        %tags = ( %tags, %{ $self->{publisher_tc}->TO_JSON } );
-    }
+  if (defined $self->{publisher_tc}) {
+    %tags = (%tags, %{$self->{publisher_tc}->TO_JSON});
+  }
 
-    return \%tags;
+  return \%tags;
 }
 
 

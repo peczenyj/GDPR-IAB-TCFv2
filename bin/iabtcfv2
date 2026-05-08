@@ -3,488 +3,400 @@
 use strict;
 use warnings;
 
-use Getopt::Long
-  qw(GetOptionsFromArray :config pass_through require_order bundling);
+use Getopt::Long qw(GetOptionsFromArray :config pass_through require_order bundling);
 use Pod::Usage;
 use File::Spec;
 eval { require JSON; 1 } or require JSON::PP;
 use GDPR::IAB::TCFv2;
 
-use constant {
-    EXIT_SUCCESS     => 0,
-    EXIT_PARSE_ERROR => 1,
-};
+use constant {EXIT_SUCCESS => 0, EXIT_PARSE_ERROR => 1,};
 
 my $script_path = File::Spec->rel2abs($0);
 
 sub _json_false {
-    return JSON->can('false') ? JSON->false() : JSON::PP::false();
+  return JSON->can('false') ? JSON->false() : JSON::PP::false();
 }
 
 sub _json_true {
-    return JSON->can('true') ? JSON->true() : JSON::PP::true();
+  return JSON->can('true') ? JSON->true() : JSON::PP::true();
 }
 
 my %global_opts;
-GetOptions(
-    'help|h'    => \$global_opts{help},
-    'man'       => \$global_opts{man},
-    'version|V' => \$global_opts{version},
-  )
-  or pod2usage(
-    -input    => $script_path, -exitval => 2, -verbose => 99,
-    -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
-  );
+GetOptions('help|h' => \$global_opts{help}, 'man' => \$global_opts{man}, 'version|V' => \$global_opts{version},)
+  or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 
-if ( $global_opts{version} ) {
-    print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
-    exit EXIT_SUCCESS;
+if ($global_opts{version}) {
+  print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
+  exit EXIT_SUCCESS;
 }
 
-if ( $global_opts{help} ) {
-    _show_help( $ARGV[0] );
+if ($global_opts{help}) {
+  _show_help($ARGV[0]);
 }
-pod2usage( -input => $script_path, -exitval => 1, -verbose => 2 )
-  if $global_opts{man};
+pod2usage(-input => $script_path, -exitval => 1, -verbose => 2) if $global_opts{man};
 
 my $subcommand = shift @ARGV || 'help';
 
-if ( $subcommand eq 'dump' ) {
-    run_dump(@ARGV);
+if ($subcommand eq 'dump') {
+  run_dump(@ARGV);
 }
-elsif ( $subcommand eq 'validate' ) {
-    run_validate(@ARGV);
+elsif ($subcommand eq 'validate') {
+  run_validate(@ARGV);
 }
-elsif ( $subcommand eq 'help' ) {
-    _show_help( shift @ARGV );
+elsif ($subcommand eq 'help') {
+  _show_help(shift @ARGV);
 }
 else {
-    warn "Unknown subcommand: $subcommand\n";
-    pod2usage(
-        -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
-    );
+  warn "Unknown subcommand: $subcommand\n";
+  pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 }
 
 sub run_dump {
-    my @args = @_;
-    my %opts = (
-        pretty             => 0,
-        compact            => 0,
-        'ignore-errors'    => 0,
-        'fail-fast'        => 0,
-        'errors-to-stderr' => 0,
-        'quiet'            => 0,
-        'enable-warnings'  => 0,
-        'vendor-id'        => undef,
-        strict             => 0,
-    );
+  my @args = @_;
+  my %opts = (
+    pretty             => 0,
+    compact            => 0,
+    'ignore-errors'    => 0,
+    'fail-fast'        => 0,
+    'errors-to-stderr' => 0,
+    'quiet'            => 0,
+    'enable-warnings'  => 0,
+    'vendor-id'        => undef,
+    strict             => 0,
+  );
 
-    GetOptionsFromArray(
-        \@args,
-        'pretty|p'           => \$opts{pretty},
-        'compact|c'          => \$opts{compact},
-        'ignore-errors|i'    => \$opts{'ignore-errors'},
-        'fail-fast|f'        => \$opts{'fail-fast'},
-        'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
-        'quiet|q'            => \$opts{'quiet'},
-        'enable-warnings|w'  => \$opts{'enable-warnings'},
-        'vendor-id|v=i'      => \$opts{'vendor-id'},
-        'strict|s'           => \$opts{strict},
-        'help|h'             => sub {
-            pod2usage(
-                -input    => $script_path, -exitval => 1, -verbose => 99,
-                -sections => "DUMP|BUGS"
-            );
-        },
-      )
-      or pod2usage(
-        -input    => $script_path, -exitval => 2, -verbose => 99,
-        -sections => "DUMP|BUGS"
-      );
+  GetOptionsFromArray(
+    \@args,
+    'pretty|p'           => \$opts{pretty},
+    'compact|c'          => \$opts{compact},
+    'ignore-errors|i'    => \$opts{'ignore-errors'},
+    'fail-fast|f'        => \$opts{'fail-fast'},
+    'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
+    'quiet|q'            => \$opts{'quiet'},
+    'enable-warnings|w'  => \$opts{'enable-warnings'},
+    'vendor-id|v=i'      => \$opts{'vendor-id'},
+    'strict|s'           => \$opts{strict},
+    'help|h'             => sub {
+      pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
+    },
+  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP|BUGS");
 
-    my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
-    my $json     = $json_pkg->new->utf8;
-    if ( $opts{pretty} ) {
-        $json->pretty(1);
-        $json->indent_length(4) if $json->isa('JSON::PP');
+  my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
+  my $json     = $json_pkg->new->utf8;
+  if ($opts{pretty}) {
+    $json->pretty(1);
+    $json->indent_length(4) if $json->isa('JSON::PP');
+  }
+
+  my $state = {count => 0, line_num => 0,};
+
+  if (@args) {
+    foreach my $str (@args) {
+      $state->{line_num}++;
+      _process_string($str, $state, \%opts, $json);
     }
-
-    my $state = {
-        count    => 0,
-        line_num => 0,
-    };
-
-    if (@args) {
-        foreach my $str (@args) {
-            $state->{line_num}++;
-            _process_string( $str, $state, \%opts, $json );
-        }
+  }
+  else {
+    binmode(STDIN, ':utf8') if -t STDIN;
+    while (my $line = <STDIN>) {
+      $state->{line_num}++;
+      chomp $line;
+      next unless $line =~ /\S/;
+      _process_string($line, $state, \%opts, $json);
     }
-    else {
-        binmode( STDIN, ':utf8' ) if -t STDIN;
-        while ( my $line = <STDIN> ) {
-            $state->{line_num}++;
-            chomp $line;
-            next unless $line =~ /\S/;
-            _process_string( $line, $state, \%opts, $json );
-        }
-    }
+  }
 
-    exit EXIT_SUCCESS;
+  exit EXIT_SUCCESS;
 }
 
 sub _process_string {
-    my ( $str, $state, $o, $j ) = @_;
-    my $output_data;
+  my ($str, $state, $o, $j) = @_;
+  my $output_data;
 
-    eval {
-        my $tcf = GDPR::IAB::TCFv2->Parse(
-            $str,
-            json => {
-                compact   => $o->{compact},
-                vendor_id => $o->{'vendor-id'},
-            },
-            strict => $o->{strict},
-        );
-        $output_data = $tcf->TO_JSON;
-    };
-    if ( my $err = $@ ) {
-        if ( $o->{'fail-fast'} ) {
-            warn
-              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
-              if $o->{'enable-warnings'};
-            exit EXIT_PARSE_ERROR;
-        }
-
-        warn
-          "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
-          if $o->{'enable-warnings'};
-
-        return if $o->{'ignore-errors'};
-
-        chomp $err;
-        $output_data = {
-            tc_string => $str,
-            error     => $err,
-            success   => _json_false(),
-        };
-
-        if ( $o->{'errors-to-stderr'} ) {
-            warn $j->encode($output_data) . "\n";
-            return;
-        }
+  eval {
+    my $tcf = GDPR::IAB::TCFv2->Parse(
+      $str,
+      json   => {compact => $o->{compact}, vendor_id => $o->{'vendor-id'},},
+      strict => $o->{strict},
+    );
+    $output_data = $tcf->TO_JSON;
+  };
+  if (my $err = $@) {
+    if ($o->{'fail-fast'}) {
+      warn "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+      exit EXIT_PARSE_ERROR;
     }
 
-    return if $o->{'quiet'};
+    warn "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
 
-    print $j->encode($output_data) . "\n";
+    return if $o->{'ignore-errors'};
 
-    $state->{count}++;
+    chomp $err;
+    $output_data = {tc_string => $str, error => $err, success => _json_false(),};
+
+    if ($o->{'errors-to-stderr'}) {
+      warn $j->encode($output_data) . "\n";
+      return;
+    }
+  }
+
+  return if $o->{'quiet'};
+
+  print $j->encode($output_data) . "\n";
+
+  $state->{count}++;
 }
 
 sub _show_help {
-    my $topic = shift;
+  my $topic = shift;
 
-    if ( $topic && $topic eq 'dump' ) {
-        pod2usage(
-            -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "DUMP|BUGS"
-        );
-    }
-    if ( $topic && $topic eq 'validate' ) {
-        pod2usage(
-            -input    => $script_path, -exitval => 1, -verbose => 99,
-            -sections => "VALIDATE|BUGS"
-        );
-    }
-    pod2usage(
-        -input    => $script_path, -exitval => 1, -verbose => 99,
-        -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS"
-    );
+  if ($topic && $topic eq 'dump') {
+    pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
+  }
+  if ($topic && $topic eq 'validate') {
+    pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
+  }
+  pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 }
 
 sub _parse_id_list {
-    my $s = shift;
-    return [] unless defined $s && length $s;
-    return [ map { 0 + $_ } grep { length $_ } split /\s*,\s*/, $s ];
+  my $s = shift;
+  return [] unless defined $s && length $s;
+  return [map { 0 + $_ } grep { length $_ } split /\s*,\s*/, $s];
 }
 
 sub run_validate {
-    my @args = @_;
-    my %opts = (
-        pretty                         => 0,
-        'ignore-errors'                => 0,
-        'fail-fast'                    => 0,
-        'errors-to-stderr'             => 0,
-        quiet                          => 0,
-        'enable-warnings'              => 0,
-        'vendor-id'                    => undef,
-        'consent-purposes'             => undef,
-        'legitimate-interest-purposes' => undef,
-        'flexible-purposes'            => undef,
-        'check-disclosed-vendors'      => 0,
-        strict                         => 0,
-        'min-policy-version'           => undef,
-        'cmp-list'                     => undef,
-        'cmp-list-network-ok'          => 0,
-        'cmp-list-verify-ssl'          => 1,
-        'cmp-list-timeout'             => 30,
-        all                            => 0,
-        text                           => 0,
-    );
+  my @args = @_;
+  my %opts = (
+    pretty                         => 0,
+    'ignore-errors'                => 0,
+    'fail-fast'                    => 0,
+    'errors-to-stderr'             => 0,
+    quiet                          => 0,
+    'enable-warnings'              => 0,
+    'vendor-id'                    => undef,
+    'consent-purposes'             => undef,
+    'legitimate-interest-purposes' => undef,
+    'flexible-purposes'            => undef,
+    'check-disclosed-vendors'      => 0,
+    strict                         => 0,
+    'min-policy-version'           => undef,
+    'cmp-list'                     => undef,
+    'cmp-list-network-ok'          => 0,
+    'cmp-list-verify-ssl'          => 1,
+    'cmp-list-timeout'             => 30,
+    all                            => 0,
+    text                           => 0,
+  );
 
-    GetOptionsFromArray(
-        \@args,
-        'pretty|p'                         => \$opts{pretty},
-        'ignore-errors|i'                  => \$opts{'ignore-errors'},
-        'fail-fast|f'                      => \$opts{'fail-fast'},
-        'errors-to-stderr|e'               => \$opts{'errors-to-stderr'},
-        'quiet|q'                          => \$opts{quiet},
-        'enable-warnings|w'                => \$opts{'enable-warnings'},
-        'vendor-id|v=i'                    => \$opts{'vendor-id'},
-        'consent-purposes|C=s'             => \$opts{'consent-purposes'},
-        'legitimate-interest-purposes|L=s' =>
-          \$opts{'legitimate-interest-purposes'},
-        'flexible-purposes|F=s'     => \$opts{'flexible-purposes'},
-        'check-disclosed-vendors|d' => \$opts{'check-disclosed-vendors'},
-        'strict|s'                  => \$opts{strict},
-        'min-policy-version|m=i'    => \$opts{'min-policy-version'},
-        'cmp-list=s'                => \$opts{'cmp-list'},
-        'cmp-list-network-ok'       => \$opts{'cmp-list-network-ok'},
-        'cmp-list-verify-ssl!'      => \$opts{'cmp-list-verify-ssl'},
-        'cmp-list-timeout=i'        => \$opts{'cmp-list-timeout'},
-        'all|a'                     => \$opts{all},
-        'text|t'                    => \$opts{text},
-        'help|h'                    => sub {
-            pod2usage(
-                -input    => $script_path, -exitval => 1, -verbose => 99,
-                -sections => "VALIDATE|BUGS"
-            );
-        },
-      )
-      or pod2usage(
-        -input    => $script_path, -exitval => 2, -verbose => 99,
-        -sections => "VALIDATE|BUGS"
-      );
+  GetOptionsFromArray(
+    \@args,
+    'pretty|p'                         => \$opts{pretty},
+    'ignore-errors|i'                  => \$opts{'ignore-errors'},
+    'fail-fast|f'                      => \$opts{'fail-fast'},
+    'errors-to-stderr|e'               => \$opts{'errors-to-stderr'},
+    'quiet|q'                          => \$opts{quiet},
+    'enable-warnings|w'                => \$opts{'enable-warnings'},
+    'vendor-id|v=i'                    => \$opts{'vendor-id'},
+    'consent-purposes|C=s'             => \$opts{'consent-purposes'},
+    'legitimate-interest-purposes|L=s' => \$opts{'legitimate-interest-purposes'},
+    'flexible-purposes|F=s'            => \$opts{'flexible-purposes'},
+    'check-disclosed-vendors|d'        => \$opts{'check-disclosed-vendors'},
+    'strict|s'                         => \$opts{strict},
+    'min-policy-version|m=i'           => \$opts{'min-policy-version'},
+    'cmp-list=s'                       => \$opts{'cmp-list'},
+    'cmp-list-network-ok'              => \$opts{'cmp-list-network-ok'},
+    'cmp-list-verify-ssl!'             => \$opts{'cmp-list-verify-ssl'},
+    'cmp-list-timeout=i'               => \$opts{'cmp-list-timeout'},
+    'all|a'                            => \$opts{all},
+    'text|t'                           => \$opts{text},
+    'help|h'                           => sub {
+      pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
+    },
+  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE|BUGS");
 
-    unless ( defined $opts{'vendor-id'} ) {
-        warn "validate: --vendor-id|-v is required\n";
-        pod2usage(
-            -input    => $script_path, -exitval => 2, -verbose => 99,
-            -sections => "VALIDATE|BUGS"
-        );
-    }
+  unless (defined $opts{'vendor-id'}) {
+    warn "validate: --vendor-id|-v is required\n";
+    pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE|BUGS");
+  }
 
-    require GDPR::IAB::TCFv2::Validator;
+  require GDPR::IAB::TCFv2::Validator;
 
-    my %vargs = (
-        vendor_id               => $opts{'vendor-id'},
-        check_disclosed_vendors => $opts{'check-disclosed-vendors'},
-        strict                  => $opts{strict},
-    );
-    $vargs{consent_purpose_ids} = _parse_id_list( $opts{'consent-purposes'} )
-      if defined $opts{'consent-purposes'};
-    $vargs{legitimate_interest_purpose_ids} =
-      _parse_id_list( $opts{'legitimate-interest-purposes'} )
-      if defined $opts{'legitimate-interest-purposes'};
-    $vargs{flexible_purpose_ids} = _parse_id_list( $opts{'flexible-purposes'} )
-      if defined $opts{'flexible-purposes'};
-    $vargs{min_policy_version} = $opts{'min-policy-version'}
-      if defined $opts{'min-policy-version'};
+  my %vargs = (
+    vendor_id               => $opts{'vendor-id'},
+    check_disclosed_vendors => $opts{'check-disclosed-vendors'},
+    strict                  => $opts{strict},
+  );
+  $vargs{consent_purpose_ids} = _parse_id_list($opts{'consent-purposes'}) if defined $opts{'consent-purposes'};
+  $vargs{legitimate_interest_purpose_ids} = _parse_id_list($opts{'legitimate-interest-purposes'})
+    if defined $opts{'legitimate-interest-purposes'};
+  $vargs{flexible_purpose_ids} = _parse_id_list($opts{'flexible-purposes'}) if defined $opts{'flexible-purposes'};
+  $vargs{min_policy_version}   = $opts{'min-policy-version'}                if defined $opts{'min-policy-version'};
 
-    if ( defined $opts{'cmp-list'} ) {
-        require GDPR::IAB::TCFv2::CMPValidator;
+  if (defined $opts{'cmp-list'}) {
+    require GDPR::IAB::TCFv2::CMPValidator;
 
-        my $src      = $opts{'cmp-list'};
-        my %cmp_args = (
-            verify_ssl => $opts{'cmp-list-verify-ssl'},
-            timeout    => $opts{'cmp-list-timeout'},
-        );
+    my $src      = $opts{'cmp-list'};
+    my %cmp_args = (verify_ssl => $opts{'cmp-list-verify-ssl'}, timeout => $opts{'cmp-list-timeout'},);
 
-        if ( $src =~ m{^https?://}i ) {
-            $cmp_args{url}        = $src;
-            $cmp_args{network_ok} = 1 if $opts{'cmp-list-network-ok'};
-        }
-        else {
-            $cmp_args{file} = $src;
-        }
-
-        # The CMPValidator emits a `carp` when the registry is older
-        # than 28 days. Surface that warning only when the user has
-        # opted into warnings (--enable-warnings); otherwise filter it
-        # out so routine CLI use stays quiet. Other warnings flow
-        # through unchanged.
-        my $cmp_v;
-        {
-            local $SIG{__WARN__} = sub {
-                my $msg = defined( $_[0] ) ? $_[0] : '';
-                return if $msg =~ /CMP list is older than 28 days/;
-                warn @_;
-              }
-              if !$opts{'enable-warnings'};
-
-            $cmp_v = eval { GDPR::IAB::TCFv2::CMPValidator->new(%cmp_args) };
-        }
-
-        if ( my $err = $@ ) {
-            chomp $err;
-            warn "validate: $err\n";
-            exit 2;
-        }
-
-        $vargs{cmp_validator} = $cmp_v;
-    }
-
-    my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
-    if ( my $err = $@ ) {
-        chomp $err;
-        warn "validate: $err\n";
-        exit 2;
-    }
-
-    my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
-    my $json     = $json_pkg->new->utf8;
-    if ( $opts{pretty} ) {
-        $json->pretty(1);
-        $json->indent_length(4) if $json->isa('JSON::PP');
-    }
-
-    my $state = {
-        count    => 0,
-        line_num => 0,
-        any_fail => 0,
-    };
-
-    if (@args) {
-        foreach my $str (@args) {
-            $state->{line_num}++;
-            _validate_string( $str, $state, \%opts, $json, $validator );
-        }
+    if ($src =~ m{^https?://}i) {
+      $cmp_args{url}        = $src;
+      $cmp_args{network_ok} = 1 if $opts{'cmp-list-network-ok'};
     }
     else {
-        binmode( STDIN, ':utf8' ) if -t STDIN;
-        while ( my $line = <STDIN> ) {
-            $state->{line_num}++;
-            chomp $line;
-            next unless $line =~ /\S/;
-            _validate_string( $line, $state, \%opts, $json, $validator );
-        }
+      $cmp_args{file} = $src;
     }
 
-    exit( $state->{any_fail} ? EXIT_PARSE_ERROR : EXIT_SUCCESS );
+    # The CMPValidator emits a `carp` when the registry is older
+    # than 28 days. Surface that warning only when the user has
+    # opted into warnings (--enable-warnings); otherwise filter it
+    # out so routine CLI use stays quiet. Other warnings flow
+    # through unchanged.
+    my $cmp_v;
+    {
+      local $SIG{__WARN__} = sub {
+        my $msg = defined($_[0]) ? $_[0] : '';
+        return if $msg =~ /CMP list is older than 28 days/;
+        warn @_;
+        }
+        if !$opts{'enable-warnings'};
+
+      $cmp_v = eval { GDPR::IAB::TCFv2::CMPValidator->new(%cmp_args) };
+    }
+
+    if (my $err = $@) {
+      chomp $err;
+      warn "validate: $err\n";
+      exit 2;
+    }
+
+    $vargs{cmp_validator} = $cmp_v;
+  }
+
+  my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
+  if (my $err = $@) {
+    chomp $err;
+    warn "validate: $err\n";
+    exit 2;
+  }
+
+  my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
+  my $json     = $json_pkg->new->utf8;
+  if ($opts{pretty}) {
+    $json->pretty(1);
+    $json->indent_length(4) if $json->isa('JSON::PP');
+  }
+
+  my $state = {count => 0, line_num => 0, any_fail => 0,};
+
+  if (@args) {
+    foreach my $str (@args) {
+      $state->{line_num}++;
+      _validate_string($str, $state, \%opts, $json, $validator);
+    }
+  }
+  else {
+    binmode(STDIN, ':utf8') if -t STDIN;
+    while (my $line = <STDIN>) {
+      $state->{line_num}++;
+      chomp $line;
+      next unless $line =~ /\S/;
+      _validate_string($line, $state, \%opts, $json, $validator);
+    }
+  }
+
+  exit($state->{any_fail} ? EXIT_PARSE_ERROR : EXIT_SUCCESS);
 }
 
 sub _validate_string {
-    my ( $str, $state, $o, $j, $validator ) = @_;
+  my ($str, $state, $o, $j, $validator) = @_;
 
-    my $result = eval {
-            $o->{all}
-          ? $validator->validate_all($str)
-          : $validator->validate($str);
-    };
-    if ( my $err = $@ ) {
-        $state->{any_fail} = 1;
+  my $result = eval { $o->{all} ? $validator->validate_all($str) : $validator->validate($str); };
+  if (my $err = $@) {
+    $state->{any_fail} = 1;
 
-        if ( $o->{'fail-fast'} ) {
-            warn
-              "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
-              if $o->{'enable-warnings'};
-            exit EXIT_PARSE_ERROR;
-        }
-
-        warn
-          "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n"
-          if $o->{'enable-warnings'};
-
-        return if $o->{'ignore-errors'};
-
-        chomp $err;
-        my $output_data = {
-            tc_string => $str,
-            error     => $err,
-            success   => _json_false(),
-        };
-
-        if ( $o->{'errors-to-stderr'} ) {
-            if ( $o->{text} ) {
-                warn "ERROR  $str: $err\n";
-            }
-            else {
-                warn $j->encode($output_data) . "\n";
-            }
-            return;
-        }
-
-        return if $o->{quiet};
-        _emit_validate( $output_data, $state, $o, $j );
-        return;
+    if ($o->{'fail-fast'}) {
+      warn "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+      exit EXIT_PARSE_ERROR;
     }
 
-    my $output_data;
-    if ( $result->is_valid ) {
-        $output_data = {
-            tc_string => $str,
-            vendor_id => $o->{'vendor-id'},
-            valid     => _json_true(),
-        };
-    }
-    else {
-        $state->{any_fail} = 1;
-        my @reasons = $result->reasons;
-        $output_data = {
-            tc_string => $str,
-            vendor_id => $o->{'vendor-id'},
-            valid     => _json_false(),
-            $o->{all} ? ( reasons => \@reasons ) : ( reason => $reasons[0] ),
-        };
+    warn "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+
+    return if $o->{'ignore-errors'};
+
+    chomp $err;
+    my $output_data = {tc_string => $str, error => $err, success => _json_false(),};
+
+    if ($o->{'errors-to-stderr'}) {
+      if ($o->{text}) {
+        warn "ERROR  $str: $err\n";
+      }
+      else {
+        warn $j->encode($output_data) . "\n";
+      }
+      return;
     }
 
     return if $o->{quiet};
-
-    _emit_validate( $output_data, $state, $o, $j );
-
-    exit EXIT_PARSE_ERROR if !$result->is_valid && $o->{'fail-fast'};
-
+    _emit_validate($output_data, $state, $o, $j);
     return;
+  }
+
+  my $output_data;
+  if ($result->is_valid) {
+    $output_data = {tc_string => $str, vendor_id => $o->{'vendor-id'}, valid => _json_true(),};
+  }
+  else {
+    $state->{any_fail} = 1;
+    my @reasons = $result->reasons;
+    $output_data = {
+      tc_string => $str,
+      vendor_id => $o->{'vendor-id'},
+      valid     => _json_false(),
+      $o->{all} ? (reasons => \@reasons) : (reason => $reasons[0]),
+    };
+  }
+
+  return if $o->{quiet};
+
+  _emit_validate($output_data, $state, $o, $j);
+
+  exit EXIT_PARSE_ERROR if !$result->is_valid && $o->{'fail-fast'};
+
+  return;
 }
 
 sub _emit_validate {
-    my ( $output_data, $state, $o, $j ) = @_;
+  my ($output_data, $state, $o, $j) = @_;
 
-    if ( $o->{text} ) {
-        my $tc  = $output_data->{tc_string};
-        my $vid = $output_data->{vendor_id};
-        my $line;
-        if ( exists $output_data->{error} ) {
-            $line = "ERROR  $tc: $output_data->{error}";
-        }
-        elsif ( $output_data->{valid} ) {
-            $line = "OK     $tc vendor $vid";
-        }
-        else {
-            my @reasons =
-              $o->{all}
-              ? @{ $output_data->{reasons} || [] }
-              : ( $output_data->{reason} );
-            if ( @reasons == 1 ) {
-                $line = "FAIL   $tc vendor $vid: $reasons[0]";
-            }
-            else {
-                $line = join "\n",
-                  "FAIL   $tc vendor $vid:",
-                  map {"  - $_"} @reasons;
-            }
-        }
-        print "$line\n";
-        $state->{count}++;
-        return;
+  if ($o->{text}) {
+    my $tc  = $output_data->{tc_string};
+    my $vid = $output_data->{vendor_id};
+    my $line;
+    if (exists $output_data->{error}) {
+      $line = "ERROR  $tc: $output_data->{error}";
     }
-
-    print $j->encode($output_data) . "\n";
+    elsif ($output_data->{valid}) {
+      $line = "OK     $tc vendor $vid";
+    }
+    else {
+      my @reasons = $o->{all} ? @{$output_data->{reasons} || []} : ($output_data->{reason});
+      if (@reasons == 1) {
+        $line = "FAIL   $tc vendor $vid: $reasons[0]";
+      }
+      else {
+        $line = join "\n", "FAIL   $tc vendor $vid:", map {"  - $_"} @reasons;
+      }
+    }
+    print "$line\n";
     $state->{count}++;
-
     return;
+  }
+
+  print $j->encode($output_data) . "\n";
+  $state->{count}++;
+
+  return;
 }
 
 __END__

@@ -7,51 +7,49 @@ use base qw<Exporter>;
 
 use constant {
 
-    # Short, established names -- supported indefinitely.  Used by examples
-    # and tests across the distribution.
-    InfoStorageAccess        => 1,
-    BasicAdserving           => 2,
-    PersonalizationProfile   => 3,
-    PersonalizationSelection => 4,
-    ContentProfile           => 5,
-    ContentSelection         => 6,
-    AdPerformance            => 7,
-    ContentPerformance       => 8,
-    MarketResearch           => 9,
-    DevelopImprove           => 10,
-    SelectContent            => 11,
+  # Short, established names -- supported indefinitely.  Used by examples
+  # and tests across the distribution.
+  InfoStorageAccess        => 1,
+  BasicAdserving           => 2,
+  PersonalizationProfile   => 3,
+  PersonalizationSelection => 4,
+  ContentProfile           => 5,
+  ContentSelection         => 6,
+  AdPerformance            => 7,
+  ContentPerformance       => 8,
+  MarketResearch           => 9,
+  DevelopImprove           => 10,
+  SelectContent            => 11,
 
-    # TCF v2.3 spec-aligned long-form aliases (Phase 3).  Each name tracks
-    # the canonical wording from the IAB Global Vendor List JSON for the
-    # corresponding purpose.id.  Both names resolve to the same integer and
-    # are interchangeable everywhere a Purpose constant is accepted.
-    StoreAndOrAccessInformationOnDevice        => 1,
-    UseLimitedDataToSelectAdvertising          => 2,
-    CreateProfilesForPersonalisedAdvertising   => 3,
-    UseProfilesToSelectPersonalisedAdvertising => 4,
-    CreateProfilesToPersonaliseContent         => 5,
-    UseProfilesToSelectPersonalisedContent     => 6,
-    MeasureAdvertisingPerformance              => 7,
-    MeasureContentPerformance                  => 8,
-    UnderstandAudiences                        => 9,
-    DevelopAndImproveServices                  => 10,
-    UseLimitedDataToSelectContent              => 11,
+  # TCF v2.3 spec-aligned long-form aliases (Phase 3).  Each name tracks
+  # the canonical wording from the IAB Global Vendor List JSON for the
+  # corresponding purpose.id.  Both names resolve to the same integer and
+  # are interchangeable everywhere a Purpose constant is accepted.
+  StoreAndOrAccessInformationOnDevice        => 1,
+  UseLimitedDataToSelectAdvertising          => 2,
+  CreateProfilesForPersonalisedAdvertising   => 3,
+  UseProfilesToSelectPersonalisedAdvertising => 4,
+  CreateProfilesToPersonaliseContent         => 5,
+  UseProfilesToSelectPersonalisedContent     => 6,
+  MeasureAdvertisingPerformance              => 7,
+  MeasureContentPerformance                  => 8,
+  UnderstandAudiences                        => 9,
+  DevelopAndImproveServices                  => 10,
+  UseLimitedDataToSelectContent              => 11,
 };
 
 use constant PurposeDescription => {
-    InfoStorageAccess        => "Store and/or access information on a device",
-    BasicAdserving           => "Use limited data to select advertising",
-    PersonalizationProfile   => "Create profiles for personalised advertising",
-    PersonalizationSelection =>
-      "Use profiles to select personalised advertising",
-    ContentProfile     => "Create profiles to personalise content",
-    ContentSelection   => "Use profiles to select personalised content",
-    AdPerformance      => "Measure advertising performance",
-    ContentPerformance => "Measure content performance",
-    MarketResearch     =>
-      "Understand audiences through statistics or combinations of data from different sources",
-    DevelopImprove => "Develop and improve services",
-    SelectContent  => "Use limited data to select content",
+  InfoStorageAccess        => "Store and/or access information on a device",
+  BasicAdserving           => "Use limited data to select advertising",
+  PersonalizationProfile   => "Create profiles for personalised advertising",
+  PersonalizationSelection => "Use profiles to select personalised advertising",
+  ContentProfile           => "Create profiles to personalise content",
+  ContentSelection         => "Use profiles to select personalised content",
+  AdPerformance            => "Measure advertising performance",
+  ContentPerformance       => "Measure content performance",
+  MarketResearch           => "Understand audiences through statistics or combinations of data from different sources",
+  DevelopImprove           => "Develop and improve services",
+  SelectContent            => "Use limited data to select content",
 };
 
 our @EXPORT_OK = qw<
@@ -79,7 +77,7 @@ our @EXPORT_OK = qw<
   UseLimitedDataToSelectContent
   PurposeDescription
 >;
-our %EXPORT_TAGS = ( all => \@EXPORT_OK );
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 1;
 

@@ -16,8 +16,8 @@ our $CAN_PACK_QUADS;
 our $CAN_FORCE_BIG_ENDIAN;
 
 BEGIN {
-    $CAN_PACK_QUADS       = !!eval { my $f = pack 'Q>'; 1 };
-    $CAN_FORCE_BIG_ENDIAN = !!eval { my $f = pack 'S>'; 1 };
+  $CAN_PACK_QUADS       = !!eval { my $f = pack 'Q>'; 1 };
+  $CAN_FORCE_BIG_ENDIAN = !!eval { my $f = pack 'S>'; 1 };
 }
 
 our @EXPORT_OK = qw<is_set
@@ -31,149 +31,137 @@ our @EXPORT_OK = qw<is_set
 >;
 
 sub is_set {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    my $data_size = length($data);
+  my $data_size = length($data);
 
-    croak
-      "index out of bounds on offset $offset: can't read 1, only has: $data_size"
-      if $offset + 1 > $data_size;
+  croak "index out of bounds on offset $offset: can't read 1, only has: $data_size" if $offset + 1 > $data_size;
 
-    my $r = substr( $data, $offset, 1 ) == 1;
+  my $r = substr($data, $offset, 1) == 1;
 
-    return wantarray ? ( $r, $offset + 1 ) : $r;
+  return wantarray ? ($r, $offset + 1) : $r;
 }
 
 sub get_uint2 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    return _get_big_endian_octet_8bits( $data, $offset, 2 );
+  return _get_big_endian_octet_8bits($data, $offset, 2);
 }
 
 sub get_uint3 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    return _get_big_endian_octet_8bits( $data, $offset, 3 );
+  return _get_big_endian_octet_8bits($data, $offset, 3);
 }
 
 sub get_uint6 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    return _get_big_endian_octet_8bits( $data, $offset, 6 );
+  return _get_big_endian_octet_8bits($data, $offset, 6);
 }
 
 sub get_char6_pair {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    my $pair;
+  my $pair;
 
-    for ( 1 .. 2 ) {
-        my ( $byte, $next_offset ) = get_uint6( $data, $offset );
+  for (1 .. 2) {
+    my ($byte, $next_offset) = get_uint6($data, $offset);
 
-        $pair .= chr( ASCII_OFFSET + $byte );
+    $pair .= chr(ASCII_OFFSET + $byte);
 
-        $offset = $next_offset;
-    }
+    $offset = $next_offset;
+  }
 
-    return wantarray ? ( $pair, $offset ) : $pair;
+  return wantarray ? ($pair, $offset) : $pair;
 }
 
 sub get_uint12 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    return _get_big_endian_short_16bits( $data, $offset, 12 );
+  return _get_big_endian_short_16bits($data, $offset, 12);
 }
 
 sub get_uint16 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    return _get_big_endian_short_16bits( $data, $offset, 16 );
+  return _get_big_endian_short_16bits($data, $offset, 16);
 }
 
 sub _get_big_endian_octet_8bits {
-    my ( $data, $offset, $nbits ) = @_;
+  my ($data, $offset, $nbits) = @_;
 
-    my ( $bits_with_pading, $next_offset ) =
-      _get_bits_with_padding( $data, 8, $offset, $nbits );
+  my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 8, $offset, $nbits);
 
-    my $r = unpack(
-        "C",
-        $bits_with_pading
-    );
+  my $r = unpack("C", $bits_with_pading);
 
-    return wantarray ? ( $r, $next_offset ) : $r;
+  return wantarray ? ($r, $next_offset) : $r;
 }
 
 sub _get_big_endian_short_16bits {
-    my ( $data, $offset, $nbits ) = @_;
+  my ($data, $offset, $nbits) = @_;
 
-    if ($CAN_FORCE_BIG_ENDIAN) {
-        my ( $bits_with_pading, $next_offset ) =
-          _get_bits_with_padding( $data, 16, $offset, $nbits );
+  if ($CAN_FORCE_BIG_ENDIAN) {
+    my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 16, $offset, $nbits);
 
-        my $r = unpack( "S>", $bits_with_pading );
+    my $r = unpack("S>", $bits_with_pading);
 
-        return wantarray ? ( $r, $next_offset ) : $r;
-    }
+    return wantarray ? ($r, $next_offset) : $r;
+  }
 
-    my ( $data_with_padding, $next_offset ) =
-      _add_padding( $data, 16, $offset, $nbits );
+  my ($data_with_padding, $next_offset) = _add_padding($data, 16, $offset, $nbits);
 
-    # Coerce to a native scalar so downstream JSON serializers don't
-    # choke on a blessed Math::BigInt.  16 bits always fits in an IV.
-    my $r = Math::BigInt->new( "0b" . $data_with_padding )->numify;
+  # Coerce to a native scalar so downstream JSON serializers don't
+  # choke on a blessed Math::BigInt.  16 bits always fits in an IV.
+  my $r = Math::BigInt->new("0b" . $data_with_padding)->numify;
 
-    return wantarray ? ( $r, $next_offset ) : $r;
+  return wantarray ? ($r, $next_offset) : $r;
 }
 
 sub get_uint36 {
-    my ( $data, $offset ) = @_;
+  my ($data, $offset) = @_;
 
-    if ($CAN_PACK_QUADS) {
-        my ( $bits_with_pading, $next_offset ) =
-          _get_bits_with_padding( $data, 64, $offset, 36 );
+  if ($CAN_PACK_QUADS) {
+    my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 64, $offset, 36);
 
-        my $r = unpack( "Q>", $bits_with_pading );
+    my $r = unpack("Q>", $bits_with_pading);
 
-        return wantarray ? ( $r, $next_offset ) : $r;
-    }
+    return wantarray ? ($r, $next_offset) : $r;
+  }
 
-    my ( $data_with_padding, $next_offset ) =
-      _add_padding( $data, 64, $offset, 36 );
+  my ($data_with_padding, $next_offset) = _add_padding($data, 64, $offset, 36);
 
-    # Same coercion as _get_big_endian_short_16bits.  36 bits fits in
-    # an NV's 53-bit mantissa with no precision loss (covers all TCF
-    # v2 deciseconds-since-epoch through year ~2148).
-    my $r = Math::BigInt->new( "0b" . $data_with_padding )->numify;
+  # Same coercion as _get_big_endian_short_16bits.  36 bits fits in
+  # an NV's 53-bit mantissa with no precision loss (covers all TCF
+  # v2 deciseconds-since-epoch through year ~2148).
+  my $r = Math::BigInt->new("0b" . $data_with_padding)->numify;
 
-    return wantarray ? ( $r, $next_offset ) : $r;
+  return wantarray ? ($r, $next_offset) : $r;
 }
 
 sub _get_bits_with_padding {
-    my ( $data, $bits, $offset, $nbits ) = @_;
+  my ($data, $bits, $offset, $nbits) = @_;
 
-    my ( $data_with_padding, $next_offset ) =
-      _add_padding( $data, $bits, $offset, $nbits );
+  my ($data_with_padding, $next_offset) = _add_padding($data, $bits, $offset, $nbits);
 
-    my $r = pack( "B${bits}", $data_with_padding );
+  my $r = pack("B${bits}", $data_with_padding);
 
-    return wantarray ? ( $r, $next_offset ) : $r;
+  return wantarray ? ($r, $next_offset) : $r;
 }
 
 sub _add_padding {
-    my ( $data, $bits, $offset, $nbits ) = @_;
+  my ($data, $bits, $offset, $nbits) = @_;
 
-    my $data_size = length($data);
+  my $data_size = length($data);
 
-    croak
-      "index out of bounds on offset $offset: can't read $nbits, only has: $data_size"
-      if $offset + $nbits > $data_size;
+  croak "index out of bounds on offset $offset: can't read $nbits, only has: $data_size"
+    if $offset + $nbits > $data_size;
 
-    my $padding = "0" x ( $bits - $nbits );
+  my $padding = "0" x ($bits - $nbits);
 
-    my $r = $padding . substr( $data, $offset, $nbits );
+  my $r = $padding . substr($data, $offset, $nbits);
 
-    return wantarray ? ( $r, $offset + $nbits ) : $r;
+  return wantarray ? ($r, $offset + $nbits) : $r;
 }
 
 1;
