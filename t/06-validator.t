@@ -325,4 +325,124 @@ subtest "Validator validate_all accumulates across rule families" => sub {
       'flexible P6 with default consent reports as a consent failure';
 };
 
+subtest "Validator per-call list overrides" => sub {
+    my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+
+    subtest "consent_purpose_ids per-call override" => sub {
+
+        # Constructor list [1] would fail (V1 P1 consent=0). Per-call
+        # override [6] passes (V1 P6 consent=1) -- proves the override
+        # replaces, not merges with, the constructor list.
+        my $validator = GDPR::IAB::TCFv2::Validator->new(
+            vendor_id           => 1,
+            consent_purpose_ids => [1],
+        );
+
+        ok !$validator->validate($tc_string),
+          'baseline fails with constructor consent=[1]';
+
+        ok $validator->validate( $tc_string, consent_purpose_ids => [6] ),
+          'per-call consent=[6] passes';
+
+        my $result =
+          $validator->validate( $tc_string, consent_purpose_ids => [ 1, 6 ] );
+        ok !$result, 'per-call [1,6] still fails on P1';
+        like "$result", qr/purpose 1/, 'reason mentions P1';
+
+        ok $validator->validate( $tc_string, consent_purpose_ids => [] ),
+          'per-call empty consent list passes vacuously';
+    };
+
+    subtest "legitimate_interest_purpose_ids per-call override" => sub {
+
+        # Constructor list [10] passes (V1 P10 LI=1, policy v2 -> no
+        # carve-out for P10). Per-call switches to [1] which always
+        # triggers the LI carve-out reason (P1 forbidden for LI).
+        my $validator = GDPR::IAB::TCFv2::Validator->new(
+            vendor_id                       => 1,
+            legitimate_interest_purpose_ids => [10],
+        );
+
+        ok $validator->validate($tc_string),
+          'baseline passes with constructor LI=[10]';
+
+        my $result = $validator->validate(
+            $tc_string,
+            legitimate_interest_purpose_ids => [1],
+        );
+        ok !$result, 'per-call LI=[1] fails (carve-out)';
+        like "$result", qr/legitimate interest not permitted for purpose 1/,
+          'failure is the LI carve-out reason';
+
+        ok $validator->validate(
+            $tc_string,
+            legitimate_interest_purpose_ids => [7],
+          ),
+          'per-call LI=[7] passes (V1 P7 LI=1, no carve-out at policy v2)';
+    };
+
+    subtest "flexible_purpose_ids per-call override -- orphan drop" => sub {
+
+        # Constructor's _check_coherence would croak on flex=[99] because
+        # 99 is not in consent or LI. The per-call path skips that check:
+        # the rule loops only iterate over the consent/LI lists, so an
+        # orphan flex pid is unreachable and silently ignored at runtime.
+        my $validator = GDPR::IAB::TCFv2::Validator->new(
+            vendor_id           => 1,
+            consent_purpose_ids => [6],
+        );
+
+        my $result;
+        lives_ok {
+            $result = $validator->validate(
+                $tc_string,
+                flexible_purpose_ids => [99],
+            );
+        }
+        'per-call orphan flexible pid does not croak';
+        ok $result, 'orphan flex pid does not affect validation outcome';
+    };
+
+    subtest "all three list overrides simultaneously" => sub {
+
+        # Constructor: a passing static policy.
+        my $validator = GDPR::IAB::TCFv2::Validator->new(
+            vendor_id           => 1,
+            consent_purpose_ids => [6],
+        );
+        ok $validator->validate($tc_string), 'baseline passes';
+
+        # Per-call: replace all three lists at once.
+        # consent=[6] (passes), LI=[10] (passes), flex=[6,10] (no PR so
+        # flex API mirrors basis-direct -- still passes).
+        my $result = $validator->validate(
+            $tc_string,
+            consent_purpose_ids             => [6],
+            legitimate_interest_purpose_ids => [10],
+            flexible_purpose_ids            => [ 6, 10 ],
+        );
+        ok $result, 'all-three override passes when each list is satisfiable';
+    };
+
+    subtest "validate_all with per-call list overrides" => sub {
+
+        # Vendor 99 fails uniformly (out of range). Override all three
+        # lists per call and confirm validate_all reports a reason for
+        # each rule that fails.
+        my $validator = GDPR::IAB::TCFv2::Validator->new(
+            vendor_id           => 99,
+            consent_purpose_ids => [6],
+        );
+
+        my $result = $validator->validate_all(
+            $tc_string,
+            consent_purpose_ids             => [ 7, 8 ],
+            legitimate_interest_purpose_ids => [9],
+        );
+        ok !$result, 'validate_all reports failure under overrides';
+        is scalar( $result->reasons ), 3,
+          'three reasons accumulated (two consent + one LI)';
+    };
+};
+
 done_testing;
