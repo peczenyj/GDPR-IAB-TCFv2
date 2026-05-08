@@ -28,7 +28,7 @@
 
 # NAME
 
-GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
+GDPR::IAB::TCFv2 - TCF v2.3 (Transparency & Consent String) parser
 
 # SYNOPSIS
 
