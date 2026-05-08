@@ -23,7 +23,12 @@ jobs:
           perl-version: ${{ matrix.perl }}
       - run: perl -V
       - run: cpanm -v
-      - run: cpanm File::ShareDir::Install Test::CheckManifest Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod
+      # Test::CheckManifest is omitted: its dep tree (Pod::Coverage::TrustPod ->
+      # Mixin::Linewise -> Sub::Exporter ...) requires Perl 5.12+, which would
+      # break the 5.8.9 matrix entry. Nothing in this repo uses it (no
+      # t/00-checkmanifest.t); `cpanm --installdeps .` below pulls in the
+      # actual TEST_REQUIRES from Makefile.PL.
+      - run: cpanm File::ShareDir::Install Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod
       - name: Install Author Test Dependencies
         if: ${{ matrix.coverage }}
         run: cpanm -n Test::Perl::Critic Test::PerlTidy
