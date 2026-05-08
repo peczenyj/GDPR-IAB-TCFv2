@@ -5,16 +5,12 @@ use warnings;
 require Exporter;
 use base qw<Exporter>;
 
-use constant {
-    NotAllowed                => 0,
-    RequireConsent            => 1,
-    RequireLegitimateInterest => 2,
-};
+use constant {NotAllowed => 0, RequireConsent => 1, RequireLegitimateInterest => 2,};
 
 use constant RestrictionTypeDescription => {
-    NotAllowed                => "Purpose Flatly Not Allowed by Publisher",
-    RequireConsent            => "Require Consent",
-    RequireLegitimateInterest => "Require Legitimate Interest",
+  NotAllowed                => "Purpose Flatly Not Allowed by Publisher",
+  RequireConsent            => "Require Consent",
+  RequireLegitimateInterest => "Require Legitimate Interest",
 };
 
 our @EXPORT_OK = qw<
@@ -24,7 +20,7 @@ our @EXPORT_OK = qw<
   RestrictionTypeDescription
 >;
 
-our %EXPORT_TAGS = ( all => \@EXPORT_OK );
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 1;
 

@@ -34,60 +34,28 @@ use FindBin;
 my $cmp_file = "$FindBin::Bin/corpus/cmp-list.json";
 
 return [
-    {   name => 'v284_baseline',
-        args => { vendor_id => 284 },
+  {name => 'v284_baseline',     args => {vendor_id => 284},},
+  {name => 'v284_consent_p1',   args => {vendor_id => 284,   consent_purpose_ids             => [1],},},
+  {name => 'v99999_consent_p1', args => {vendor_id => 99999, consent_purpose_ids             => [1],},},
+  {name => 'v284_li_p7',        args => {vendor_id => 284,   legitimate_interest_purpose_ids => [7],},},
+  {
+    name => 'v284_flex_p2_consent',
+    args => {vendor_id => 284, consent_purpose_ids => [2], flexible_purpose_ids => [2],},
+  },
+  {
+    name => 'v284_flex_p7_li',
+    args => {vendor_id => 284, legitimate_interest_purpose_ids => [7], flexible_purpose_ids => [7],},
+  },
+  {name => 'v284_min_policy_v5',   args => {vendor_id => 284, min_policy_version      => 5,},},
+  {name => 'v284_check_disclosed', args => {vendor_id => 284, check_disclosed_vendors => 1,},},
+  {
+    name => 'v284_cmp_registry',
+    args => {
+      vendor_id     => 284,
+      cmp_validator => {
+        file => $cmp_file,
+        now  => 1776254400,    # 2026-04-15, fixture is fresh
+      },
     },
-    {   name => 'v284_consent_p1',
-        args => {
-            vendor_id           => 284,
-            consent_purpose_ids => [1],
-        },
-    },
-    {   name => 'v99999_consent_p1',
-        args => {
-            vendor_id           => 99999,
-            consent_purpose_ids => [1],
-        },
-    },
-    {   name => 'v284_li_p7',
-        args => {
-            vendor_id                       => 284,
-            legitimate_interest_purpose_ids => [7],
-        },
-    },
-    {   name => 'v284_flex_p2_consent',
-        args => {
-            vendor_id            => 284,
-            consent_purpose_ids  => [2],
-            flexible_purpose_ids => [2],
-        },
-    },
-    {   name => 'v284_flex_p7_li',
-        args => {
-            vendor_id                       => 284,
-            legitimate_interest_purpose_ids => [7],
-            flexible_purpose_ids            => [7],
-        },
-    },
-    {   name => 'v284_min_policy_v5',
-        args => {
-            vendor_id          => 284,
-            min_policy_version => 5,
-        },
-    },
-    {   name => 'v284_check_disclosed',
-        args => {
-            vendor_id               => 284,
-            check_disclosed_vendors => 1,
-        },
-    },
-    {   name => 'v284_cmp_registry',
-        args => {
-            vendor_id     => 284,
-            cmp_validator => {
-                file => $cmp_file,
-                now  => 1776254400,    # 2026-04-15, fixture is fresh
-            },
-        },
-    },
+  },
 ];

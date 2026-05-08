@@ -8,18 +8,18 @@ use overload
   fallback => 1;
 
 sub new {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    my $self = {
-        code             => defined $args{code}    ? $args{code}    : 0,
-        message          => defined $args{message} ? $args{message} : '',
-        purpose_id       => $args{purpose_id},
-        vendor_id        => $args{vendor_id},
-        restriction_type => $args{restriction_type},
-        cmp_id           => $args{cmp_id},
-    };
+  my $self = {
+    code             => defined $args{code}    ? $args{code}    : 0,
+    message          => defined $args{message} ? $args{message} : '',
+    purpose_id       => $args{purpose_id},
+    vendor_id        => $args{vendor_id},
+    restriction_type => $args{restriction_type},
+    cmp_id           => $args{cmp_id},
+  };
 
-    return bless $self, $klass;
+  return bless $self, $klass;
 }
 
 sub code             { $_[0]->{code} }

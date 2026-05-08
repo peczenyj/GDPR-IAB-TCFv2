@@ -29,59 +29,51 @@ use GDPR::IAB::TCFv2::Validator;
 
 my $corpus_file = 't/corpus/gdpr_subset.txt';
 
-open my $fh, '<', $corpus_file
-  or die "Could not open $corpus_file: $!\n"
-  . "(run from the distribution root)";
-chomp( my @strings = <$fh> );
+open my $fh, '<', $corpus_file or die "Could not open $corpus_file: $!\n" . "(run from the distribution root)";
+chomp(my @strings = <$fh>);
 close $fh;
 @strings = grep {length} @strings;
 
-my $simple_validator = GDPR::IAB::TCFv2::Validator->new(
-    vendor_id           => 284,
-    consent_purpose_ids => [ 1, 3 ],
-);
+my $simple_validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 284, consent_purpose_ids => [1, 3],);
 
 print "Benchmarking against ", scalar(@strings), " TC strings...\n\n";
 
 my $idx = 0;
 cmpthese(
-    -5,
-    {   '01_Parse' => sub {
-            GDPR::IAB::TCFv2->Parse( $strings[ $idx++ % @strings ] );
-        },
-        '02_Parse+TO_JSON' => sub {
-            my $tcf = GDPR::IAB::TCFv2->Parse( $strings[ $idx++ % @strings ] );
-            $tcf->TO_JSON;
-        },
-        '03_Validate' => sub {
-            $simple_validator->validate( $strings[ $idx++ % @strings ] );
-        },
-        '04_Validate_all' => sub {
-            $simple_validator->validate_all( $strings[ $idx++ % @strings ] );
-        },
-    }
+  -5,
+  {
+    '01_Parse' => sub {
+      GDPR::IAB::TCFv2->Parse($strings[$idx++ % @strings]);
+    },
+    '02_Parse+TO_JSON' => sub {
+      my $tcf = GDPR::IAB::TCFv2->Parse($strings[$idx++ % @strings]);
+      $tcf->TO_JSON;
+    },
+    '03_Validate' => sub {
+      $simple_validator->validate($strings[$idx++ % @strings]);
+    },
+    '04_Validate_all' => sub {
+      $simple_validator->validate_all($strings[$idx++ % @strings]);
+    },
+  }
 );
 
 print "\nAbsolute throughput (50_000 iterations, single-thread):\n";
 
 for my $bench (
-    [   'Parse',
-        sub { GDPR::IAB::TCFv2->Parse( $strings[ $idx++ % @strings ] ) }
-    ],
-    [   'Parse+TO_JSON',
-        sub {
-            my $tcf = GDPR::IAB::TCFv2->Parse( $strings[ $idx++ % @strings ] );
-            $tcf->TO_JSON;
-        }
-    ],
-    [   'Validate',
-        sub { $simple_validator->validate( $strings[ $idx++ % @strings ] ) }
-    ],
+  ['Parse', sub { GDPR::IAB::TCFv2->Parse($strings[$idx++ % @strings]) }],
+  [
+    'Parse+TO_JSON',
+    sub {
+      my $tcf = GDPR::IAB::TCFv2->Parse($strings[$idx++ % @strings]);
+      $tcf->TO_JSON;
+    }
+  ],
+  ['Validate', sub { $simple_validator->validate($strings[$idx++ % @strings]) }],
   )
 {
-    my $count = 50_000;
-    my $t     = timeit( $count, $bench->[1] );
-    my $sec   = $t->[0] + $t->[1] || 1;
-    printf "  %-15s %10.0f ops/sec   (%.3fs cpu)\n",
-      $bench->[0], $count / $sec, $sec;
+  my $count = 50_000;
+  my $t     = timeit($count, $bench->[1]);
+  my $sec   = $t->[0] + $t->[1] || 1;
+  printf "  %-15s %10.0f ops/sec   (%.3fs cpu)\n", $bench->[0], $count / $sec, $sec;
 }

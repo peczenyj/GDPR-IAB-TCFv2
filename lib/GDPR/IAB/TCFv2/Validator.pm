@@ -12,33 +12,33 @@ use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
 sub new {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    my $consent             = $args{consent_purpose_ids}             || [];
-    my $legitimate_interest = $args{legitimate_interest_purpose_ids} || [];
-    my $flexible            = $args{flexible_purpose_ids}            || [];
+  my $consent             = $args{consent_purpose_ids}             || [];
+  my $legitimate_interest = $args{legitimate_interest_purpose_ids} || [];
+  my $flexible            = $args{flexible_purpose_ids}            || [];
 
-    _check_coherence( $consent, $legitimate_interest, $flexible );
+  _check_coherence($consent, $legitimate_interest, $flexible);
 
-    # Compute cmp_validator in scalar context so a bare `return` from the
-    # coercer correctly yields undef -- a list-context call inside the
-    # anonymous-hash construction below would collapse the key/value
-    # pair instead.
-    my $cmp_v = _coerce_cmp_validator( $args{cmp_validator} );
+  # Compute cmp_validator in scalar context so a bare `return` from the
+  # coercer correctly yields undef -- a list-context call inside the
+  # anonymous-hash construction below would collapse the key/value
+  # pair instead.
+  my $cmp_v = _coerce_cmp_validator($args{cmp_validator});
 
-    my $self = {
-        vendor_id                       => $args{vendor_id},
-        consent_purpose_ids             => $consent,
-        legitimate_interest_purpose_ids => $legitimate_interest,
-        flexible_purpose_ids            => $flexible,
-        _flexible_set                   => { map { $_ => 1 } @{$flexible} },
-        check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
-        min_policy_version              => $args{min_policy_version},
-        cmp_validator                   => $cmp_v,
-        strict => exists $args{strict} ? $args{strict} : 0,
-    };
+  my $self = {
+    vendor_id                       => $args{vendor_id},
+    consent_purpose_ids             => $consent,
+    legitimate_interest_purpose_ids => $legitimate_interest,
+    flexible_purpose_ids            => $flexible,
+    _flexible_set                   => {map { $_ => 1 } @{$flexible}},
+    check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
+    min_policy_version              => $args{min_policy_version},
+    cmp_validator                   => $cmp_v,
+    strict                          => exists $args{strict} ? $args{strict} : 0,
+  };
 
-    return bless $self, $klass;
+  return bless $self, $klass;
 }
 
 # Accept either a CMPValidator object, a hashref of constructor args
@@ -46,320 +46,266 @@ sub new {
 # `require` so callers who never opt into the CMP rule never pay for
 # loading JSON::PP / Time::Piece.
 sub _coerce_cmp_validator {
-    my ($spec) = @_;
+  my ($spec) = @_;
 
-    # Bare `return` is fine -- callers always invoke this in scalar
-    # context (see the explicit `my $cmp_v = ...` in `new` and the
-    # `my $cmp_validator = ...` in `_run_validation`).
-    return unless defined $spec;
-    return $spec
-      if blessed($spec) && $spec->isa('GDPR::IAB::TCFv2::CMPValidator');
+  # Bare `return` is fine -- callers always invoke this in scalar
+  # context (see the explicit `my $cmp_v = ...` in `new` and the
+  # `my $cmp_validator = ...` in `_run_validation`).
+  return unless defined $spec;
+  return $spec if blessed($spec) && $spec->isa('GDPR::IAB::TCFv2::CMPValidator');
 
-    croak "cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator object "
-      . "or a hashref of constructor arguments"
-      unless ref($spec) eq 'HASH';
+  croak "cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator object " . "or a hashref of constructor arguments"
+    unless ref($spec) eq 'HASH';
 
-    require GDPR::IAB::TCFv2::CMPValidator;
-    return GDPR::IAB::TCFv2::CMPValidator->new( %{$spec} );
+  require GDPR::IAB::TCFv2::CMPValidator;
+  return GDPR::IAB::TCFv2::CMPValidator->new(%{$spec});
 }
 
 sub _check_coherence {
-    my ( $consent, $legitimate_interest, $flexible ) = @_;
+  my ($consent, $legitimate_interest, $flexible) = @_;
 
-    my %consent_set = map { $_ => 1 } @{$consent};
-    my %li_set      = map { $_ => 1 } @{$legitimate_interest};
+  my %consent_set = map { $_ => 1 } @{$consent};
+  my %li_set      = map { $_ => 1 } @{$legitimate_interest};
 
-    foreach my $pid ( @{$consent} ) {
-        croak
-          "purpose $pid cannot be in both consent_purpose_ids and legitimate_interest_purpose_ids"
-          if $li_set{$pid};
-    }
+  foreach my $pid (@{$consent}) {
+    croak "purpose $pid cannot be in both consent_purpose_ids and legitimate_interest_purpose_ids" if $li_set{$pid};
+  }
 
-    foreach my $pid ( @{$flexible} ) {
-        next if $consent_set{$pid} || $li_set{$pid};
-        croak
-          "flexible purpose $pid must also appear in consent_purpose_ids or legitimate_interest_purpose_ids";
-    }
+  foreach my $pid (@{$flexible}) {
+    next if $consent_set{$pid} || $li_set{$pid};
+    croak "flexible purpose $pid must also appear in consent_purpose_ids or legitimate_interest_purpose_ids";
+  }
 
-    return;
+  return;
 }
 
 sub validate {
-    my ( $self, $input, %overrides ) = @_;
+  my ($self, $input, %overrides) = @_;
 
-    return $self->_run_validation( $input, 1, %overrides );
+  return $self->_run_validation($input, 1, %overrides);
 }
 
 sub validate_all {
-    my ( $self, $input, %overrides ) = @_;
+  my ($self, $input, %overrides) = @_;
 
-    return $self->_run_validation( $input, 0, %overrides );
+  return $self->_run_validation($input, 0, %overrides);
 }
 
 sub _run_validation {
-    my ( $self, $input, $stop_on_first, %overrides ) = @_;
+  my ($self, $input, $stop_on_first, %overrides) = @_;
 
-    my $tc =
-      ref($input) eq 'GDPR::IAB::TCFv2'
-      ? $input
-      : GDPR::IAB::TCFv2->Parse($input);
+  my $tc = ref($input) eq 'GDPR::IAB::TCFv2' ? $input : GDPR::IAB::TCFv2->Parse($input);
 
-    my $vendor_id =
-      exists $overrides{vendor_id}
-      ? $overrides{vendor_id}
-      : $self->{vendor_id};
-    my $strict =
-      exists $overrides{strict} ? $overrides{strict} : $self->{strict};
-    my $check_disclosed =
-      exists $overrides{check_disclosed_vendors}
-      ? $overrides{check_disclosed_vendors}
-      : $self->{check_disclosed_vendors};
-    my $min_policy_version =
-      exists $overrides{min_policy_version}
-      ? $overrides{min_policy_version}
-      : $self->{min_policy_version};
-    my $cmp_validator =
-      exists $overrides{cmp_validator}
-      ? _coerce_cmp_validator( $overrides{cmp_validator} )
-      : $self->{cmp_validator};
+  my $vendor_id = exists $overrides{vendor_id} ? $overrides{vendor_id} : $self->{vendor_id};
+  my $strict    = exists $overrides{strict}    ? $overrides{strict}    : $self->{strict};
+  my $check_disclosed
+    = exists $overrides{check_disclosed_vendors}
+    ? $overrides{check_disclosed_vendors}
+    : $self->{check_disclosed_vendors};
+  my $min_policy_version
+    = exists $overrides{min_policy_version} ? $overrides{min_policy_version} : $self->{min_policy_version};
+  my $cmp_validator
+    = exists $overrides{cmp_validator} ? _coerce_cmp_validator($overrides{cmp_validator}) : $self->{cmp_validator};
 
-    # Per-call list overrides. Coherence is not re-validated here:
-    # orphan flexible purposes (a pid in flexible_purpose_ids that
-    # isn't also in consent_purpose_ids or legitimate_interest_purpose_ids)
-    # are silently dropped because the rule loops only iterate over the
-    # consent/LI lists, so the flex flag for an orphan is unreachable.
-    # This keeps per-call overrides forgiving while the constructor
-    # remains strict for the static policy.
-    my $consent_ids =
-      exists $overrides{consent_purpose_ids}
-      ? $overrides{consent_purpose_ids}
-      : $self->{consent_purpose_ids};
-    my $li_ids =
-      exists $overrides{legitimate_interest_purpose_ids}
-      ? $overrides{legitimate_interest_purpose_ids}
-      : $self->{legitimate_interest_purpose_ids};
-    my $flexible_set =
-      exists $overrides{flexible_purpose_ids}
-      ? { map { $_ => 1 } @{ $overrides{flexible_purpose_ids} } }
-      : $self->{_flexible_set};
+  # Per-call list overrides. Coherence is not re-validated here:
+  # orphan flexible purposes (a pid in flexible_purpose_ids that
+  # isn't also in consent_purpose_ids or legitimate_interest_purpose_ids)
+  # are silently dropped because the rule loops only iterate over the
+  # consent/LI lists, so the flex flag for an orphan is unreachable.
+  # This keeps per-call overrides forgiving while the constructor
+  # remains strict for the static policy.
+  my $consent_ids
+    = exists $overrides{consent_purpose_ids} ? $overrides{consent_purpose_ids} : $self->{consent_purpose_ids};
+  my $li_ids
+    = exists $overrides{legitimate_interest_purpose_ids}
+    ? $overrides{legitimate_interest_purpose_ids}
+    : $self->{legitimate_interest_purpose_ids};
+  my $flexible_set
+    = exists $overrides{flexible_purpose_ids}
+    ? {map { $_ => 1 } @{$overrides{flexible_purpose_ids}}}
+    : $self->{_flexible_set};
 
-    croak "missing vendor_id" unless defined $vendor_id;
+  croak "missing vendor_id" unless defined $vendor_id;
 
-    my @failures;
+  my @failures;
 
-    $self->_check_min_policy_version( $tc, $min_policy_version, \@failures );
-    return $self->_make_result( 0, \@failures )
-      if $stop_on_first && @failures;
+  $self->_check_min_policy_version($tc, $min_policy_version, \@failures);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-    $self->_check_cmp_validator( $tc, $cmp_validator, \@failures );
-    return $self->_make_result( 0, \@failures )
-      if $stop_on_first && @failures;
+  $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-    $self->_check_disclosed( $tc, $vendor_id, $check_disclosed, \@failures );
-    return $self->_make_result( 0, \@failures )
-      if $stop_on_first && @failures;
+  $self->_check_disclosed($tc, $vendor_id, $check_disclosed, \@failures);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-    $self->_check_consent_purposes(
-        $tc,            $vendor_id,   $strict, \@failures,
-        $stop_on_first, $consent_ids, $flexible_set,
-    );
-    return $self->_make_result( 0, \@failures )
-      if $stop_on_first && @failures;
+  $self->_check_consent_purposes($tc, $vendor_id, $strict, \@failures, $stop_on_first, $consent_ids, $flexible_set,);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-    $self->_check_li_purposes(
-        $tc,            $vendor_id, $strict, \@failures,
-        $stop_on_first, $li_ids,    $flexible_set,
-    );
+  $self->_check_li_purposes($tc, $vendor_id, $strict, \@failures, $stop_on_first, $li_ids, $flexible_set,);
 
-    if (@failures) {
-        return $self->_make_result( 0, \@failures );
-    }
+  if (@failures) {
+    return $self->_make_result(0, \@failures);
+  }
 
-    return $self->_make_result( 1, [] );
+  return $self->_make_result(1, []);
 }
 
 sub _check_cmp_validator {
-    my ( $self, $tc, $cmp_validator, $failures ) = @_;
+  my ($self, $tc, $cmp_validator, $failures) = @_;
 
-    return unless defined $cmp_validator;
+  return unless defined $cmp_validator;
 
-    my $cmp_id = $tc->cmp_id;
-    unless ( $cmp_validator->is_valid($cmp_id) ) {
-        push @{$failures},
-          GDPR::IAB::TCFv2::Validator::Failure->new(
-            code    => ReasonInvalidCMP,
-            message => "CMP $cmp_id is not valid/disclosed",
-            cmp_id  => $cmp_id,
-          );
-    }
-    return;
+  my $cmp_id = $tc->cmp_id;
+  unless ($cmp_validator->is_valid($cmp_id)) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code    => ReasonInvalidCMP,
+      message => "CMP $cmp_id is not valid/disclosed",
+      cmp_id  => $cmp_id,
+      );
+  }
+  return;
 }
 
 sub _check_min_policy_version {
-    my ( $self, $tc, $min_policy_version, $failures ) = @_;
+  my ($self, $tc, $min_policy_version, $failures) = @_;
 
-    return unless defined $min_policy_version;
+  return unless defined $min_policy_version;
 
-    my $actual = $tc->policy_version;
-    if ( $actual < $min_policy_version ) {
-        push @{$failures},
-          GDPR::IAB::TCFv2::Validator::Failure->new(
-            code    => ReasonPolicyVersionTooLow,
-            message =>
-              "TC string policy version $actual is below required minimum $min_policy_version",
-          );
-    }
-    return;
+  my $actual = $tc->policy_version;
+  if ($actual < $min_policy_version) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code    => ReasonPolicyVersionTooLow,
+      message => "TC string policy version $actual is below required minimum $min_policy_version",
+      );
+  }
+  return;
 }
 
 sub _check_disclosed {
-    my ( $self, $tc, $vendor_id, $check_disclosed, $failures ) = @_;
+  my ($self, $tc, $vendor_id, $check_disclosed, $failures) = @_;
 
-    return unless $check_disclosed;
-    return unless $tc->has_vendor_disclosure;
+  return unless $check_disclosed;
+  return unless $tc->has_vendor_disclosure;
 
-    unless ( $tc->disclosed_vendor($vendor_id) ) {
-        push @{$failures},
-          GDPR::IAB::TCFv2::Validator::Failure->new(
-            code      => ReasonVendorNotDisclosed,
-            message   => "vendor $vendor_id not disclosed",
-            vendor_id => $vendor_id,
-          );
-    }
-    return;
+  unless ($tc->disclosed_vendor($vendor_id)) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code      => ReasonVendorNotDisclosed,
+      message   => "vendor $vendor_id not disclosed",
+      vendor_id => $vendor_id,
+      );
+  }
+  return;
 }
 
 sub _check_consent_purposes {
-    my ($self,        $tc, $vendor_id, $strict, $failures, $stop_on_first,
-        $consent_ids, $flexible_set
-    ) = @_;
+  my ($self, $tc, $vendor_id, $strict, $failures, $stop_on_first, $consent_ids, $flexible_set) = @_;
 
-    foreach my $pid ( @{$consent_ids} ) {
-        my $is_flexible = $flexible_set->{$pid};
+  foreach my $pid (@{$consent_ids}) {
+    my $is_flexible = $flexible_set->{$pid};
 
-        # Publisher-restriction inspection runs before the parser
-        # delegate so a restriction-driven failure carries the precise
-        # Reason* code (and restriction_type) rather than the generic
-        # vendor-not-allowed code. Skipped for flexible purposes: the
-        # flex API may flip the basis based on the restriction itself,
-        # so what looks like a contradiction here can still pass.
-        if ( !$is_flexible ) {
-            my $pr_failure = $self->_publisher_restriction_failure(
-                $tc,
-                $vendor_id, $pid, 0
-            );
-            if ($pr_failure) {
-                push @{$failures}, $pr_failure;
-                return if $stop_on_first;
-                next;
-            }
-        }
-
-        my $allowed = $is_flexible
-          ? $tc->is_vendor_allowed_for_flexible_purpose(
-            $vendor_id, $pid, 0,
-            strict => $strict
-          )
-          : $tc->is_vendor_consent_allowed(
-            $vendor_id, $pid,
-            strict => $strict
-          );
-
-        unless ($allowed) {
-            push @{$failures},
-              GDPR::IAB::TCFv2::Validator::Failure->new(
-                code    => ReasonVendorNotAllowedConsent,
-                message =>
-                  "vendor $vendor_id not allowed for purpose $pid (consent)",
-                purpose_id => $pid,
-                vendor_id  => $vendor_id,
-              );
-            return if $stop_on_first;
-        }
+    # Publisher-restriction inspection runs before the parser
+    # delegate so a restriction-driven failure carries the precise
+    # Reason* code (and restriction_type) rather than the generic
+    # vendor-not-allowed code. Skipped for flexible purposes: the
+    # flex API may flip the basis based on the restriction itself,
+    # so what looks like a contradiction here can still pass.
+    if (!$is_flexible) {
+      my $pr_failure = $self->_publisher_restriction_failure($tc, $vendor_id, $pid, 0);
+      if ($pr_failure) {
+        push @{$failures}, $pr_failure;
+        return if $stop_on_first;
+        next;
+      }
     }
-    return;
+
+    my $allowed
+      = $is_flexible
+      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 0, strict => $strict)
+      : $tc->is_vendor_consent_allowed($vendor_id, $pid, strict => $strict);
+
+    unless ($allowed) {
+      push @{$failures},
+        GDPR::IAB::TCFv2::Validator::Failure->new(
+        code       => ReasonVendorNotAllowedConsent,
+        message    => "vendor $vendor_id not allowed for purpose $pid (consent)",
+        purpose_id => $pid,
+        vendor_id  => $vendor_id,
+        );
+      return if $stop_on_first;
+    }
+  }
+  return;
 }
 
 sub _check_li_purposes {
-    my ($self,   $tc, $vendor_id, $strict, $failures, $stop_on_first,
-        $li_ids, $flexible_set
-    ) = @_;
+  my ($self, $tc, $vendor_id, $strict, $failures, $stop_on_first, $li_ids, $flexible_set) = @_;
 
-    my $policy_version = $tc->policy_version;
+  my $policy_version = $tc->policy_version;
 
-    foreach my $pid ( @{$li_ids} ) {
-        my $is_flexible = $flexible_set->{$pid};
+  foreach my $pid (@{$li_ids}) {
+    my $is_flexible = $flexible_set->{$pid};
 
-        # TCF carve-out: legitimate interest is never permitted for
-        # Purpose 1, and is forbidden for Purposes 3-6 in TCF v2.2+
-        # (TcfPolicyVersion >= 4). When the configured basis is LI and
-        # the purpose is not flexible, this is a configuration the
-        # spec cannot satisfy regardless of the vendor's signals; emit
-        # the dedicated reason instead of the generic LI failure so
-        # callers can distinguish "spec forbids this" from "vendor
-        # missing the LI bit".
-        if ( !$is_flexible
-            && _li_carve_out_applies( $pid, $policy_version ) )
-        {
-            push @{$failures},
-              GDPR::IAB::TCFv2::Validator::Failure->new(
-                code    => ReasonLegitimateInterestNotPermittedForPurpose,
-                message =>
-                  "legitimate interest not permitted for purpose $pid",
-                purpose_id => $pid,
-                vendor_id  => $vendor_id,
-              );
-            return if $stop_on_first;
-            next;
-        }
-
-        # Publisher-restriction inspection: same rationale as on the
-        # consent path. Skipped for flexible purposes (the flex API
-        # honors the restriction by flipping bases, so what looks like
-        # a contradiction here can still pass).
-        if ( !$is_flexible ) {
-            my $pr_failure = $self->_publisher_restriction_failure(
-                $tc,
-                $vendor_id, $pid, 1
-            );
-            if ($pr_failure) {
-                push @{$failures}, $pr_failure;
-                return if $stop_on_first;
-                next;
-            }
-        }
-
-        my $allowed = $is_flexible
-          ? $tc->is_vendor_allowed_for_flexible_purpose(
-            $vendor_id, $pid, 1,
-            strict => $strict
-          )
-          : $tc->is_vendor_legitimate_interest_allowed(
-            $vendor_id, $pid,
-            strict => $strict
-          );
-
-        unless ($allowed) {
-            push @{$failures},
-              GDPR::IAB::TCFv2::Validator::Failure->new(
-                code    => ReasonVendorNotAllowedLegitimateInterest,
-                message =>
-                  "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
-                purpose_id => $pid,
-                vendor_id  => $vendor_id,
-              );
-            return if $stop_on_first;
-        }
+    # TCF carve-out: legitimate interest is never permitted for
+    # Purpose 1, and is forbidden for Purposes 3-6 in TCF v2.2+
+    # (TcfPolicyVersion >= 4). When the configured basis is LI and
+    # the purpose is not flexible, this is a configuration the
+    # spec cannot satisfy regardless of the vendor's signals; emit
+    # the dedicated reason instead of the generic LI failure so
+    # callers can distinguish "spec forbids this" from "vendor
+    # missing the LI bit".
+    if (!$is_flexible && _li_carve_out_applies($pid, $policy_version)) {
+      push @{$failures},
+        GDPR::IAB::TCFv2::Validator::Failure->new(
+        code       => ReasonLegitimateInterestNotPermittedForPurpose,
+        message    => "legitimate interest not permitted for purpose $pid",
+        purpose_id => $pid,
+        vendor_id  => $vendor_id,
+        );
+      return if $stop_on_first;
+      next;
     }
-    return;
+
+    # Publisher-restriction inspection: same rationale as on the
+    # consent path. Skipped for flexible purposes (the flex API
+    # honors the restriction by flipping bases, so what looks like
+    # a contradiction here can still pass).
+    if (!$is_flexible) {
+      my $pr_failure = $self->_publisher_restriction_failure($tc, $vendor_id, $pid, 1);
+      if ($pr_failure) {
+        push @{$failures}, $pr_failure;
+        return if $stop_on_first;
+        next;
+      }
+    }
+
+    my $allowed
+      = $is_flexible
+      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 1, strict => $strict)
+      : $tc->is_vendor_legitimate_interest_allowed($vendor_id, $pid, strict => $strict);
+
+    unless ($allowed) {
+      push @{$failures},
+        GDPR::IAB::TCFv2::Validator::Failure->new(
+        code       => ReasonVendorNotAllowedLegitimateInterest,
+        message    => "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
+        purpose_id => $pid,
+        vendor_id  => $vendor_id,
+        );
+      return if $stop_on_first;
+    }
+  }
+  return;
 }
 
 sub _li_carve_out_applies {
-    my ( $pid, $policy_version ) = @_;
+  my ($pid, $policy_version) = @_;
 
-    return 1 if $pid == 1;
-    return 1 if $pid >= 3 && $pid <= 6 && $policy_version >= 4;
-    return 0;
+  return 1 if $pid == 1;
+  return 1 if $pid >= 3 && $pid <= 6 && $policy_version >= 4;
+  return 0;
 }
 
 # Inspect publisher restrictions for ($vendor_id, $pid) and return a
@@ -374,60 +320,46 @@ sub _li_carve_out_applies {
 # restriction (e.g. RequireConsent on a consent-basis purpose) is a
 # legal coexistence and falls through to the parser delegate.
 sub _publisher_restriction_failure {
-    my ( $self, $tc, $vendor_id, $pid, $basis ) = @_;
+  my ($self, $tc, $vendor_id, $pid, $basis) = @_;
 
-    if ( $tc->check_publisher_restriction( $pid, NotAllowed, $vendor_id ) ) {
-        return GDPR::IAB::TCFv2::Validator::Failure->new(
-            code    => ReasonPublisherRestrictionNotAllowed,
-            message =>
-              "publisher restriction: purpose $pid not allowed (vendor $vendor_id)",
-            purpose_id       => $pid,
-            vendor_id        => $vendor_id,
-            restriction_type => NotAllowed,
-        );
-    }
+  if ($tc->check_publisher_restriction($pid, NotAllowed, $vendor_id)) {
+    return GDPR::IAB::TCFv2::Validator::Failure->new(
+      code             => ReasonPublisherRestrictionNotAllowed,
+      message          => "publisher restriction: purpose $pid not allowed (vendor $vendor_id)",
+      purpose_id       => $pid,
+      vendor_id        => $vendor_id,
+      restriction_type => NotAllowed,
+    );
+  }
 
-    if ($basis == 0
-        && $tc->check_publisher_restriction(
-            $pid, RequireLegitimateInterest, $vendor_id
-        )
-      )
-    {
-        return GDPR::IAB::TCFv2::Validator::Failure->new(
-            code    => ReasonPublisherRestrictionRequireLegitimateInterest,
-            message =>
-              "publisher restriction: purpose $pid requires legitimate interest (vendor $vendor_id)",
-            purpose_id       => $pid,
-            vendor_id        => $vendor_id,
-            restriction_type => RequireLegitimateInterest,
-        );
-    }
+  if ($basis == 0 && $tc->check_publisher_restriction($pid, RequireLegitimateInterest, $vendor_id)) {
+    return GDPR::IAB::TCFv2::Validator::Failure->new(
+      code             => ReasonPublisherRestrictionRequireLegitimateInterest,
+      message          => "publisher restriction: purpose $pid requires legitimate interest (vendor $vendor_id)",
+      purpose_id       => $pid,
+      vendor_id        => $vendor_id,
+      restriction_type => RequireLegitimateInterest,
+    );
+  }
 
-    if (   $basis == 1
-        && $tc->check_publisher_restriction( $pid, RequireConsent, $vendor_id )
-      )
-    {
-        return GDPR::IAB::TCFv2::Validator::Failure->new(
-            code    => ReasonPublisherRestrictionRequireConsent,
-            message =>
-              "publisher restriction: purpose $pid requires consent (vendor $vendor_id)",
-            purpose_id       => $pid,
-            vendor_id        => $vendor_id,
-            restriction_type => RequireConsent,
-        );
-    }
+  if ($basis == 1 && $tc->check_publisher_restriction($pid, RequireConsent, $vendor_id)) {
+    return GDPR::IAB::TCFv2::Validator::Failure->new(
+      code             => ReasonPublisherRestrictionRequireConsent,
+      message          => "publisher restriction: purpose $pid requires consent (vendor $vendor_id)",
+      purpose_id       => $pid,
+      vendor_id        => $vendor_id,
+      restriction_type => RequireConsent,
+    );
+  }
 
-    return;
+  return;
 }
 
 
 sub _make_result {
-    my ( $self, $ok, $failures ) = @_;
+  my ($self, $ok, $failures) = @_;
 
-    return GDPR::IAB::TCFv2::Validator::Result->new(
-        ok       => $ok,
-        failures => $failures,
-    );
+  return GDPR::IAB::TCFv2::Validator::Result->new(ok => $ok, failures => $failures,);
 }
 
 1;

@@ -14,179 +14,166 @@ use Scalar::Util qw<blessed>;
 # handled the same way in load_from_url.
 
 sub new {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    _validate_http_options( \%args );
+  _validate_http_options(\%args);
 
-    my $self = {
-        cmps         => {},
-        last_updated => undef,
-        now          => $args{now},
-        verify_ssl   => exists $args{verify_ssl} ? $args{verify_ssl} : 1,
-        timeout      => exists $args{timeout}    ? $args{timeout}    : 30,
-        http_client  => $args{http_client},
-    };
-    bless $self, $klass;
+  my $self = {
+    cmps         => {},
+    last_updated => undef,
+    now          => $args{now},
+    verify_ssl   => exists $args{verify_ssl} ? $args{verify_ssl} : 1,
+    timeout      => exists $args{timeout}    ? $args{timeout}    : 30,
+    http_client  => $args{http_client},
+  };
+  bless $self, $klass;
 
-    if ( defined $args{file} ) {
-        $self->load_from_file( $args{file} );
-    }
-    elsif ( defined $args{url} ) {
+  if (defined $args{file}) {
+    $self->load_from_file($args{file});
+  }
+  elsif (defined $args{url}) {
 
-        # Network fetch is opt-in.  A library that silently dials out
-        # over the network when handed an arbitrary URL is a footgun
-        # (proxy traversal, blocked egress, surprise latency, supply-
-        # chain risk).  Force the caller to pass network_ok => 1 so the
-        # decision is intentional.
-        croak "CMPValidator: refusing to fetch '$args{url}' because "
-          . "network_ok was not set. Pass network_ok => 1 to enable "
-          . "URL loading, or use file => '...' / data => '...' instead."
-          unless $args{network_ok};
+    # Network fetch is opt-in.  A library that silently dials out
+    # over the network when handed an arbitrary URL is a footgun
+    # (proxy traversal, blocked egress, surprise latency, supply-
+    # chain risk).  Force the caller to pass network_ok => 1 so the
+    # decision is intentional.
+    croak "CMPValidator: refusing to fetch '$args{url}' because "
+      . "network_ok was not set. Pass network_ok => 1 to enable "
+      . "URL loading, or use file => '...' / data => '...' instead."
+      unless $args{network_ok};
 
-        $self->load_from_url( $args{url} );
-    }
-    elsif ( defined $args{data} ) {
-        $self->load_from_data( $args{data} );
-    }
+    $self->load_from_url($args{url});
+  }
+  elsif (defined $args{data}) {
+    $self->load_from_data($args{data});
+  }
 
-    return $self;
+  return $self;
 }
 
 sub _validate_http_options {
-    my ($args) = @_;
+  my ($args) = @_;
 
-    return unless exists $args->{http_client};
+  return unless exists $args->{http_client};
 
-    my $client = $args->{http_client};
-    croak
-      "http_client must be a blessed object responding to ->get(\$url); got "
-      . ( ref($client) || ( defined $client ? "a non-reference" : "undef" ) )
-      unless blessed($client) && $client->can('get');
+  my $client = $args->{http_client};
+  croak "http_client must be a blessed object responding to ->get(\$url); got "
+    . (ref($client) || (defined $client ? "a non-reference" : "undef"))
+    unless blessed($client) && $client->can('get');
 
-    croak
-      "http_client and verify_ssl/timeout are mutually exclusive: configure SSL/timeout on the http_client itself"
-      if exists $args->{verify_ssl} || exists $args->{timeout};
+  croak "http_client and verify_ssl/timeout are mutually exclusive: configure SSL/timeout on the http_client itself"
+    if exists $args->{verify_ssl} || exists $args->{timeout};
 
-    return;
+  return;
 }
 
 sub load_from_file {
-    my ( $self, $path ) = @_;
+  my ($self, $path) = @_;
 
-    open my $fh, '<', $path
-      or croak "Could not open CMP list file '$path': $!";
-    my $content = do { local $/ = undef; <$fh> };
-    close $fh;
+  open my $fh, '<', $path or croak "Could not open CMP list file '$path': $!";
+  my $content = do { local $/ = undef; <$fh> };
+  close $fh;
 
-    return $self->load_from_data($content);
+  return $self->load_from_data($content);
 }
 
 sub load_from_url {
-    my ( $self, $url ) = @_;
+  my ($self, $url) = @_;
 
-    my $client = $self->{http_client};
-    unless ( defined $client ) {
-        eval { require HTTP::Tiny; 1 }
-          or croak "HTTP::Tiny is required to load CMP list from URL. "
-          . "Please install it or use a local file instead.";
+  my $client = $self->{http_client};
+  unless (defined $client) {
+    eval { require HTTP::Tiny; 1 }
+      or croak "HTTP::Tiny is required to load CMP list from URL. " . "Please install it or use a local file instead.";
 
-        # env_proxy => 1: honor https_proxy / http_proxy / no_proxy.
-        # verify_SSL => 1 (default): pin the secure default regardless
-        # of the installed HTTP::Tiny version (older versions defaulted
-        # to 0).
-        $client = HTTP::Tiny->new(
-            env_proxy  => 1,
-            verify_SSL => $self->{verify_ssl},
-            timeout    => $self->{timeout},
-        );
-    }
+    # env_proxy => 1: honor https_proxy / http_proxy / no_proxy.
+    # verify_SSL => 1 (default): pin the secure default regardless
+    # of the installed HTTP::Tiny version (older versions defaulted
+    # to 0).
+    $client = HTTP::Tiny->new(env_proxy => 1, verify_SSL => $self->{verify_ssl}, timeout => $self->{timeout},);
+  }
 
-    my $response = $client->get($url);
-    croak "Failed to fetch CMP list from '$url': $response->{reason}"
-      unless $response->{success};
+  my $response = $client->get($url);
+  croak "Failed to fetch CMP list from '$url': $response->{reason}" unless $response->{success};
 
-    return $self->load_from_data( $response->{content} );
+  return $self->load_from_data($response->{content});
 }
 
 sub load_from_data {
-    my ( $self, $json_text ) = @_;
+  my ($self, $json_text) = @_;
 
-    eval { require JSON::PP; 1 }
-      or croak "JSON::PP is required to decode the CMP list. "
-      . "Please install it (it is core in Perl 5.14+).";
+  eval { require JSON::PP; 1 }
+    or croak "JSON::PP is required to decode the CMP list. " . "Please install it (it is core in Perl 5.14+).";
 
-    my $data = eval { JSON::PP->new->utf8->decode($json_text) };
-    croak "Failed to decode CMP list JSON: $@" if $@;
+  my $data = eval { JSON::PP->new->utf8->decode($json_text) };
+  croak "Failed to decode CMP list JSON: $@" if $@;
 
-    croak "Invalid CMP list format: missing 'cmps' key"
-      unless ref $data eq 'HASH' && $data->{cmps};
+  croak "Invalid CMP list format: missing 'cmps' key" unless ref $data eq 'HASH' && $data->{cmps};
 
-    $self->{cmps}         = $data->{cmps};
-    $self->{last_updated} = $data->{lastUpdated};
+  $self->{cmps}         = $data->{cmps};
+  $self->{last_updated} = $data->{lastUpdated};
 
-    $self->_check_age();
+  $self->_check_age();
 
-    return $self;
+  return $self;
 }
 
 sub is_valid {
-    my ( $self, $cmp_id ) = @_;
+  my ($self, $cmp_id) = @_;
 
-    my $cmp = $self->{cmps}->{$cmp_id};
-    return 0 unless $cmp;
+  my $cmp = $self->{cmps}->{$cmp_id};
+  return 0 unless $cmp;
 
-    if ( $cmp->{deletedDate} ) {
-        my $deleted = $self->_parse_date( $cmp->{deletedDate} );
-        return 0 if $deleted && $deleted <= $self->_now();
-    }
+  if ($cmp->{deletedDate}) {
+    my $deleted = $self->_parse_date($cmp->{deletedDate});
+    return 0 if $deleted && $deleted <= $self->_now();
+  }
 
-    return 1;
+  return 1;
 }
 
 sub last_updated_epoch {
-    my ($self) = @_;
-    return unless $self->{last_updated};
-    return $self->_parse_date( $self->{last_updated} );
+  my ($self) = @_;
+  return unless $self->{last_updated};
+  return $self->_parse_date($self->{last_updated});
 }
 
 sub _check_age {
-    my ($self) = @_;
+  my ($self) = @_;
 
-    my $epoch = $self->last_updated_epoch();
-    return unless $epoch;
+  my $epoch = $self->last_updated_epoch();
+  return unless $epoch;
 
-    my $age_days = ( $self->_now() - $epoch ) / 86400;
-    if ( $age_days > 28 ) {
-        carp sprintf "CMP list is older than 28 days (last updated: %s)",
-          $self->{last_updated};
-    }
-    return;
+  my $age_days = ($self->_now() - $epoch) / 86400;
+  if ($age_days > 28) {
+    carp sprintf "CMP list is older than 28 days (last updated: %s)", $self->{last_updated};
+  }
+  return;
 }
 
 sub _now {
-    my ($self) = @_;
-    return $self->{now} || time();
+  my ($self) = @_;
+  return $self->{now} || time();
 }
 
 sub _parse_date {
-    my ( $self, $date_str ) = @_;
+  my ($self, $date_str) = @_;
 
-    # IAB Registry timestamps come as "2020-04-27T20:27:54Z" or
-    # "2020-04-27T20:27:54.2Z".  Strip the optional fractional seconds
-    # and the timezone suffix (always Z in the IAB feed) before handing
-    # to Time::Piece, which doesn't grok %z portably.
-    if ( $date_str =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/ ) {
-        eval { require Time::Piece; 1 }
-          or croak "Time::Piece is required to parse the CMP list "
-          . "lastUpdated timestamp. Please install it (it is core in "
-          . "Perl 5.10+).";
+  # IAB Registry timestamps come as "2020-04-27T20:27:54Z" or
+  # "2020-04-27T20:27:54.2Z".  Strip the optional fractional seconds
+  # and the timezone suffix (always Z in the IAB feed) before handing
+  # to Time::Piece, which doesn't grok %z portably.
+  if ($date_str =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/) {
+    eval { require Time::Piece; 1 }
+      or croak "Time::Piece is required to parse the CMP list "
+      . "lastUpdated timestamp. Please install it (it is core in "
+      . "Perl 5.10+).";
 
-        my $t_str = "$1-$2-$3 $4:$5:$6";
-        my $epoch =
-          eval { Time::Piece->strptime( $t_str, "%Y-%m-%d %H:%M:%S" )->epoch; };
-        return $epoch;
-    }
-    return;
+    my $t_str = "$1-$2-$3 $4:$5:$6";
+    my $epoch = eval { Time::Piece->strptime($t_str, "%Y-%m-%d %H:%M:%S")->epoch; };
+    return $epoch;
+  }
+  return;
 }
 
 1;

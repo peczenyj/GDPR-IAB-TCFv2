@@ -6,40 +6,37 @@ use warnings;
 use overload
   bool => sub { $_[0]->{ok} },
   '""' => sub {
-    my $self = shift;
-    return '' if $self->{ok};
+  my $self = shift;
+  return '' if $self->{ok};
 
-    # Use $ORS (Output Record Separator) or newline as fallback
-    my $sep = defined($\) ? $\ : "\n";
-    return join( $sep, map { $_->message } @{ $self->{failures} || [] } );
+  # Use $ORS (Output Record Separator) or newline as fallback
+  my $sep = defined($\) ? $\ : "\n";
+  return join($sep, map { $_->message } @{$self->{failures} || []});
   };
 
 sub new {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    my $self = {
-        ok       => $args{ok}       || 0,
-        failures => $args{failures} || [],
-    };
+  my $self = {ok => $args{ok} || 0, failures => $args{failures} || [],};
 
-    return bless $self, $klass;
+  return bless $self, $klass;
 }
 
 sub is_valid { $_[0]->{ok} }
 
 sub failures {
-    my $self = shift;
-    return @{ $self->{failures} || [] };
+  my $self = shift;
+  return @{$self->{failures} || []};
 }
 
 sub reason_codes {
-    my $self = shift;
-    return map { $_->code } @{ $self->{failures} || [] };
+  my $self = shift;
+  return map { $_->code } @{$self->{failures} || []};
 }
 
 sub reasons {
-    my $self = shift;
-    return map { $_->message } @{ $self->{failures} || [] };
+  my $self = shift;
+  return map { $_->message } @{$self->{failures} || []};
 }
 
 1;
