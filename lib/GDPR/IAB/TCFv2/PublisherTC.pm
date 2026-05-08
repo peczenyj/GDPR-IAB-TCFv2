@@ -173,10 +173,10 @@ GDPR::IAB::TCFv2::PublisherTC - TCF v2.3 publisher TC section parser
         options      => { json => ... },
     );
 
-    say num_custom_purposes;
+    say "publisher declares ", $publisher_tc->num_custom_purposes, " custom purposes";
 
-    say "there is publisher restriction on purpose id 1, type 0 on vendor 284"
-        if $publisher_tc->check_restriction(1, 0, 284);
+    say "publisher consents to purpose 1"
+        if $publisher_tc->is_purpose_consent_allowed(1);
 
 =head1 CONSTRUCTOR
 
@@ -212,7 +212,7 @@ The user's consent value for each Purpose established on the legal basis of cons
 
 =head2 is_purpose_legitimate_interest_allowed
 
-The Purposes transparency requir'ements are met for each Purpose established on the legal basis of legitimate interest and the user has not exercised their "Right to Object" to that Purpose.
+The Purposes transparency requirements are met for each Purpose established on the legal basis of legitimate interest and the user has not exercised their "Right to Object" to that Purpose.
 
 By default or if the user has exercised their "Right to Object to a Purpose", the corresponding bit for that purpose is set to 0
 
@@ -226,24 +226,20 @@ The legitimate Interest disclosure establishment value for each custom purpose i
 
 =head2 TO_JSON
 
-Returns a hashref with the following format:
+Returns a hashref describing the publisher's purpose decisions:
 
     {
-        consents => ...,
+        consents             => ...,
         legitimate_interests => ...,
-        custom_purposes => {
-            consents => ...,
+        custom_purposes      => {
+            consents             => ...,
             legitimate_interests => ...,
         },
-        restrictions => {
-            '[purpose id]' => {
-                # 0 - Not Allowed
-                # 1 - Require Consent
-                # 2 - Require Legitimate Interest
-                '[vendor id]' => 1,
-            },
-        }
     }
+
+Publisher restrictions are emitted by L<GDPR::IAB::TCFv2::PublisherRestrictions/TO_JSON>;
+the L<GDPR::IAB::TCFv2::Publisher/TO_JSON> wrapper combines the two views into a
+single hashref.
 
 Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.argAC0gAAAAAAAAAAAA> we can generate this compact hashref.
 
@@ -263,13 +259,8 @@ Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4A
          7,
          10
       ],
-      "custom_purpose" : {
+      "custom_purposes" : {
          "consents" : [],
          "legitimate_interests" : []
-      },
-      "restrictions" : {
-         "7" : {
-            "32" : 1
-         }
       }
     }

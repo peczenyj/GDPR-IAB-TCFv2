@@ -196,6 +196,14 @@ Will fetch 2 bits from data since bit offset and convert it an unsigned int.
 
     my $value = get_uint2( $data, $offset );
 
+=head2 get_uint3
+
+Receive two parameters: data and bit offset.
+
+Will fetch 3 bits from data since bit offset and convert it an unsigned int.
+
+    my $segment_type = get_uint3( $data, 0 );
+
 =head2 get_uint6
 
 Receive two parameters: data and bit offset.
@@ -204,17 +212,16 @@ Will fetch 6 bits from data since bit offset and convert it an unsigned int.
 
     my $version = get_uint6( $data, 0 );
 
-=head2 get_char6
-
-Similar to L<GDPR::IAB::TCFv2::BitUtils::get_uint6> but perform increment the value with the ascii value of "A" letter and convert to a character.
-
 =head2 get_char6_pair
 
-Receives the data, bit offset and sequence size n.
+Receives the data and bit offset.
 
-Returns a string of size n by concatenate L<GDPR::IAB::TCFv2::BitUtils::get_char6> calls.
+Reads two consecutive 6-bit values starting at C<$offset>, increments each
+by the ASCII value of the letter C<A>, and returns the resulting two-letter
+string. Used to decode the C<consent_language> and C<publisher_country_code>
+fields of the TCF v2 core string.
 
-    my $consent_language = get_char6_pair($data, 108, 2) # returns two letter country encoded as ISO_639-1 
+    my $consent_language = get_char6_pair($data, 108); # returns two letter country encoded as ISO_639-1
 
 =head2 get_uint12
 
@@ -239,5 +246,5 @@ Receives the data and bit offset.
 Will fetch 36 bits from data since bit offset and convert it an unsigned int (long).
 
     my $deciseconds = get_uint36( $data, 6 );
-    my $created = $deciseconds/2;
+    my $created = $deciseconds/10;
 

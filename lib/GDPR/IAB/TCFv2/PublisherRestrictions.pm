@@ -194,18 +194,20 @@ Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4A
 
 =head2 TO_JSON
 
-Returns a hashref with the following format:
+Returns a hashref keyed by purpose id; each inner hashref maps vendor id
+to the integer C<restriction_type> that vendor was given for that purpose:
 
     {
         '[purpose id]' => {
-            # 0 - Not Allowed
-            # 1 - Require Consent
-            # 2 - Require Legitimate Interest
-            '[vendor id]' => 1,
+            # value is the restriction type:
+            #   0 - Not Allowed
+            #   1 - Require Consent
+            #   2 - Require Legitimate Interest
+            '[vendor id]' => '[restriction type]',
         },
     }
 
-Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this hashref.
+Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA> we can generate this hashref (vendor 32 has restriction type 1 -- Require Consent -- for purpose 7):
 
     {
         "7" => {

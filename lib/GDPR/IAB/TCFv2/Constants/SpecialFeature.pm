@@ -71,11 +71,10 @@ With your acceptance, your precise location (within a radius of less than 500 me
 Special feature id 2: Actively scan device characteristics for identification
 
 With your acceptance, certain characteristics specific to your device might be requested and used to distinguish it from other devices (such as the installed fonts or plugins, the resolution of your screen) in support of the purposes explained in this notice.
-      "description": 
 
 =head2 SpecialFeatureDescription
 
-Returns a hashref with a mapping between all restriction types and their description.
+Returns a hashref with a mapping between all special feature ids and their description.
 
 =head1 NAME ALIASES
 
