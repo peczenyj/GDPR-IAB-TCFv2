@@ -39,7 +39,7 @@ jobs:
           cpan-upload -u "$PAUSE_USER" -p "$PAUSE_PASSWORD" GDPR-IAB-TCFv2-*.tar.gz
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: GDPR-IAB-TCFv2-*.tar.gz
           generate_release_notes: true
