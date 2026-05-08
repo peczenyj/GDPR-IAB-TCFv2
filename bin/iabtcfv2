@@ -278,7 +278,7 @@ sub run_validate {
     }
 
     if (my $err = $@) {
-      chomp $err;
+      $err = _clean_error($err);
       warn "validate: $err\n";
       exit 2;
     }
@@ -288,7 +288,7 @@ sub run_validate {
 
   my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
   if (my $err = $@) {
-    chomp $err;
+    $err = _clean_error($err);
     warn "validate: $err\n";
     exit 2;
   }
