@@ -19,15 +19,15 @@ sub Parse {
 
   my $data      = $args{data};
   my $data_size = $args{data_size};
-  my $offset    = 0;
+  my $offset    = $args{offset} || 0;
   my $max_id    = $args{max_id};
   my $options   = $args{options};
 
   croak
-    "a BitField for $max_id bits requires a consent string of at least $max_id bits. This consent string only had $data_size bits"
-    if $data_size < $max_id;
+    "a BitField for $max_id bits requires a consent string of at least @{[ $offset + $max_id ]} bits. This consent string only had @{[ $data_size << 3 ]} bits"
+    if $offset + $max_id > ($data_size << 3);
 
-  my $self = {data => substr($data, $offset, $max_id), max_id => $max_id, options => $options,};
+  my $self = {data => $data, offset => $offset, max_id => $max_id, options => $options,};
 
   bless $self, $klass;
 
@@ -47,24 +47,28 @@ sub contains {
 
   return if $id > $self->{max_id};
 
-  return is_set($self->{data}, $id - 1);
+  return is_set($self->{data}, $self->{offset} + $id - 1);
 }
 
 sub all {
   my $self = shift;
 
-  my @data = split //, $self->{data};
+  my $bitstring = unpack("B*", substr($self->{data}, $self->{offset} >> 3));
+  $bitstring = substr($bitstring, $self->{offset} & 7, $self->{max_id});
 
-  return [grep { $data[$_ - 1] } 1 .. $self->{max_id}];
+  my @set_bits;
+  while ($bitstring =~ /1/g) {
+    push @set_bits, pos($bitstring);
+  }
+
+  return \@set_bits;
 }
 
 sub TO_JSON {
   my ($self, $filter_id) = @_;
 
-  my @data = split //, $self->{data};
-
   if (defined $filter_id) {
-    my $val = ($filter_id > 0 && $filter_id <= $self->{max_id}) ? $data[$filter_id - 1] : 0;
+    my $val = $self->contains($filter_id);
 
     if (!!$self->{options}->{json}->{compact}) {
       return $val ? [$filter_id] : [];
@@ -81,16 +85,27 @@ sub TO_JSON {
   }
 
   if (!!$self->{options}->{json}->{compact}) {
-    return [grep { $data[$_ - 1] } 1 .. $self->{max_id}];
+    return $self->all;
   }
+
+  my $bitstring = unpack("B*", substr($self->{data}, $self->{offset} >> 3));
+  $bitstring = substr($bitstring, $self->{offset} & 7, $self->{max_id});
 
   my ($false, $true) = @{$self->{options}->{json}->{boolean_values}};
 
   if (!!$self->{options}->{json}->{verbose}) {
-    return {map { $_ => $data[$_ - 1] ? $true : $false } 1 .. $self->{max_id}};
+    my %map = map { $_ => $false } 1 .. $self->{max_id};
+    while ($bitstring =~ /1/g) {
+      $map{pos($bitstring)} = $true;
+    }
+    return \%map;
   }
 
-  return {map { $_ => $true } grep { $data[$_ - 1] } 1 .. $self->{max_id}};
+  my %map;
+  while ($bitstring =~ /1/g) {
+    $map{pos($bitstring)} = $true;
+  }
+  return \%map;
 }
 
 1;

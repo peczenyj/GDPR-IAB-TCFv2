@@ -33,31 +33,33 @@ our @EXPORT_OK = qw<is_set
 sub is_set {
   my ($data, $offset) = @_;
 
-  my $data_size = length($data);
+  my $byte_offset = $offset >> 3;
+  my $bit_in_byte = $offset & 7;
 
-  croak "index out of bounds on offset $offset: can't read 1, only has: $data_size" if $offset + 1 > $data_size;
+  # TCF is MSB-first. vec(..., 1) addresses bits from LSB to MSB.
+  # So bit 0 of the spec is bit 7 of the byte for vec().
+  my $vec_offset = ($byte_offset << 3) | (7 - $bit_in_byte);
 
-  my $r = substr($data, $offset, 1) == 1;
+  croak "index out of bounds on offset $offset: can't read 1" if ($byte_offset >= length($data));
+
+  my $r = vec($data, $vec_offset, 1);
 
   return wantarray ? ($r, $offset + 1) : $r;
 }
 
 sub get_uint2 {
   my ($data, $offset) = @_;
-
-  return _get_big_endian_octet_8bits($data, $offset, 2);
+  return _get_bits($data, $offset, 2);
 }
 
 sub get_uint3 {
   my ($data, $offset) = @_;
-
-  return _get_big_endian_octet_8bits($data, $offset, 3);
+  return _get_bits($data, $offset, 3);
 }
 
 sub get_uint6 {
   my ($data, $offset) = @_;
-
-  return _get_big_endian_octet_8bits($data, $offset, 6);
+  return _get_bits($data, $offset, 6);
 }
 
 sub get_char6_pair {
@@ -78,91 +80,81 @@ sub get_char6_pair {
 
 sub get_uint12 {
   my ($data, $offset) = @_;
-
-  return _get_big_endian_short_16bits($data, $offset, 12);
+  return _get_bits($data, $offset, 12);
 }
 
 sub get_uint16 {
   my ($data, $offset) = @_;
-
-  return _get_big_endian_short_16bits($data, $offset, 16);
-}
-
-sub _get_big_endian_octet_8bits {
-  my ($data, $offset, $nbits) = @_;
-
-  my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 8, $offset, $nbits);
-
-  my $r = unpack("C", $bits_with_pading);
-
-  return wantarray ? ($r, $next_offset) : $r;
-}
-
-sub _get_big_endian_short_16bits {
-  my ($data, $offset, $nbits) = @_;
-
-  if ($CAN_FORCE_BIG_ENDIAN) {
-    my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 16, $offset, $nbits);
-
-    my $r = unpack("S>", $bits_with_pading);
-
-    return wantarray ? ($r, $next_offset) : $r;
-  }
-
-  my ($data_with_padding, $next_offset) = _add_padding($data, 16, $offset, $nbits);
-
-  # Coerce to a native scalar so downstream JSON serializers don't
-  # choke on a blessed Math::BigInt.  16 bits always fits in an IV.
-  my $r = Math::BigInt->new("0b" . $data_with_padding)->numify;
-
-  return wantarray ? ($r, $next_offset) : $r;
+  return _get_bits($data, $offset, 16);
 }
 
 sub get_uint36 {
   my ($data, $offset) = @_;
+  return _get_bits($data, $offset, 36);
+}
 
-  if ($CAN_PACK_QUADS) {
-    my ($bits_with_pading, $next_offset) = _get_bits_with_padding($data, 64, $offset, 36);
+# General bit extractor that handles cross-byte boundaries efficiently.
+# Since TCF is MSB-first, we can extract bytes, join them into a large
+# integer, and then shift/mask.
+sub _get_bits {
+  my ($data, $offset, $nbits) = @_;
 
-    my $r = unpack("Q>", $bits_with_pading);
+  my $byte_start = $offset >> 3;
+  my $bit_start  = $offset & 7;
+  my $byte_end   = ($offset + $nbits - 1) >> 3;
+  my $num_bytes  = $byte_end - $byte_start + 1;
 
-    return wantarray ? ($r, $next_offset) : $r;
+  croak "index out of bounds on offset $offset: can't read $nbits" if ($byte_end >= length($data));
+
+  my $raw = substr($data, $byte_start, $num_bytes);
+  my $val;
+
+  # Unpack into a native integer and shift.
+  # For up to 36 bits, we might need up to 6 bytes if it spans boundaries.
+  if ($num_bytes == 1) {
+    $val = unpack("C", $raw);
+  }
+  elsif ($num_bytes == 2) {
+    $val = unpack("n", $raw);
+  }
+  elsif ($num_bytes == 3) {
+    $val = unpack("N", "\0" . $raw);
+  }
+  elsif ($num_bytes == 4) {
+    $val = unpack("N", $raw);
+  }
+  elsif ($num_bytes <= 8) {
+
+    # Use Math::BigInt for 32-bit Perls or 36-bit values that might overflow IV
+    if ($CAN_PACK_QUADS && $num_bytes <= 8) {
+      my $padding = "\0" x (8 - $num_bytes);
+      $val = unpack("Q>", $padding . $raw);
+    }
+    else {
+      $val = Math::BigInt->from_bytes($raw);
+    }
   }
 
-  my ($data_with_padding, $next_offset) = _add_padding($data, 64, $offset, 36);
+  # Shift right to remove trailing bits of the last byte
+  my $bits_in_buffer = $num_bytes << 3;
+  my $right_shift    = $bits_in_buffer - $bit_start - $nbits;
 
-  # Same coercion as _get_big_endian_short_16bits.  36 bits fits in
-  # an NV's 53-bit mantissa with no precision loss (covers all TCF
-  # v2 deciseconds-since-epoch through year ~2148).
-  my $r = Math::BigInt->new("0b" . $data_with_padding)->numify;
-
-  return wantarray ? ($r, $next_offset) : $r;
+  if (ref $val) {
+    $val >>= $right_shift if $right_shift > 0;
+    my $mask = Math::BigInt->new(1) << $nbits;
+    $mask -= 1;
+    $val &= $mask;
+    return wantarray ? ($val->numify, $offset + $nbits) : $val->numify;
+  }
+  else {
+    $val >>= $right_shift if $right_shift > 0;
+    my $mask = (1 << $nbits) - 1;
+    $val &= $mask;
+    return wantarray ? ($val, $offset + $nbits) : $val;
+  }
 }
 
-sub _get_bits_with_padding {
-  my ($data, $bits, $offset, $nbits) = @_;
-
-  my ($data_with_padding, $next_offset) = _add_padding($data, $bits, $offset, $nbits);
-
-  my $r = pack("B${bits}", $data_with_padding);
-
-  return wantarray ? ($r, $next_offset) : $r;
-}
-
-sub _add_padding {
-  my ($data, $bits, $offset, $nbits) = @_;
-
-  my $data_size = length($data);
-
-  croak "index out of bounds on offset $offset: can't read $nbits, only has: $data_size"
-    if $offset + $nbits > $data_size;
-
-  my $padding = "0" x ($bits - $nbits);
-
-  my $r = $padding . substr($data, $offset, $nbits);
-
-  return wantarray ? ($r, $offset + $nbits) : $r;
-}
+# Remove legacy helpers that worked on bitstrings
 
 1;
 __END__

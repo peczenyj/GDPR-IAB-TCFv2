@@ -615,7 +615,7 @@ sub _decode_tc_string_segments {
   my ($core, @parts) = split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
 
   my $core_data      = _validate_and_decode_base64($core);
-  my $core_data_size = length($core_data) / 8;
+  my $core_data_size = length($core_data);
 
   croak
     "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
@@ -656,7 +656,7 @@ sub _validate_and_decode_base64 {
         \z
     }x;
 
-  return unpack 'B*', _decode_base64url($s);
+  return _decode_base64url($s);
 }
 
 sub _decode_base64url {
@@ -693,14 +693,15 @@ sub _parse_vendor_consents {
 sub _parse_vendor_legitimate_interests {
   my ($self, $legitimate_interest_offset) = @_;
 
-  my $data_size = length($self->{core_data});
+  my $data_size_bits = length($self->{core_data}) << 3;
 
   my ($vendor_legitimate_interests, $pub_restriction_offset) = $self->_parse_bitfield_or_range(
     $legitimate_interest_offset,
     sub {
       my $legitimate_interest_start = shift;
 
-      croak "invalid consent data: no legitimate interest start position" if $legitimate_interest_start >= $data_size;
+      croak "invalid consent data: no legitimate interest start position"
+        if $legitimate_interest_start >= $data_size_bits;
     }
   );
 
@@ -714,12 +715,10 @@ sub _parse_publisher_section {
 
   # parse public restrictions
 
-  my $core_data      = substr($self->{core_data}, $pub_restriction_offset);
-  my $core_data_size = length($self->{core_data});
-
   my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
-    core_data         => $core_data,
-    core_data_size    => $core_data_size,
+    core_data         => $self->{core_data},
+    core_data_size    => length($self->{core_data}),
+    offset            => $pub_restriction_offset,
     publisher_tc_data => $self->{publisher_tc_data},
     options           => $self->{options},
   );
@@ -752,6 +751,11 @@ sub _parse_allowed_vendors {
 sub _parse_vendor_bitfield_or_range {
   my ($self, $data, $expected_segment_type) = @_;
 
+  # If data looks like a string of 0/1 (from legacy tests), pack it.
+  if ($data =~ /^[01]+$/) {
+    $data = pack("B*", $data);
+  }
+
   my ($segment_type, $offset) = get_uint3($data, 0);
 
   croak "invalid segment type $segment_type: expected $expected_segment_type"
@@ -764,8 +768,13 @@ sub _parse_vendor_bitfield_or_range {
   # has_vendor_disclosure() still reports the segment as present while
   # contains() always returns false for any vendor id.
   if ($max_id == 0) {
-    my ($empty_section)
-      = GDPR::IAB::TCFv2::BitField->Parse(data => '', data_size => 0, max_id => 0, options => $self->{options},);
+    my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
+      data      => $data,
+      data_size => length($data),
+      max_id    => 0,
+      offset    => $next_offset,
+      options   => $self->{options},
+    );
     return $empty_section;
   }
 
@@ -773,20 +782,19 @@ sub _parse_vendor_bitfield_or_range {
 
   my $vendors_section;
   if ($is_range) {
-    my $range_data = substr($data, $bf_offset);
     ($vendors_section,) = GDPR::IAB::TCFv2::RangeSection->Parse(
-      data      => $range_data,
-      data_size => length($range_data),
-      offset    => 0,
+      data      => $data,
+      data_size => length($data),
+      offset    => $bf_offset,
       max_id    => $max_id,
       options   => $self->{options},
     );
   }
   else {
-    my $bitfield_data = substr($data, $bf_offset, $max_id);
     ($vendors_section,) = GDPR::IAB::TCFv2::BitField->Parse(
-      data      => $bitfield_data,
-      data_size => length($bitfield_data),
+      data      => $data,
+      data_size => length($data),
+      offset    => $bf_offset,
       max_id    => $max_id,
       options   => $self->{options},
     );
@@ -821,32 +829,29 @@ sub _parse_bitfield_or_range {
 sub _parse_range_section {
   my ($self, $max_id, $range_section_start_offset) = @_;
 
-  my $data = substr($self->{core_data}, $range_section_start_offset);
-
   my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
-    data      => $data,
-    data_size => length($data),
-    offset    => 0,
+    data      => $self->{core_data},
+    data_size => length($self->{core_data}),
+    offset    => $range_section_start_offset,
     max_id    => $max_id,
     options   => $self->{options},
   );
 
-  return wantarray ? ($range_section, $range_section_start_offset + $next_offset) : $range_section;
+  return wantarray ? ($range_section, $next_offset) : $range_section;
 }
 
 sub _parse_bitfield {
   my ($self, $max_id, $bitfield_start_offset) = @_;
 
-  my $data = substr($self->{core_data}, $bitfield_start_offset, $max_id);
-
   my ($bitfield, $next_offset) = GDPR::IAB::TCFv2::BitField->Parse(
-    data      => $data,
-    data_size => length($data),
+    data      => $self->{core_data},
+    data_size => length($self->{core_data}),
+    offset    => $bitfield_start_offset,
     max_id    => $max_id,
     options   => $self->{options},
   );
 
-  return wantarray ? ($bitfield, $bitfield_start_offset + $next_offset) : $bitfield;
+  return wantarray ? ($bitfield, $next_offset) : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
