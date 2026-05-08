@@ -207,6 +207,7 @@ GDPR::IAB::TCFv2::CMPValidator - IAB Registry-based Consent Management Platform 
         cmp_validator => $cmp_v,
     );
 
+    my $tc_string = '...';
     my $result = $validator->validate($tc_string);
     warn "compliance failed: $result\n" unless $result;
 

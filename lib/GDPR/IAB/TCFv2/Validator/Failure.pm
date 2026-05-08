@@ -43,6 +43,7 @@ GDPR::IAB::TCFv2::Validator::Failure - structured failure record from the Valida
 
     use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 
+    my ($validator, $tc_string) = ('...', '...');
     my $result = $validator->validate($tc_string);
 
     unless ($result) {
@@ -51,7 +52,6 @@ GDPR::IAB::TCFv2::Validator::Failure - structured failure record from the Valida
 
             if ( $f->code == ReasonVendorNotAllowedConsent ) {
                 # machine-readable handling
-                ...
             }
         }
     }

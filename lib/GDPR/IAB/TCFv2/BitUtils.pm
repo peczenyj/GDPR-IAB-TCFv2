@@ -164,21 +164,12 @@ __END__
 GDPR::IAB::TCFv2::BitUtils - TCF v2.3 bit-level decoding utilities
  
 =head1 SYNOPSIS
-    use GDPR::IAB::TCFv2::BitUtils qw<get_uint16>;
+    use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint16>;
 
-    my $data = unpack "B*", decode_base64url('tcf v2 consent string base64 encoded');
+    my $data = '...'; # raw binary data
     
     my $max_vendor_id_consent = get_uint16($data, 213);
-
-=head1 FUNCTIONS
-
-=head2 is_set
-
-Receive two parameters: data and bit offset.
-
-Will return true if the bit present on bit offset is 1.
-
-    my $is_service_specific = is_set( $data, 138 );
+    my $is_service_specific   = is_set( $data, 138 );
 
 =head2 get_uint2
 

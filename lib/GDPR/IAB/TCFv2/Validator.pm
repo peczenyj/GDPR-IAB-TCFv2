@@ -384,10 +384,11 @@ GDPR::IAB::TCFv2::Validator - declarative compliance checks for TC strings
     );
 
     # Fail-fast: stops at the first failing rule.
+    my $tc_string = '...';
     my $result = $validator->validate($tc_string);
 
     # Accumulate every failure for richer error reporting.
-    my $result = $validator->validate_all($tc_string);
+    $result = $validator->validate_all($tc_string);
 
     if ($result) {
         # All rules passed.
@@ -395,7 +396,7 @@ GDPR::IAB::TCFv2::Validator - declarative compliance checks for TC strings
     else {
         warn "Compliance failed:\n$result\n";  # stringification = reasons
         for my $reason ( $result->reasons ) {
-            log_failure($reason);
+            warn "$reason";
         }
     }
 
