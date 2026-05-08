@@ -34,9 +34,21 @@ sub _clean_error {
   return $err;
 }
 
-my %global_opts;
-GetOptions('help|h' => \$global_opts{help}, 'man' => \$global_opts{man}, 'version|V' => \$global_opts{version},)
-  or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
+my %global_opts = (color => 0,);
+
+sub _color {
+  my ($str, $color, $local_opts) = @_;
+  return $str unless $global_opts{color} || ($local_opts && $local_opts->{color});
+  eval { require Term::ANSIColor; 1 } or return $str;
+  return Term::ANSIColor::colored([$color], $str);
+}
+
+GetOptions(
+  'help|h'    => \$global_opts{help},
+  'man'       => \$global_opts{man},
+  'version|V' => \$global_opts{version},
+  'color'     => \$global_opts{color},
+) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 
 if ($global_opts{version}) {
   print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
@@ -76,6 +88,7 @@ sub run_dump {
     'enable-warnings'  => 0,
     'vendor-id'        => undef,
     strict             => 0,
+    color              => 0,
   );
 
   GetOptionsFromArray(
@@ -89,6 +102,7 @@ sub run_dump {
     'enable-warnings|w'  => \$opts{'enable-warnings'},
     'vendor-id|v=i'      => \$opts{'vendor-id'},
     'strict|s'           => \$opts{strict},
+    'color'              => \$opts{color},
     'help|h'             => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
     },
@@ -136,11 +150,11 @@ sub _process_string {
   };
   if (my $err = $@) {
     if ($o->{'fail-fast'}) {
-      warn "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+      warn _color("Fatal:", "red", $o) . " Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
       exit EXIT_PARSE_ERROR;
     }
 
-    warn "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+    warn _color("Warning:", "yellow", $o) . " Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
 
     return if $o->{'ignore-errors'};
 
@@ -200,6 +214,7 @@ sub run_validate {
     'cmp-list-timeout'             => 30,
     all                            => 0,
     text                           => 0,
+    color                          => 0,
   );
 
   GetOptionsFromArray(
@@ -223,6 +238,7 @@ sub run_validate {
     'cmp-list-timeout=i'               => \$opts{'cmp-list-timeout'},
     'all|a'                            => \$opts{all},
     'text|t'                           => \$opts{text},
+    'color'                            => \$opts{color},
     'help|h'                           => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
     },
@@ -329,11 +345,11 @@ sub _validate_string {
     $state->{any_fail} = 1;
 
     if ($o->{'fail-fast'}) {
-      warn "Fatal: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+      warn _color("Fatal:", "red", $o) . " Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
       exit EXIT_PARSE_ERROR;
     }
 
-    warn "Warning: Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
+    warn _color("Warning:", "yellow", $o) . " Failed to parse TC string '$str' at line $state->{line_num}: $err\n" if $o->{'enable-warnings'};
 
     return if $o->{'ignore-errors'};
 
@@ -342,7 +358,7 @@ sub _validate_string {
 
     if ($o->{'errors-to-stderr'}) {
       if ($o->{text}) {
-        warn "ERROR  $str: $err\n";
+        warn _color("ERROR", "red", $o) . "  $str: $err\n";
       }
       else {
         warn $j->encode($output_data) . "\n";
@@ -387,18 +403,25 @@ sub _emit_validate {
     my $vid = $output_data->{vendor_id};
     my $line;
     if (exists $output_data->{error}) {
-      $line = "ERROR  $tc: $output_data->{error}";
+      $line = _color("ERROR", "red", $o) . "  " . _color($tc, "bold", $o) . ": " . $output_data->{error};
     }
     elsif ($output_data->{valid}) {
-      $line = "OK     $tc vendor $vid";
+      $line = _color("OK", "green", $o) . "     " . _color($tc, "bold", $o) . " vendor " . _color($vid, "cyan", $o);
     }
     else {
       my @reasons = $o->{all} ? @{$output_data->{reasons} || []} : ($output_data->{reason});
       if (@reasons == 1) {
-        $line = "FAIL   $tc vendor $vid: $reasons[0]";
+        $line
+          = _color("FAIL", "red", $o) . "   "
+          . _color($tc,  "bold", $o)
+          . " vendor "
+          . _color($vid, "cyan", $o) . ": "
+          . $reasons[0];
       }
       else {
-        $line = join "\n", "FAIL   $tc vendor $vid:", map {"  - $_"} @reasons;
+        $line = join "\n",
+          _color("FAIL", "red", $o) . "   " . _color($tc, "bold", $o) . " vendor " . _color($vid, "cyan", $o) . ":",
+          map {"  - $_"} @reasons;
       }
     }
     print "$line\n";
@@ -435,6 +458,12 @@ Print a brief help message and exits.
 =item B<--version>, B<-V>
 
 Print the version and exits.
+
+=item B<--color>
+
+Enable colored output. Off by default. When enabled, the tool uses ANSI colors
+for text status (e.g. OK/FAIL), TC strings, and error prefixes. Requires
+C<Term::ANSIColor> (core).
 
 =item B<--man>
 
