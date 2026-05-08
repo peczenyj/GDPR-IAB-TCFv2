@@ -123,6 +123,26 @@ sub _run_validation {
       ? _coerce_cmp_validator( $overrides{cmp_validator} )
       : $self->{cmp_validator};
 
+    # Per-call list overrides. Coherence is not re-validated here:
+    # orphan flexible purposes (a pid in flexible_purpose_ids that
+    # isn't also in consent_purpose_ids or legitimate_interest_purpose_ids)
+    # are silently dropped because the rule loops only iterate over the
+    # consent/LI lists, so the flex flag for an orphan is unreachable.
+    # This keeps per-call overrides forgiving while the constructor
+    # remains strict for the static policy.
+    my $consent_ids =
+      exists $overrides{consent_purpose_ids}
+      ? $overrides{consent_purpose_ids}
+      : $self->{consent_purpose_ids};
+    my $li_ids =
+      exists $overrides{legitimate_interest_purpose_ids}
+      ? $overrides{legitimate_interest_purpose_ids}
+      : $self->{legitimate_interest_purpose_ids};
+    my $flexible_set =
+      exists $overrides{flexible_purpose_ids}
+      ? { map { $_ => 1 } @{ $overrides{flexible_purpose_ids} } }
+      : $self->{_flexible_set};
+
     croak "missing vendor_id" unless defined $vendor_id;
 
     my @failures;
@@ -140,15 +160,15 @@ sub _run_validation {
       if $stop_on_first && @failures;
 
     $self->_check_consent_purposes(
-        $tc, $vendor_id, $strict, \@failures,
-        $stop_on_first
+        $tc,            $vendor_id,   $strict, \@failures,
+        $stop_on_first, $consent_ids, $flexible_set,
     );
     return $self->_make_result( 0, \@failures )
       if $stop_on_first && @failures;
 
     $self->_check_li_purposes(
-        $tc, $vendor_id, $strict, \@failures,
-        $stop_on_first
+        $tc,            $vendor_id, $strict, \@failures,
+        $stop_on_first, $li_ids,    $flexible_set,
     );
 
     if (@failures) {
@@ -210,10 +230,12 @@ sub _check_disclosed {
 }
 
 sub _check_consent_purposes {
-    my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
+    my ($self,        $tc, $vendor_id, $strict, $failures, $stop_on_first,
+        $consent_ids, $flexible_set
+    ) = @_;
 
-    foreach my $pid ( @{ $self->{consent_purpose_ids} } ) {
-        my $is_flexible = $self->{_flexible_set}->{$pid};
+    foreach my $pid ( @{$consent_ids} ) {
+        my $is_flexible = $flexible_set->{$pid};
 
         # Publisher-restriction inspection runs before the parser
         # delegate so a restriction-driven failure carries the precise
@@ -259,12 +281,14 @@ sub _check_consent_purposes {
 }
 
 sub _check_li_purposes {
-    my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
+    my ($self,   $tc, $vendor_id, $strict, $failures, $stop_on_first,
+        $li_ids, $flexible_set
+    ) = @_;
 
     my $policy_version = $tc->policy_version;
 
-    foreach my $pid ( @{ $self->{legitimate_interest_purpose_ids} } ) {
-        my $is_flexible = $self->{_flexible_set}->{$pid};
+    foreach my $pid ( @{$li_ids} ) {
+        my $is_flexible = $flexible_set->{$pid};
 
         # TCF carve-out: legitimate interest is never permitted for
         # Purpose 1, and is forbidden for Purposes 3-6 in TCF v2.2+
@@ -538,9 +562,18 @@ the first failing rule (B<fail-fast> mode) and returns a
 L<GDPR::IAB::TCFv2::Validator::Result> carrying that one reason.
 
 C<%overrides> can replace the constructor values for C<vendor_id>,
-C<strict>, and C<check_disclosed_vendors> for this call only. The
-arrayref rules (C<consent_purpose_ids> etc.) are not currently
-overridable per call.
+C<strict>, C<check_disclosed_vendors>, C<min_policy_version>,
+C<cmp_validator>, C<consent_purpose_ids>,
+C<legitimate_interest_purpose_ids>, and C<flexible_purpose_ids> for
+this call only.
+
+The list overrides (C<consent_purpose_ids>,
+C<legitimate_interest_purpose_ids>, C<flexible_purpose_ids>) do B<not>
+re-validate coherence — orphan entries (a flexible pid that isn't also
+in one of the basis lists) are silently dropped at runtime rather than
+fatal. This makes per-call overrides forgiving for callers that
+generate their lists dynamically; the constructor remains strict for
+the static policy.
 
 C<$tc_string_or_object> may be either a raw consent string or a
 pre-parsed L<GDPR::IAB::TCFv2> object — handy when the same TC string
