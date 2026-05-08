@@ -1,9 +1,13 @@
-## [0.400] - 2026-05-08
+## [unreleased]
 
 ### Bug Fixes
 
 - *(cmp-validator)* Make JSON::PP and Time::Piece optional 
 - Replace // defined-or with defined() ternary for Perl 5.8 
+
+### Documentation
+
+- Align POD and error messages with implementation 
 
 ### Features
 
@@ -19,6 +23,10 @@
 - Merge tag 'v0.391' into devel
 
 Tagged for release. v0.391
+
+### Performance
+
+- Implement vec() and regex optimizations for bitfields 
 
 ## [0.391] - 2026-05-07
 
