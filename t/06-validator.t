@@ -74,6 +74,13 @@ subtest "Validator with Disclosed Vendors" => sub {
   my $result = $validator->validate($tc_v23, vendor_id => 9999);
   ok !$result, 'fail for non-disclosed vendor 9999';
   like "$result", qr/not disclosed/, 'correct failure reason';
+
+  # TC string without disclosed vendors segment
+  my $tc_v20    = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+  my $r_missing = $validator->validate($tc_v20);
+  ok !$r_missing, 'fail when check_disclosed is requested but segment is missing';
+  is(($r_missing->failures)[0]->code, 1, 'ReasonMissingDisclosedVendors code is 1');
+  like "$r_missing", qr/missing disclosed vendors segment/, 'correct failure message';
 };
 
 subtest "Validator accepts a pre-parsed GDPR::IAB::TCFv2 object" => sub {

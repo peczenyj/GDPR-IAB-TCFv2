@@ -184,7 +184,7 @@ GDPR::IAB::TCFv2::PublisherTC - TCF v2.3 publisher TC section parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash of 3 parameters: 
+Constructor C<Parse> receives a hash of 3 parameters: 
 
 =over
 

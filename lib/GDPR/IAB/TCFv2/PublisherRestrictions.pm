@@ -160,7 +160,7 @@ GDPR::IAB::TCFv2::PublisherRestrictions - TCF v2.3 publisher restrictions parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash of 3 parameters: 
+Constructor C<Parse> receives a hash of 4 parameters: 
 
 =over
 

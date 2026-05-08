@@ -77,7 +77,7 @@ sub _parse {
 sub _parse_range {
   my ($self, $data, $data_size, $offset, $prefetch) = @_;
 
-  croak "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
+  croak "bit $offset was supposed to start a new range entry, but the consent string was only $data_size bytes long"
     if ($offset >> 3) >= $data_size;
 
   my $max_id = $self->{max_id};
@@ -234,7 +234,7 @@ GDPR::IAB::TCFv2::RangeSection - TCF v2.3 range section parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash parameters: 
+Constructor C<Parse> receives a hash of parameters: 
 
 =over
 

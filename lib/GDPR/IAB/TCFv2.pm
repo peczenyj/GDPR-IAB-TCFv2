@@ -62,7 +62,7 @@ use overload q<""> => \&tc_string;
 sub Parse {
   my ($klass, $tc_string, %opts) = @_;
 
-  croak 'missing gdpr consent string' unless $tc_string;
+  croak 'missing gdpr consent string' unless defined $tc_string && length $tc_string;
 
   my $segments = _decode_tc_string_segments($tc_string);
 

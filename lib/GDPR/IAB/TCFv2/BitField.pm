@@ -135,7 +135,7 @@ GDPR::IAB::TCFv2::BitField - TCF v2.3 bitfield parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash of 4 parameters: 
+Constructor C<Parse> receives a hash of 5 parameters: 
 
 =over
 

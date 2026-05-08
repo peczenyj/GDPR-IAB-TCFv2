@@ -156,6 +156,15 @@ sub _now {
   return $self->{now} || time();
 }
 
+sub _load_time_piece {
+  return 1 if $INC{'Time/Piece.pm'};
+  eval { require Time::Piece; 1 }
+    or croak "Time::Piece is required to parse the CMP list "
+    . "timestamps. Please install it (it is core in "
+    . "Perl 5.10+).";
+  return 1;
+}
+
 sub _parse_date {
   my ($self, $date_str) = @_;
 
@@ -164,10 +173,7 @@ sub _parse_date {
   # and the timezone suffix (always Z in the IAB feed) before handing
   # to Time::Piece, which doesn't grok %z portably.
   if ($date_str =~ /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/) {
-    eval { require Time::Piece; 1 }
-      or croak "Time::Piece is required to parse the CMP list "
-      . "lastUpdated timestamp. Please install it (it is core in "
-      . "Perl 5.10+).";
+    $self->_load_time_piece();
 
     my $t_str = "$1-$2-$3 $4:$5:$6";
     my $epoch = eval { Time::Piece->strptime($t_str, "%Y-%m-%d %H:%M:%S")->epoch; };

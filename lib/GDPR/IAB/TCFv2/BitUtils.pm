@@ -175,7 +175,7 @@ GDPR::IAB::TCFv2::BitUtils - TCF v2.3 bit-level decoding utilities
 
 Receive two parameters: data and bit offset.
 
-Will fetch 2 bits from data since bit offset and convert it an unsigned int.
+Will fetch 2 bits from data since bit offset and convert it to an unsigned int.
 
     my $value = get_uint2( $data, $offset );
 
@@ -183,7 +183,7 @@ Will fetch 2 bits from data since bit offset and convert it an unsigned int.
 
 Receive two parameters: data and bit offset.
 
-Will fetch 3 bits from data since bit offset and convert it an unsigned int.
+Will fetch 3 bits from data since bit offset and convert it to an unsigned int.
 
     my $segment_type = get_uint3( $data, 0 );
 
@@ -191,7 +191,7 @@ Will fetch 3 bits from data since bit offset and convert it an unsigned int.
 
 Receive two parameters: data and bit offset.
 
-Will fetch 6 bits from data since bit offset and convert it an unsigned int.
+Will fetch 6 bits from data since bit offset and convert it to an unsigned int.
 
     my $version = get_uint6( $data, 0 );
 
@@ -210,7 +210,7 @@ fields of the TCF v2 core string.
 
 Receives the data and bit offset.
 
-Will fetch 12 bits from data since bit offset and convert it an unsigned int (short).
+Will fetch 12 bits from data since bit offset and convert it to an unsigned int (short).
 
     my $cmp_id = get_uint12( $data, 78 );
 
@@ -218,7 +218,7 @@ Will fetch 12 bits from data since bit offset and convert it an unsigned int (sh
 
 Receives the data and bit offset.
 
-Will fetch 16 bits from data since bit offset and convert it an unsigned int (short).
+Will fetch 16 bits from data since bit offset and convert it to an unsigned int (short).
 
     my $max_vendor_id_consent = get_uint16( $data, 213 );
 
@@ -226,7 +226,7 @@ Will fetch 16 bits from data since bit offset and convert it an unsigned int (sh
 
 Receives the data and bit offset.
 
-Will fetch 36 bits from data since bit offset and convert it an unsigned int (long).
+Will fetch 36 bits from data since bit offset and convert it to an unsigned int (long).
 
     my $deciseconds = get_uint36( $data, 6 );
     my $created = $deciseconds/10;

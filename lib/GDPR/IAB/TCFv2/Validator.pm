@@ -187,7 +187,16 @@ sub _check_disclosed {
   my ($self, $tc, $vendor_id, $check_disclosed, $failures) = @_;
 
   return unless $check_disclosed;
-  return unless $tc->has_vendor_disclosure;
+
+  unless ($tc->has_vendor_disclosure) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code      => ReasonMissingDisclosedVendors,
+      message   => "missing disclosed vendors segment",
+      vendor_id => $vendor_id,
+      );
+    return;
+  }
 
   unless ($tc->disclosed_vendor($vendor_id)) {
     push @{$failures},
