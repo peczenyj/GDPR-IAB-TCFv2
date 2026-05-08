@@ -29,7 +29,7 @@ sub Parse {
   my $max_id    = ASSUMED_MAX_VENDOR_ID;
   my $options   = $args{options};
 
-  return if ($offset >> 3) >= $data_size;
+  return if $offset + 12 > $data_size;
 
   my ($num_restrictions, $next_offset) = get_uint12($data, $offset);
 
