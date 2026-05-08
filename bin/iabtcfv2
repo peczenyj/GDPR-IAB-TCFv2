@@ -36,7 +36,7 @@ sub _clean_error {
 
 my %global_opts;
 GetOptions('help|h' => \$global_opts{help}, 'man' => \$global_opts{man}, 'version|V' => \$global_opts{version},)
-  or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
+  or pod2usage(-input => $script_path, -exitval => 2, -verbose => 0);
 
 if ($global_opts{version}) {
   print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
@@ -60,8 +60,7 @@ elsif ($subcommand eq 'help') {
   _show_help(shift @ARGV);
 }
 else {
-  warn "Unknown subcommand: $subcommand\n";
-  pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
+  pod2usage(-input => $script_path, -exitval => 2, -message => "Unknown subcommand: $subcommand", -verbose => 0);
 }
 
 sub run_dump {
@@ -78,7 +77,10 @@ sub run_dump {
     'strict-legal-basis' => 0,
   );
 
-  GetOptionsFromArray(
+  require Getopt::Long;
+  my $parser = Getopt::Long::Parser->new(config => [qw(no_pass_through require_order bundling)]);
+
+  $parser->getoptionsfromarray(
     \@args,
     'pretty|p'             => \$opts{pretty},
     'compact|c'            => \$opts{compact},
@@ -92,7 +94,7 @@ sub run_dump {
     'help|h'               => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
     },
-  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP|BUGS");
+  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP/Usage");
 
   my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
   my $json     = $json_pkg->new->utf8;
@@ -202,7 +204,10 @@ sub run_validate {
     text                            => 0,
   );
 
-  GetOptionsFromArray(
+  require Getopt::Long;
+  my $parser = Getopt::Long::Parser->new(config => [qw(no_pass_through require_order bundling)]);
+
+  $parser->getoptionsfromarray(
     \@args,
     'pretty|p'                         => \$opts{pretty},
     'ignore-errors|i'                  => \$opts{'ignore-errors'},
@@ -226,11 +231,16 @@ sub run_validate {
     'help|h'                           => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
     },
-  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE|BUGS");
+  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE/Usage");
 
   unless (defined $opts{'vendor-id'}) {
-    warn "validate: --vendor-id|-v is required\n";
-    pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE|BUGS");
+    pod2usage(
+      -input    => $script_path,
+      -exitval  => 2,
+      -message  => "validate: --vendor-id|-v is required",
+      -verbose  => 99,
+      -sections => "VALIDATE/Usage"
+    );
   }
 
   require GDPR::IAB::TCFv2::Validator;
@@ -460,6 +470,12 @@ emitting one JSON record per string (or text lines with B<--text>).
 
 =head1 DUMP
 
+=head2 Usage
+
+    iabtcfv2 dump [options] [tc_strings...]
+
+=head2 Description
+
 Parses TC strings and outputs them as JSON.
 
 =head2 Options
@@ -563,6 +579,12 @@ To type strings manually:
     docker run -it --rm peczenyj/gdpr-iab-tcfv2 dump
 
 =head1 VALIDATE
+
+=head2 Usage
+
+    iabtcfv2 validate --vendor-id <id> [options] [tc_strings...]
+
+=head2 Description
 
 Validates TC strings against a vendor identity and a set of declared purpose
 lists. The vendor must be allowed for every purpose in C<--consent-purposes>
