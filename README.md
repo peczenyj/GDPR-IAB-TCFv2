@@ -30,6 +30,25 @@
 
 GDPR::IAB::TCFv2 - TCF v2.3 (Transparency & Consent String) parser
 
+# PROJECT STATUS
+
+`GDPR::IAB::TCFv2` entered **maintenance mode** on 2026-05-08 with the
+v0.400 release. The core parser, validator, and CMP-validator surfaces
+are considered feature-complete for the IAB TCF v2.3 specification.
+
+In maintenance mode the maintainer commits to bug fixes, security
+fixes, CPAN-tester regression triage, and tracking IAB-spec updates
+(TCF v2.4 / v3 if and when they ship). Larger feature work -- the
+remaining roadmap phases (GVL-aware validator, Special Features /
+Special Purposes, CLI configuration loading), the distribution items
+(DockerHub automation, Debian package), and the sister-distribution
+ideas in ["ECOSYSTEM"](#ecosystem) -- is now tracked as `help-wanted` issues on
+GitHub.
+
+Patches and PRs from the community are welcome and will continue to be
+reviewed. See `TODO.pod` at the repository root for the full
+help-wanted list and `CONTRIBUTING.pod` for the patching workflow.
+
 # SYNOPSIS
 
 The purpose of this package is to parse Transparency & Consent String (TC String) as defined by IAB version 2.
@@ -614,6 +633,44 @@ using [ISO\_8601](https://en.wikipedia.org/wiki/ISO_8601). This behaviour can be
 ## looksLikeIsConsentVersion2
 
 Will check if a given tc string starts with a literal `C`.
+
+# ECOSYSTEM
+
+The following **sister distributions** are intentionally left as
+`help-wanted` ideas rather than shipped from this module. Each one is
+companion glue for a popular Perl framework and would add a runtime
+dependency on its host framework, so they belong as separate CPAN
+distributions rather than features of `GDPR::IAB::TCFv2` itself.
+
+- [GDPR::IAB::TCFv2::Validator::LIVR](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3ALIVR)
+
+    LIVR rule-engine binding for JSON-shaped TC string payloads.
+
+- [GDPR::IAB::TCFv2::Validator::TypeTiny](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3ATypeTiny)
+
+    Reusable Type::Tiny constraints (parameterized by purpose / vendor
+    sets) for Moo, Moose, or pure-Perl callers that prefer type-level
+    enforcement.
+
+- [Plack::Middleware::GDPR::TCFv2](https://metacpan.org/pod/Plack%3A%3AMiddleware%3A%3AGDPR%3A%3ATCFv2)
+
+    Plack middleware that decodes a TC string from a request header or
+    cookie, attaches a parsed `GDPR::IAB::TCFv2` object to `$env`,
+    and short-circuits the response when consent is missing or invalid.
+
+- [GDPR::IAB::TCFv2::Validator::Moose](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3AMoose)
+
+    Moose attribute traits and role-based validation for Moose-end-to-end
+    projects.
+
+- [GDPR::IAB::TCFv2::Validator::FormValidator](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3AFormValidator)
+
+    `Data::FormValidator` profile glue for legacy applications that drive
+    business validation through DFV.
+
+The `help-wanted` issues on GitHub track each of these ideas; see
+[https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem](https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem)
+and `TODO.pod` for context.
 
 # SEE ALSO
 
