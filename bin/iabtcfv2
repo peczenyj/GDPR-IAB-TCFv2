@@ -80,21 +80,26 @@ sub run_dump {
   require Getopt::Long;
   my $parser = Getopt::Long::Parser->new(config => [qw(no_pass_through require_order bundling)]);
 
-  $parser->getoptionsfromarray(
-    \@args,
-    'pretty|p'             => \$opts{pretty},
-    'compact|c'            => \$opts{compact},
-    'ignore-errors|i'      => \$opts{'ignore-errors'},
-    'fail-fast|f'          => \$opts{'fail-fast'},
-    'errors-to-stderr|e'   => \$opts{'errors-to-stderr'},
-    'quiet|q'              => \$opts{'quiet'},
-    'enable-warnings|w'    => \$opts{'enable-warnings'},
-    'vendor-id|v=i'        => \$opts{'vendor-id'},
-    'strict-legal-basis|s' => \$opts{'strict-legal-basis'},
-    'help|h'               => sub {
-      pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
-    },
-  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP/Usage");
+  my $getopt_ok;
+  {
+    local @ARGV = @args;
+    $getopt_ok = $parser->getoptions(
+      'pretty|p'             => \$opts{pretty},
+      'compact|c'            => \$opts{compact},
+      'ignore-errors|i'      => \$opts{'ignore-errors'},
+      'fail-fast|f'          => \$opts{'fail-fast'},
+      'errors-to-stderr|e'   => \$opts{'errors-to-stderr'},
+      'quiet|q'              => \$opts{'quiet'},
+      'enable-warnings|w'    => \$opts{'enable-warnings'},
+      'vendor-id|v=i'        => \$opts{'vendor-id'},
+      'strict-legal-basis|s' => \$opts{'strict-legal-basis'},
+      'help|h'               => sub {
+        pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
+      },
+    );
+    @args = @ARGV;
+  }
+  $getopt_ok or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP/Usage");
 
   my $json_pkg = JSON->can('new') ? 'JSON' : 'JSON::PP';
   my $json     = $json_pkg->new->utf8;
@@ -207,31 +212,36 @@ sub run_validate {
   require Getopt::Long;
   my $parser = Getopt::Long::Parser->new(config => [qw(no_pass_through require_order bundling)]);
 
-  $parser->getoptionsfromarray(
-    \@args,
-    'pretty|p'                         => \$opts{pretty},
-    'ignore-errors|i'                  => \$opts{'ignore-errors'},
-    'fail-fast|f'                      => \$opts{'fail-fast'},
-    'errors-to-stderr|e'               => \$opts{'errors-to-stderr'},
-    'quiet|q'                          => \$opts{quiet},
-    'enable-warnings|w'                => \$opts{'enable-warnings'},
-    'vendor-id|v=i'                    => \$opts{'vendor-id'},
-    'consent-purposes|C=s'             => \$opts{'consent-purposes'},
-    'legitimate-interest-purposes|L=s' => \$opts{'legitimate-interest-purposes'},
-    'flexible-purposes|F=s'            => \$opts{'flexible-purposes'},
-    'verify-disclosed-vendors|d'       => \$opts{'verify-disclosed-vendors'},
-    'strict-legal-basis|s'             => \$opts{'strict-legal-basis'},
-    'min-tcf-policy-version|m=i'       => \$opts{'min-tcf-policy-version'},
-    'cmp-state-provider=s'             => \$opts{'cmp-state-provider'},
-    'cmp-state-provider-network-ok'    => \$opts{'cmp-state-provider-network-ok'},
-    'cmp-state-provider-verify-ssl!'   => \$opts{'cmp-state-provider-verify-ssl'},
-    'cmp-state-provider-timeout=i'     => \$opts{'cmp-state-provider-timeout'},
-    'all|a'                            => \$opts{all},
-    'text|t'                           => \$opts{text},
-    'help|h'                           => sub {
-      pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
-    },
-  ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE/Usage");
+  my $getopt_ok;
+  {
+    local @ARGV = @args;
+    $getopt_ok = $parser->getoptions(
+      'pretty|p'                         => \$opts{pretty},
+      'ignore-errors|i'                  => \$opts{'ignore-errors'},
+      'fail-fast|f'                      => \$opts{'fail-fast'},
+      'errors-to-stderr|e'               => \$opts{'errors-to-stderr'},
+      'quiet|q'                          => \$opts{quiet},
+      'enable-warnings|w'                => \$opts{'enable-warnings'},
+      'vendor-id|v=i'                    => \$opts{'vendor-id'},
+      'consent-purposes|C=s'             => \$opts{'consent-purposes'},
+      'legitimate-interest-purposes|L=s' => \$opts{'legitimate-interest-purposes'},
+      'flexible-purposes|F=s'            => \$opts{'flexible-purposes'},
+      'verify-disclosed-vendors|d'       => \$opts{'verify-disclosed-vendors'},
+      'strict-legal-basis|s'             => \$opts{'strict-legal-basis'},
+      'min-tcf-policy-version|m=i'       => \$opts{'min-tcf-policy-version'},
+      'cmp-state-provider=s'             => \$opts{'cmp-state-provider'},
+      'cmp-state-provider-network-ok'    => \$opts{'cmp-state-provider-network-ok'},
+      'cmp-state-provider-verify-ssl!'   => \$opts{'cmp-state-provider-verify-ssl'},
+      'cmp-state-provider-timeout=i'     => \$opts{'cmp-state-provider-timeout'},
+      'all|a'                            => \$opts{all},
+      'text|t'                           => \$opts{text},
+      'help|h'                           => sub {
+        pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
+      },
+    );
+    @args = @ARGV;
+  }
+  $getopt_ok or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE/Usage");
 
   unless (defined $opts{'vendor-id'}) {
     pod2usage(
