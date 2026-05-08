@@ -694,7 +694,7 @@ Please report any bugs or feature requests to [https://github.com/peczenyj/GDPR-
 
 # LICENSE AND COPYRIGHT
 
-Copyright 2023 Tiago Peczenyj
+Copyright 2023-2026 Tiago Peczenyj
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

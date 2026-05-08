@@ -213,19 +213,84 @@ invocation.
 These items are about packaging the existing code, not about adding
 features.
 
-=head2 DockerHub publication
+=head2 Linux package artifacts (.deb and .rpm)
 
-A F<Dockerfile> already lives at the repo root and is exercised in CI.
-Outstanding work: a GitHub Actions workflow that builds and pushes
-C<peczenyj/gdpr-iab-tcfv2:VERSION> and C<:latest> to DockerHub on every
-C<v*> tag push. The release narrative in F<CONTRIBUTING.pod> step 9
-already references the expected image name.
+Wire up a GitHub Actions workflow that, on every C<v*> tag, builds a
+C<.deb> and a C<.rpm> from the released tarball and uploads both as
+assets on the corresponding GitHub Release. Both packages are pure
+Perl (noarch / C<all>), so a single Linux runner per format is
+enough; no build matrix, no cross-arch concerns.
 
-=head2 Debian package (libgdpr-iab-tcfv2-perl)
+Suggested toolchain:
 
-Generate C<debian/> metadata via C<dh-make-perl> and wire up a build
-pipeline that produces signed C<.deb> artifacts. Useful for Debian and
-Ubuntu deployments that prefer apt over CPAN.
+=over 4
+
+=item *
+
+B<.deb>: C<dh-make-perl --build --cpan-mirror=file:./> against the
+C<make dist> tarball. Produces C<libgdpr-iab-tcfv2-perl_VERSION_all.deb>.
+Confirm the resulting C<debian/control> picks up
+C<bin/iabtcfv2> as an executable and respects the META C<recommends>.
+
+=item *
+
+B<.rpm>: C<cpanspec> on the tarball to produce a C<.spec>, then
+C<rpmbuild -ba> inside a C<fedora:latest> container. Produces
+C<perl-GDPR-IAB-TCFv2-VERSION-1.noarch.rpm>.
+
+=item *
+
+Upload both via C<gh release upload "$GITHUB_REF_NAME" *.deb *.rpm>.
+
+=back
+
+Out of scope (separate, larger efforts -- not part of this item):
+filing an ITP bug to ship the package via Debian proper, hosting a
+signed apt repo, or maintaining a Fedora COPR. The deliverable here is
+B<artifacts on the Release page>, downloadable with C<wget> + C<dpkg -i>
+or C<dnf install ./perl-GDPR-IAB-TCFv2-VERSION-1.noarch.rpm>.
+
+=head2 Homebrew tap (macOS + Linux)
+
+Stand up a self-hosted Homebrew tap repository
+(C<peczenyj/homebrew-tap>) with a C<Formula/iabtcfv2.rb> formula that
+installs the CLI from the released CPAN tarball. Users opt in with:
+
+    brew tap peczenyj/tap
+    brew install iabtcfv2
+
+Maintenance contract: a small CI step on this repository's release
+event that opens a PR against the tap repo bumping the formula's
+C<url> + C<sha256>. Self-hosted (not C<homebrew-core>), so no
+external review queue and no
+C<homebrew-core>'s "notable + stable + popular" gate.
+
+Same formula works on Homebrew on Linux (Linuxbrew), so this single
+channel covers macOS plus a slice of Linux developer machines for
+free.
+
+=head2 Snap package (Ubuntu / cross-distro Linux)
+
+Author a C<snapcraft.yaml> that packages C<bin/iabtcfv2> and the Perl
+runtime, and publish to C<snapcraft.io> on every C<v*> tag. Users
+install with:
+
+    sudo snap install iabtcfv2
+
+Heads-up for the contributor: snaps run under confinement, so any
+file paths the CLI reads (config files, GVL JSON dumps) need to be
+inside the snap-allowed locations or a C<personal-files> /
+C<system-files> plug must be declared and connected. Path the
+release notes accordingly so first-time users do not hit a silent
+"file not found" inside the sandbox.
+
+=head2 AUR package (Arch Linux)
+
+Publish a C<PKGBUILD> for Arch's user repository. The recipe is
+short -- C<makepkg> drives a C<perl Makefile.PL && make && make
+install> against the release tarball. Best handled by a community
+co-maintainer rather than this repo's CI; volunteer contributions
+welcome.
 
 =head1 ECOSYSTEM -- SISTER DISTRIBUTIONS
 
@@ -280,6 +345,22 @@ L<GDPR::IAB::TCFv2::Validator::FormValidator>
 C<Data::FormValidator> profile glue for legacy applications that drive
 business validation through DFV.
 
+=item *
+
+L<GDPR::IAB::TCFv1>
+
+A standalone parser for the legacy IAB TCF v1 / v1.1 consent string
+format (April 2018 -- August 2020, superseded by TCF v2.0). The wire
+format is unrelated to v2 -- different bit layout, no segment
+structure, smaller fixed core -- so it does not belong inside this
+distribution.
+
+Audience is intentionally narrow: log spelunkers, audit teams, and
+the historically curious. A useful contribution would expose a
+similar surface to L<GDPR::IAB::TCFv2> (C<Parse>, C<TO_JSON>, simple
+purpose / vendor predicates) without dragging in v2's validator
+machinery.
+
 =back
 
 =head1 HOW TO CLAIM AN ITEM
@@ -314,7 +395,11 @@ The following are intentionally B<not> on the roadmap:
 
 =item *
 
-C<TCF v1> support (legacy, no longer maintained by the IAB).
+TCF v1 / v1.1 support inside this distribution. The two wire formats
+share nothing but the IAB acronym, so v1 belongs in a sibling
+distribution rather than as a code path here. See the
+L<GDPR::IAB::TCFv1> entry under L</ECOSYSTEM -- SISTER DISTRIBUTIONS>
+if you are interested in claiming it.
 
 =item *
 
