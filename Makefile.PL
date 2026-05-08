@@ -6,7 +6,7 @@ WriteMakefile(
   LICENSE          => "perl_5",
   ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
   VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
-  MIN_PERL_VERSION => 5.008,
+  MIN_PERL_VERSION => '5.008009',
   EXE_FILES        => ['bin/iabtcfv2'],
   TEST_REQUIRES    => {
 
