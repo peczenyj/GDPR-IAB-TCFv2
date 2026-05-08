@@ -46,7 +46,7 @@ return [
     name => 'v284_flex_p7_li',
     args => {vendor_id => 284, legitimate_interest_purpose_ids => [7], flexible_purpose_ids => [7],},
   },
-  {name => 'v284_min_policy_v5',   args => {vendor_id => 284, min_policy_version       => 5,},},
+  {name => 'v284_min_policy_v5',    args => {vendor_id => 284, min_policy_version       => 5,},},
   {name => 'v284_verify_disclosed', args => {vendor_id => 284, verify_disclosed_vendors => 1,},},
   {
 
