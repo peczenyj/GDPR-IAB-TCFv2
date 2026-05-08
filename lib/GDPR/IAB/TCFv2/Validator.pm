@@ -20,11 +20,11 @@ sub new {
 
   _check_coherence($consent, $legitimate_interest, $flexible);
 
-  # Compute cmp_validator in scalar context so a bare `return` from the
+  # Compute cmp_state_provider in scalar context so a bare `return` from the
   # coercer correctly yields undef -- a list-context call inside the
   # anonymous-hash construction below would collapse the key/value
   # pair instead.
-  my $cmp_v = _coerce_cmp_validator($args{cmp_validator});
+  my $cmp_v = _coerce_cmp_state_provider($args{cmp_state_provider});
 
   my $self = {
     vendor_id                       => $args{vendor_id},
@@ -32,10 +32,10 @@ sub new {
     legitimate_interest_purpose_ids => $legitimate_interest,
     flexible_purpose_ids            => $flexible,
     _flexible_set                   => {map { $_ => 1 } @{$flexible}},
-    check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
-    min_policy_version              => $args{min_policy_version},
-    cmp_validator                   => $cmp_v,
-    strict                          => exists $args{strict} ? $args{strict} : 0,
+    verify_disclosed_vendors        => $args{verify_disclosed_vendors} || 0,
+    min_tcf_policy_version          => $args{min_tcf_policy_version},
+    cmp_state_provider              => $cmp_v,
+    strict_legal_basis              => exists $args{strict_legal_basis} ? $args{strict_legal_basis} : 0,
   };
 
   return bless $self, $klass;
@@ -45,16 +45,16 @@ sub new {
 # (auto-instantiated lazily on the first call), or undef.  Defer the
 # `require` so callers who never opt into the CMP rule never pay for
 # loading JSON::PP / Time::Piece.
-sub _coerce_cmp_validator {
+sub _coerce_cmp_state_provider {
   my ($spec) = @_;
 
   # Bare `return` is fine -- callers always invoke this in scalar
   # context (see the explicit `my $cmp_v = ...` in `new` and the
-  # `my $cmp_validator = ...` in `_run_validation`).
+  # `my $cmp_state_provider = ...` in `_run_validation`).
   return unless defined $spec;
   return $spec if blessed($spec) && $spec->isa('GDPR::IAB::TCFv2::CMPValidator');
 
-  croak "cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator object " . "or a hashref of constructor arguments"
+  croak "cmp_state_provider must be a GDPR::IAB::TCFv2::CMPValidator object " . "or a hashref of constructor arguments"
     unless ref($spec) eq 'HASH';
 
   require GDPR::IAB::TCFv2::CMPValidator;
@@ -97,15 +97,18 @@ sub _run_validation {
   my $tc = ref($input) eq 'GDPR::IAB::TCFv2' ? $input : GDPR::IAB::TCFv2->Parse($input);
 
   my $vendor_id = exists $overrides{vendor_id} ? $overrides{vendor_id} : $self->{vendor_id};
-  my $strict    = exists $overrides{strict}    ? $overrides{strict}    : $self->{strict};
-  my $check_disclosed
-    = exists $overrides{check_disclosed_vendors}
-    ? $overrides{check_disclosed_vendors}
-    : $self->{check_disclosed_vendors};
-  my $min_policy_version
-    = exists $overrides{min_policy_version} ? $overrides{min_policy_version} : $self->{min_policy_version};
-  my $cmp_validator
-    = exists $overrides{cmp_validator} ? _coerce_cmp_validator($overrides{cmp_validator}) : $self->{cmp_validator};
+  my $strict_legal_basis
+    = exists $overrides{strict_legal_basis} ? $overrides{strict_legal_basis} : $self->{strict_legal_basis};
+  my $verify_disclosed
+    = exists $overrides{verify_disclosed_vendors}
+    ? $overrides{verify_disclosed_vendors}
+    : $self->{verify_disclosed_vendors};
+  my $min_tcf_policy_version
+    = exists $overrides{min_tcf_policy_version} ? $overrides{min_tcf_policy_version} : $self->{min_tcf_policy_version};
+  my $cmp_state_provider
+    = exists $overrides{cmp_state_provider}
+    ? _coerce_cmp_state_provider($overrides{cmp_state_provider})
+    : $self->{cmp_state_provider};
 
   # Per-call list overrides. Coherence is not re-validated here:
   # orphan flexible purposes (a pid in flexible_purpose_ids that
@@ -129,19 +132,20 @@ sub _run_validation {
 
   my @failures;
 
-  $self->_check_min_policy_version($tc, $min_policy_version, \@failures);
+  $self->_check_min_tcf_policy_version($tc, $min_tcf_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
+  $self->_check_cmp_state_provider($tc, $cmp_state_provider, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_disclosed($tc, $vendor_id, $check_disclosed, \@failures);
+  $self->_check_disclosed($tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_consent_purposes($tc, $vendor_id, $strict, \@failures, $stop_on_first, $consent_ids, $flexible_set,);
+  $self->_check_consent_purposes($tc, $vendor_id, $strict_legal_basis, \@failures, $stop_on_first, $consent_ids,
+    $flexible_set,);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_li_purposes($tc, $vendor_id, $strict, \@failures, $stop_on_first, $li_ids, $flexible_set,);
+  $self->_check_li_purposes($tc, $vendor_id, $strict_legal_basis, \@failures, $stop_on_first, $li_ids, $flexible_set,);
 
   if (@failures) {
     return $self->_make_result(0, \@failures);
@@ -150,13 +154,13 @@ sub _run_validation {
   return $self->_make_result(1, []);
 }
 
-sub _check_cmp_validator {
-  my ($self, $tc, $cmp_validator, $failures) = @_;
+sub _check_cmp_state_provider {
+  my ($self, $tc, $cmp_state_provider, $failures) = @_;
 
-  return unless defined $cmp_validator;
+  return unless defined $cmp_state_provider;
 
   my $cmp_id = $tc->cmp_id;
-  unless ($cmp_validator->is_valid($cmp_id)) {
+  unless ($cmp_state_provider->is_valid($cmp_id)) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonInvalidCMP,
@@ -167,41 +171,51 @@ sub _check_cmp_validator {
   return;
 }
 
-sub _check_min_policy_version {
-  my ($self, $tc, $min_policy_version, $failures) = @_;
+sub _check_min_tcf_policy_version {
+  my ($self, $tc, $min_tcf_policy_version, $failures) = @_;
 
-  return unless defined $min_policy_version;
+  return unless defined $min_tcf_policy_version;
 
   my $actual = $tc->policy_version;
-  if ($actual < $min_policy_version) {
+  if ($actual < $min_tcf_policy_version) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonPolicyVersionTooLow,
-      message => "TC string policy version $actual is below required minimum $min_policy_version",
+      message => "TC string policy version $actual is below required minimum $min_tcf_policy_version",
       );
   }
   return;
 }
 
 sub _check_disclosed {
-  my ($self, $tc, $vendor_id, $check_disclosed, $failures) = @_;
+  my ($self, $tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, $failures) = @_;
 
-  return unless $check_disclosed;
-  return unless $tc->has_vendor_disclosure;
+  return unless $verify_disclosed;
 
-  unless ($tc->disclosed_vendor($vendor_id)) {
+  if ($tc->has_vendor_disclosure) {
+    unless ($tc->disclosed_vendor($vendor_id)) {
+      push @{$failures},
+        GDPR::IAB::TCFv2::Validator::Failure->new(
+        code      => ReasonVendorNotDisclosed,
+        message   => "vendor $vendor_id not disclosed",
+        vendor_id => $vendor_id,
+        );
+    }
+  }
+  elsif (defined $min_tcf_policy_version && $min_tcf_policy_version >= 5) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
-      code      => ReasonVendorNotDisclosed,
-      message   => "vendor $vendor_id not disclosed",
+      code      => ReasonMissingDisclosedVendors,
+      message   => "missing disclosed vendors segment",
       vendor_id => $vendor_id,
       );
   }
+
   return;
 }
 
 sub _check_consent_purposes {
-  my ($self, $tc, $vendor_id, $strict, $failures, $stop_on_first, $consent_ids, $flexible_set) = @_;
+  my ($self, $tc, $vendor_id, $strict_legal_basis, $failures, $stop_on_first, $consent_ids, $flexible_set) = @_;
 
   foreach my $pid (@{$consent_ids}) {
     my $is_flexible = $flexible_set->{$pid};
@@ -221,12 +235,12 @@ sub _check_consent_purposes {
       }
     }
 
-    my $allowed
+    my $is_allowed
       = $is_flexible
-      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 0, strict => $strict)
-      : $tc->is_vendor_consent_allowed($vendor_id, $pid, strict => $strict);
+      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 0, strict => $strict_legal_basis)
+      : $tc->is_vendor_consent_allowed($vendor_id, $pid, strict => $strict_legal_basis);
 
-    unless ($allowed) {
+    unless ($is_allowed) {
       push @{$failures},
         GDPR::IAB::TCFv2::Validator::Failure->new(
         code       => ReasonVendorNotAllowedConsent,
@@ -241,7 +255,7 @@ sub _check_consent_purposes {
 }
 
 sub _check_li_purposes {
-  my ($self, $tc, $vendor_id, $strict, $failures, $stop_on_first, $li_ids, $flexible_set) = @_;
+  my ($self, $tc, $vendor_id, $strict_legal_basis, $failures, $stop_on_first, $li_ids, $flexible_set) = @_;
 
   my $policy_version = $tc->policy_version;
 
@@ -281,12 +295,12 @@ sub _check_li_purposes {
       }
     }
 
-    my $allowed
+    my $is_allowed
       = $is_flexible
-      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 1, strict => $strict)
-      : $tc->is_vendor_legitimate_interest_allowed($vendor_id, $pid, strict => $strict);
+      ? $tc->is_vendor_allowed_for_flexible_purpose($vendor_id, $pid, 1, strict => $strict_legal_basis)
+      : $tc->is_vendor_legitimate_interest_allowed($vendor_id, $pid, strict => $strict_legal_basis);
 
-    unless ($allowed) {
+    unless ($is_allowed) {
       push @{$failures},
         GDPR::IAB::TCFv2::Validator::Failure->new(
         code       => ReasonVendorNotAllowedLegitimateInterest,
@@ -380,7 +394,9 @@ GDPR::IAB::TCFv2::Validator - declarative compliance checks for TC strings
         consent_purpose_ids             => [ 1, 3, 9 ],
         legitimate_interest_purpose_ids => [ 10 ],
         flexible_purpose_ids            => [ 10 ],
-        check_disclosed_vendors         => 1,
+        verify_disclosed_vendors        => 1,
+        min_tcf_policy_version          => 5,
+        strict_legal_basis              => 1,
     );
 
     # Fail-fast: stops at the first failing rule.
@@ -470,11 +486,29 @@ L<GDPR::IAB::TCFv2/is_vendor_allowed_for_flexible_purpose>.
 
 =item *
 
-C<check_disclosed_vendors> — boolean. When true B<and> the TC string
-carries a Disclosed Vendors segment, the vendor must appear there or
-the rule fails with C<"vendor N not disclosed">. If the segment is
-absent the check is silently skipped — set the parser's C<strict>
-mode at parse time if you need to require the segment's presence.
+C<verify_disclosed_vendors> — boolean. When true, the validator inspects
+the TC string's Disclosed Vendors segment.
+
+If the segment is present, the vendor must appear there or the rule
+fails with C<"vendor N not disclosed"> (ReasonVendorNotDisclosed).
+
+If the segment is B<absent>, the behavior depends on the
+C<min_tcf_policy_version> floor:
+
+=over 8
+
+=item *
+
+When C<min_tcf_policy_version> is set to B<5 or higher> (TCF v2.3+), the
+segment is mandatory; absence causes a failure
+(ReasonMissingDisclosedVendors).
+
+=item *
+
+Otherwise (if C<min_tcf_policy_version> is below 5 or unset), absence is
+B<silently ignored> (matches legacy behavior).
+
+=back
 
 =item *
 
@@ -495,8 +529,8 @@ the first failing rule (B<fail-fast> mode) and returns a
 L<GDPR::IAB::TCFv2::Validator::Result> carrying that one reason.
 
 C<%overrides> can replace the constructor values for C<vendor_id>,
-C<strict>, C<check_disclosed_vendors>, C<min_policy_version>,
-C<cmp_validator>, C<consent_purpose_ids>,
+C<strict>, C<verify_disclosed_vendors>, C<min_tcf_policy_version>,
+C<cmp_state_provider>, C<consent_purpose_ids>,
 C<legitimate_interest_purpose_ids>, and C<flexible_purpose_ids> for
 this call only.
 

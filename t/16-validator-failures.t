@@ -95,12 +95,12 @@ subtest 'Validator::Result: failing result exposes failures + codes + reasons' =
   like("$result", qr/vendor 99999 not allowed for purpose/, 'stringification includes failure messages');
 };
 
-subtest 'Validator::Result: min_policy_version failure carries correct code' => sub {
+subtest 'Validator::Result: min_tcf_policy_version failure carries correct code' => sub {
 
   # The fixture TC string uses TCF policy version 2 (pre v2.3).
   # A floor of 5 forces a ReasonPolicyVersionTooLow failure on the
   # first rule, before any vendor/purpose check.
-  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 32, min_policy_version => 5,);
+  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 32, min_tcf_policy_version => 5,);
   my $result    = $validator->validate($tc_string);
 
   ok(!$result, 'result is falsy when policy version is too low');
@@ -248,7 +248,7 @@ subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
   my $tc_unknown_cmp = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
   my $validator
-    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_validator => {file => $cmp_file, now => 1776254400},);
+    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_state_provider => {file => $cmp_file, now => 1776254400},);
   my $result = $validator->validate($tc_unknown_cmp);
 
   ok(!$result, 'unknown CMP fails validation');

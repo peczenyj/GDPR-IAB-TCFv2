@@ -155,8 +155,10 @@ GDPR::IAB::TCFv2::Validator::Reason - machine-readable validation-failure codes
 =head1 DESCRIPTION
 
 Stable, integer-valued reason codes that describe why
-L<GDPR::IAB::TCFv2::Validator/validate> or L</validate_all> rejected a
-TCF consent string. The set mirrors the C<Reason> enum from the Go
+L<GDPR::IAB::TCFv2::Validator/validate> or
+L<GDPR::IAB::TCFv2::Validator/validate_all> rejected a
+TCF consent string.
+ The set mirrors the C<Reason> enum from the Go
 C<lib-gdpr/validator> package so cross-language tooling can share a
 single vocabulary.
 
@@ -229,7 +231,7 @@ Purposes 3-6 on TcfPolicyVersion >= 4 (TCF v2.2+).
 =head2 ReasonPolicyVersionTooLow
 
 Code 11. The consent string's TcfPolicyVersion is below the validator's
-configured C<min_policy_version>.
+configured C<min_tcf_policy_version>.
 
 =head2 ReasonDecodeError
 

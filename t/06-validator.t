@@ -67,13 +67,35 @@ subtest "Validator with Disclosed Vendors" => sub {
   my $tc_v23
     = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.ILrtR_G__bXlv-bb36ftkeYxf9_hr7sQxBgbJs24FzLvW7JwX32E7NEzatqYKmRIAu3TBIQNtHJjURVChKIgVrzDsaEyUoTtKJ-BkiHMRY2NYCFxvm4tjWQCZ5vr_91d9mT-N7dr-2dzyy7hnv3a9_-S1WJidKYetHfv8bBKT-_IU9_x-_4v4_N7pE2-eS1v_tGvt639-4vP_dpvxt-7yffz____73_e7X__d_______Xf_7____________4AAA';
 
-  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 284, check_disclosed_vendors => 1,);
+  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 284, verify_disclosed_vendors => 1,);
 
   ok $validator->validate($tc_v23), 'pass for disclosed vendor 284';
 
   my $result = $validator->validate($tc_v23, vendor_id => 9999);
   ok !$result, 'fail for non-disclosed vendor 9999';
   like "$result", qr/not disclosed/, 'correct failure reason';
+
+  subtest "Missing disclosed vendors segment logic (Go alignment)" => sub {
+
+    # TC string without disclosed vendors segment (v2.0)
+    my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+
+    # 1. No min_tcf_policy_version set (defaults to undef/<5) -> Silently pass
+    my $v1 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1,);
+    ok $v1->validate($tc_v20), 'missing segment passes when min_tcf_policy_version is not set';
+
+    # 2. min_tcf_policy_version < 5 -> Silently pass
+    my $v2
+      = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_tcf_policy_version => 2,);
+    ok $v2->validate($tc_v20), 'missing segment passes when min_tcf_policy_version < 5';
+
+    # 3. min_tcf_policy_version >= 5 -> Failure
+    my $v3
+      = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_tcf_policy_version => 5,);
+    my $r3 = $v3->validate_all($tc_v20);
+    ok !$r3, 'missing segment fails when min_tcf_policy_version >= 5';
+    like "$r3", qr/missing disclosed vendors segment/, 'correct failure reason';
+  };
 };
 
 subtest "Validator accepts a pre-parsed GDPR::IAB::TCFv2 object" => sub {
@@ -112,25 +134,25 @@ subtest "Validator legitimate_interest_purpose_ids" => sub {
   like "$result", qr/legitimate interest not permitted for purpose 1/, 'reason names the carve-out rule (Phase 6.3)';
 };
 
-subtest "Validator min_policy_version" => sub {
+subtest "Validator min_tcf_policy_version" => sub {
 
   # The 'COwAdDh...' fixture is policy_version 2 (TCF v2.0).
   my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-  # No min_policy_version set: no check, normal behaviour.
+  # No min_tcf_policy_version set: no check, normal behaviour.
   my $v_default = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [6],);
-  ok $v_default->validate($tc_v20), 'no min_policy_version set: passes for v2.0 string';
+  ok $v_default->validate($tc_v20), 'no min_tcf_policy_version set: passes for v2.0 string';
 
-  # min_policy_version satisfied (v2.0 string with min=2).
+  # min_tcf_policy_version satisfied (v2.0 string with min=2).
   my $v_satisfied
-    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [6], min_policy_version => 2,);
-  ok $v_satisfied->validate($tc_v20), 'min_policy_version=2 passes for v2.0 string';
+    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [6], min_tcf_policy_version => 2,);
+  ok $v_satisfied->validate($tc_v20), 'min_tcf_policy_version=2 passes for v2.0 string';
 
-  # min_policy_version not satisfied (v2.0 string with min=5).
+  # min_tcf_policy_version not satisfied (v2.0 string with min=5).
   my $v_too_old
-    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [6], min_policy_version => 5,);
+    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [6], min_tcf_policy_version => 5,);
   my $result = $v_too_old->validate($tc_v20);
-  ok !$result, 'min_policy_version=5 fails for v2.0 string';
+  ok !$result, 'min_tcf_policy_version=5 fails for v2.0 string';
   like "$result", qr/TC string policy version 2 is below required minimum 5/,
     'reason names the actual and required versions';
 
@@ -138,9 +160,9 @@ subtest "Validator min_policy_version" => sub {
   # Even though consent_purpose_ids includes a deliberately-failing purpose,
   # only one reason is reported -- the version mismatch.
   my $v_short_circuit = GDPR::IAB::TCFv2::Validator->new(
-    vendor_id           => 1,
-    consent_purpose_ids => [1],    # would also fail
-    min_policy_version  => 5,
+    vendor_id              => 1,
+    consent_purpose_ids    => [1],    # would also fail
+    min_tcf_policy_version => 5,
   );
   my $r_first = $v_short_circuit->validate($tc_v20);
   is scalar($r_first->reasons), 1, 'fail-fast stops after the version-check reason';
@@ -216,28 +238,28 @@ subtest "flexible_purpose_ids derives default basis from membership" => sub {
   ok !$v_p2_consent_flex->validate($tc_string), 'flexible P2 with default consent fails for vendor 2 (no consent bit)';
 };
 
-subtest "Validator strict mode override" => sub {
+subtest "Validator strict_legal_basis mode override" => sub {
   my $tc_string = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
   # Out-of-range purpose ID 25.
   my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, consent_purpose_ids => [25],);
 
-  # Without strict (the default): the underlying parser warns and returns 0,
+  # Without strict_legal_basis (the default): the underlying parser warns and returns 0,
   # so the validator reports a normal failure.  Use Test::Warn to swallow
   # the warning while asserting on its content.
   my $result;
   warning_like {
     $result = $validator->validate($tc_string);
   }
-  qr/invalid purpose id 25/, 'underlying parser warns about the invalid id without strict';
-  ok !$result, 'invalid purpose id without strict yields a failed result';
+  qr/invalid purpose id 25/, 'underlying parser warns about the invalid id without strict_legal_basis';
+  ok !$result, 'invalid purpose id without strict_legal_basis yields a failed result';
 
-  # With strict=1: the underlying parser croaks, and that propagates up
+  # With strict_legal_basis=1: the underlying parser croaks, and that propagates up
   # through the validator unchanged.
   throws_ok {
-    $validator->validate($tc_string, strict => 1);
+    $validator->validate($tc_string, strict_legal_basis => 1);
   }
-  qr/invalid purpose id 25/, 'invalid purpose id with strict=1 propagates the parser croak';
+  qr/invalid purpose id 25/, 'invalid purpose id with strict_legal_basis=1 propagates the parser croak';
 };
 
 subtest "Validator validate_all accumulates across rule families" => sub {
