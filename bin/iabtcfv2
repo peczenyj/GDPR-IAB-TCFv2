@@ -191,7 +191,7 @@ sub run_validate {
     'consent-purposes'             => undef,
     'legitimate-interest-purposes' => undef,
     'flexible-purposes'            => undef,
-    'check-disclosed-vendors'      => 0,
+    'verify-disclosed-vendors'     => 0,
     strict                         => 0,
     'min-policy-version'           => undef,
     'cmp-list'                     => undef,
@@ -214,7 +214,7 @@ sub run_validate {
     'consent-purposes|C=s'             => \$opts{'consent-purposes'},
     'legitimate-interest-purposes|L=s' => \$opts{'legitimate-interest-purposes'},
     'flexible-purposes|F=s'            => \$opts{'flexible-purposes'},
-    'check-disclosed-vendors|d'        => \$opts{'check-disclosed-vendors'},
+    'verify-disclosed-vendors|check-disclosed-vendors|d' => \$opts{'verify-disclosed-vendors'},
     'strict|s'                         => \$opts{strict},
     'min-policy-version|m=i'           => \$opts{'min-policy-version'},
     'cmp-list=s'                       => \$opts{'cmp-list'},
@@ -236,9 +236,9 @@ sub run_validate {
   require GDPR::IAB::TCFv2::Validator;
 
   my %vargs = (
-    vendor_id               => $opts{'vendor-id'},
-    check_disclosed_vendors => $opts{'check-disclosed-vendors'},
-    strict                  => $opts{strict},
+    vendor_id                => $opts{'vendor-id'},
+    verify_disclosed_vendors => $opts{'verify-disclosed-vendors'},
+    strict                   => $opts{strict},
   );
   $vargs{consent_purpose_ids} = _parse_id_list($opts{'consent-purposes'}) if defined $opts{'consent-purposes'};
   $vargs{legitimate_interest_purpose_ids} = _parse_id_list($opts{'legitimate-interest-purposes'})
@@ -632,10 +632,15 @@ legal basis used for the flexible-purpose check.
 
 =over 4
 
-=item B<--check-disclosed-vendors>, B<-d>
+=item B<--verify-disclosed-vendors>, B<-d>
 
-Require the vendor to appear in the Disclosed Vendors segment when the TC
-string carries one. Off by default.
+Require the vendor to appear in the Disclosed Vendors segment. When the TC string
+carries the segment, the vendor must be present. If the segment is absent, it
+only fails if B<--min-policy-version> is set to 5 or higher (TCF v2.3+).
+
+=item B<--check-disclosed-vendors>
+
+Alias for B<--verify-disclosed-vendors>.
 
 =item B<--strict>, B<-s>
 
