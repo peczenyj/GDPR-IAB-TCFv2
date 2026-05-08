@@ -23,7 +23,7 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.391";
+our $VERSION = "0.400";
 
 use constant {
   CONSENT_STRING_TCF_V2   => {SEPARATOR => quotemeta q<.>, PREFIX => q<C>, MIN_BYTE_SIZE => 29,},
@@ -1635,7 +1635,7 @@ Please report any bugs or feature requests to L<https://github.com/peczenyj/GDPR
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2023 Tiago Peczenyj
+Copyright 2023-2026 Tiago Peczenyj
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

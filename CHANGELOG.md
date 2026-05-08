@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.400] - 2026-05-08
 
 ### Bug Fixes
 
@@ -14,6 +14,8 @@
 
 ### Other
 
+- Regenerate readme
+- Update changelog
 - Merge tag 'v0.391' into devel
 
 Tagged for release. v0.391
