@@ -8,8 +8,6 @@ use JSON::PP     ();
 use Scalar::Util qw<blessed>;
 use Time::Piece;
 
-our $VERSION = '0.001';
-
 sub new {
     my ( $klass, %args ) = @_;
 
