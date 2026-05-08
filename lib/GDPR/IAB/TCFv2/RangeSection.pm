@@ -24,8 +24,7 @@ sub Parse {
   my $max_id    = $args{max_id};
   my $options   = $args{options};
 
-  Carp::confess "a BitField for vendor consent strings using RangeSections require at least 31 bytes. Got $data_size"
-    if $data_size < 31;
+  Carp::confess "a RangeSection requires at least 31 bits. Got $data_size" if $data_size < 31;
 
   my %prefetch;
   my %cache;
@@ -76,9 +75,9 @@ sub _parse_range {
     ($start, $next_offset) = get_uint16($data, $next_offset);
     ($end,   $next_offset) = get_uint16($data, $next_offset);
 
-    croak "bit $offset range entry exclusion starts at $start, but the min vendor ID is 1" if 1 > $start;
+    croak "bit $offset range entry inclusion starts at $start, but the min vendor ID is 1" if 1 > $start;
 
-    croak "bit $offset range entry exclusion ends at $end, but the max vendor ID is $max_id" if $end > $max_id;
+    croak "bit $offset range entry inclusion ends at $end, but the max vendor ID is $max_id" if $end > $max_id;
 
     croak "start $start can't be bigger than end $end" if $start > $end;
 
@@ -95,7 +94,7 @@ sub _parse_range {
 
   ($vendor_id, $next_offset) = get_uint16($data, $next_offset);
 
-  croak "bit $offset range entry exclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
+  croak "bit $offset range entry inclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
     if 1 > $vendor_id || $vendor_id > $max_id;
 
   push @{$self->{ranges}}, [$vendor_id, $vendor_id];

@@ -69,7 +69,7 @@ sub has_restrictions {
 }
 
 sub publisher_tc {
-  my ($self, $callback) = @_;
+  my ($self) = @_;
 
   return $self->{publisher_tc};
 }
@@ -201,7 +201,7 @@ Example, by parsing the consent C<COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4A
          7,
          10
       ],
-      "custom_purpose" : {
+      "custom_purposes" : {
          "consents" : [],
          "legitimate_interests" : []
       },
