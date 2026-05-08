@@ -131,7 +131,7 @@ sub _get_bits {
       $val = unpack("Q>", $padding . $raw);
     }
     else {
-      $val = Math::BigInt->from_bytes($raw);
+      $val = Math::BigInt->new("0x" . unpack("H*", $raw));
     }
   }
 
