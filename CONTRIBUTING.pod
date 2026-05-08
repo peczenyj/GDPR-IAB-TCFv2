@@ -205,13 +205,19 @@ B<vanilla git:>
 
     git checkout -b release/0.360 devel
 
-=item 3. Bump C<$VERSION>
+=item 3. Bump the version in both files
 
     $EDITOR lib/GDPR/IAB/TCFv2.pm
     # Edit:  our $VERSION = "0.360";
 
-F<Makefile.PL> reads the version from this file via C<VERSION_FROM>; no
-other file needs editing.
+    $EDITOR CITATION.cff
+    # Edit:
+    #   version: "0.360"
+    #   date-released: "YYYY-MM-DD"     # the actual tag/release date
+
+F<Makefile.PL> reads C<$VERSION> from the C<.pm> via C<VERSION_FROM>;
+F<CITATION.cff> is the only other file that has to be hand-bumped, and
+both its C<version> and C<date-released> fields must be updated together.
 
 =item 4. Regenerate the changelog
 
@@ -247,7 +253,7 @@ excludes those, but a quick eyeball is cheap insurance.
 
 =item 7. Commit the release prep
 
-    git add lib/GDPR/IAB/TCFv2.pm CHANGELOG.md README.md
+    git add lib/GDPR/IAB/TCFv2.pm CITATION.cff CHANGELOG.md README.md
     # Also `git add MANIFEST` if `make manifest` changed it
     git commit -m "chore: prepare for v0.360 release"
 
@@ -396,8 +402,9 @@ B<git-flow:>
 B<vanilla git:>
 
     git checkout -b hotfix/0.351 main
-    # Make the fix, bump $VERSION, regenerate CHANGELOG and README
-    git add lib/GDPR/IAB/TCFv2.pm CHANGELOG.md README.md
+    # Make the fix, bump $VERSION (both lib/GDPR/IAB/TCFv2.pm AND CITATION.cff),
+    # regenerate CHANGELOG and README
+    git add lib/GDPR/IAB/TCFv2.pm CITATION.cff CHANGELOG.md README.md
     git commit -m "fix: <description> (v0.351)"
     git push -u origin hotfix/0.351
 
