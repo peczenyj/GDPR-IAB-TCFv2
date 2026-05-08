@@ -318,7 +318,7 @@ sub run_validate {
         my $cmp_v;
         {
             local $SIG{__WARN__} = sub {
-                my $msg = $_[0] // '';
+                my $msg = defined( $_[0] ) ? $_[0] : '';
                 return if $msg =~ /CMP list is older than 28 days/;
                 warn @_;
               }
