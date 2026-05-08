@@ -81,7 +81,8 @@ sub load_from_file {
 sub load_from_url {
     my ( $self, $url ) = @_;
 
-    my $client = $self->{http_client} // do {
+    my $client = $self->{http_client};
+    unless ( defined $client ) {
         eval { require HTTP::Tiny; 1 }
           or croak "HTTP::Tiny is required to load CMP list from URL. "
           . "Please install it or use a local file instead.";
@@ -90,12 +91,12 @@ sub load_from_url {
         # verify_SSL => 1 (default): pin the secure default regardless
         # of the installed HTTP::Tiny version (older versions defaulted
         # to 0).
-        HTTP::Tiny->new(
+        $client = HTTP::Tiny->new(
             env_proxy  => 1,
             verify_SSL => $self->{verify_ssl},
             timeout    => $self->{timeout},
         );
-    };
+    }
 
     my $response = $client->get($url);
     croak "Failed to fetch CMP list from '$url': $response->{reason}"
