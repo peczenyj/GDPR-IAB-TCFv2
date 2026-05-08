@@ -345,6 +345,22 @@ L<GDPR::IAB::TCFv2::Validator::FormValidator>
 C<Data::FormValidator> profile glue for legacy applications that drive
 business validation through DFV.
 
+=item *
+
+L<GDPR::IAB::TCFv1>
+
+A standalone parser for the legacy IAB TCF v1 / v1.1 consent string
+format (April 2018 -- August 2020, superseded by TCF v2.0). The wire
+format is unrelated to v2 -- different bit layout, no segment
+structure, smaller fixed core -- so it does not belong inside this
+distribution.
+
+Audience is intentionally narrow: log spelunkers, audit teams, and
+the historically curious. A useful contribution would expose a
+similar surface to L<GDPR::IAB::TCFv2> (C<Parse>, C<TO_JSON>, simple
+purpose / vendor predicates) without dragging in v2's validator
+machinery.
+
 =back
 
 =head1 HOW TO CLAIM AN ITEM
@@ -379,7 +395,11 @@ The following are intentionally B<not> on the roadmap:
 
 =item *
 
-C<TCF v1> support (legacy, no longer maintained by the IAB).
+TCF v1 / v1.1 support inside this distribution. The two wire formats
+share nothing but the IAB acronym, so v1 belongs in a sibling
+distribution rather than as a code path here. See the
+L<GDPR::IAB::TCFv1> entry under L</ECOSYSTEM -- SISTER DISTRIBUTIONS>
+if you are interested in claiming it.
 
 =item *
 
