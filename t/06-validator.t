@@ -76,6 +76,7 @@ subtest "Validator with Disclosed Vendors" => sub {
   like "$result", qr/not disclosed/, 'correct failure reason';
 
   subtest "Missing disclosed vendors segment logic (Go alignment)" => sub {
+
     # TC string without disclosed vendors segment (v2.0)
     my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
@@ -84,19 +85,11 @@ subtest "Validator with Disclosed Vendors" => sub {
     ok $v1->validate($tc_v20), 'missing segment passes when min_policy_version is not set';
 
     # 2. min_policy_version < 5 -> Silently pass
-    my $v2 = GDPR::IAB::TCFv2::Validator->new(
-      vendor_id                => 1,
-      verify_disclosed_vendors => 1,
-      min_policy_version       => 2,
-    );
+    my $v2 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_policy_version => 2,);
     ok $v2->validate($tc_v20), 'missing segment passes when min_policy_version < 5';
 
     # 3. min_policy_version >= 5 -> Failure
-    my $v3 = GDPR::IAB::TCFv2::Validator->new(
-      vendor_id                => 1,
-      verify_disclosed_vendors => 1,
-      min_policy_version       => 5,
-    );
+    my $v3 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_policy_version => 5,);
     my $r3 = $v3->validate_all($tc_v20);
     ok !$r3, 'missing segment fails when min_policy_version >= 5';
     like "$r3", qr/missing disclosed vendors segment/, 'correct failure reason';
