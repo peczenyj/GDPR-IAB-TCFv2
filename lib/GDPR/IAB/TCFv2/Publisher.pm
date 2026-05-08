@@ -13,16 +13,19 @@ sub Parse {
 
   croak "missing 'core_data'"      unless defined $args{core_data};
   croak "missing 'core_data_size'" unless defined $args{core_data_size};
+  croak "missing 'offset'"         unless defined $args{offset};
 
   croak "missing 'options'"      unless defined $args{options};
   croak "missing 'options.json'" unless defined $args{options}->{json};
 
   my $core_data      = $args{core_data};
-  my $core_data_size = $args{core_data_size};
+  my $core_data_size = $args{core_data_size};    # size in bytes
+  my $offset         = $args{offset};
 
   my $restrictions = GDPR::IAB::TCFv2::PublisherRestrictions->Parse(
     data      => $core_data,
-    data_size => $core_data_size,
+    data_size => $core_data_size << 3,           # convert to bits
+    offset    => $offset,
     options   => $args{options},
   );
 
@@ -30,11 +33,11 @@ sub Parse {
 
   if (defined $args{publisher_tc_data}) {
     my $publisher_tc_data      = $args{publisher_tc_data};
-    my $publisher_tc_data_size = $args{publisher_tc_data_size} || length($publisher_tc_data);
+    my $publisher_tc_data_bits = length($publisher_tc_data) << 3;
 
     my $publisher_tc = GDPR::IAB::TCFv2::PublisherTC->Parse(
       data      => $publisher_tc_data,
-      data_size => $publisher_tc_data_size,
+      data_size => $publisher_tc_data_bits,
       options   => $args{options},
     );
 

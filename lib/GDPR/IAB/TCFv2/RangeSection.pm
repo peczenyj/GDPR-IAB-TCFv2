@@ -24,25 +24,40 @@ sub Parse {
   my $max_id    = $args{max_id};
   my $options   = $args{options};
 
-  Carp::confess "a RangeSection requires at least 31 bits. Got $data_size" if $data_size < 31;
-
   my %prefetch;
-  my %cache;
+  my $cache = "";
 
   if (exists $options->{prefetch}) {
     my $vendor_ids = $options->{prefetch};
-
     foreach my $vendor_id (@{$vendor_ids}) {
       $prefetch{$vendor_id} = 1;
-      $cache{$vendor_id}    = 0;
     }
   }
 
-  my $self = {ranges => [], cache => \%cache, max_id => $max_id, options => $options,};
+  my $self = {ranges => [], cache => $cache, max_id => $max_id, options => $options, offset => $offset,};
 
   bless $self, $klass;
 
   my $next_offset = $self->_parse($data, $data_size, $offset, \%prefetch);
+
+  # If many ranges, build a bit-vector cache for O(1) lookups
+  if (scalar @{$self->{ranges}} > 10) {
+    $self->{cache} = "\0" x (($max_id >> 3) + 1);
+    foreach my $range (@{$self->{ranges}}) {
+      for my $id ($range->[0] .. $range->[1]) {
+        my $vec_offset = (($id - 1) >> 3 << 3) | (7 - (($id - 1) & 7));
+        vec($self->{cache}, $vec_offset, 1) = 1;
+      }
+    }
+  }
+  else {
+    # Small number of ranges: pre-populate hash cache from prefetch
+    my %hcache;
+    foreach my $vendor_id (keys %prefetch) {
+      $hcache{$vendor_id} = $prefetch{$vendor_id} == 2 ? 1 : 0;
+    }
+    $self->{hcache} = \%hcache;
+  }
 
   return ($self, $next_offset);
 }
@@ -63,7 +78,7 @@ sub _parse_range {
   my ($self, $data, $data_size, $offset, $prefetch) = @_;
 
   croak "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
-    if $data_size <= $offset / 8;
+    if ($offset >> 3) >= $data_size;
 
   my $max_id = $self->{max_id};
 
@@ -75,16 +90,18 @@ sub _parse_range {
     ($start, $next_offset) = get_uint16($data, $next_offset);
     ($end,   $next_offset) = get_uint16($data, $next_offset);
 
-    croak "bit $offset range entry inclusion starts at $start, but the min vendor ID is 1" if 1 > $start;
+    croak "bit $offset range entry starts at $start, but the min vendor ID is 1" if 1 > $start;
 
-    croak "bit $offset range entry inclusion ends at $end, but the max vendor ID is $max_id" if $end > $max_id;
+    croak "bit $offset range entry ends at $end, but the max vendor ID is $max_id" if $end > $max_id;
 
     croak "start $start can't be bigger than end $end" if $start > $end;
 
     push @{$self->{ranges}}, [$start, $end];
 
     foreach my $vendor_id (keys %{$prefetch}) {
-      $self->{cache}->{$vendor_id} = delete($prefetch->{$vendor_id}) if $start <= $vendor_id && $vendor_id <= $end;
+      if ($start <= $vendor_id && $vendor_id <= $end) {
+        $prefetch->{$vendor_id} = 2;
+      }
     }
 
     return $next_offset;
@@ -94,12 +111,14 @@ sub _parse_range {
 
   ($vendor_id, $next_offset) = get_uint16($data, $next_offset);
 
-  croak "bit $offset range entry inclusion vendor $vendor_id, but only vendors [1, $max_id] are valid"
+  croak "bit $offset range entry vendor $vendor_id, but only vendors [1, $max_id] are valid"
     if 1 > $vendor_id || $vendor_id > $max_id;
 
   push @{$self->{ranges}}, [$vendor_id, $vendor_id];
 
-  $self->{cache}->{$vendor_id} = delete($prefetch->{$vendor_id}) if exists $prefetch->{$vendor_id};
+  if (exists $prefetch->{$vendor_id}) {
+    $prefetch->{$vendor_id} = 2;
+  }
 
   return $next_offset;
 }
@@ -115,7 +134,15 @@ sub contains {
 
   croak "invalid vendor id $id: must be positive integer bigger than 0" if $id < 1;
 
-  return $self->{cache}->{$id} if exists $self->{cache}->{$id};
+  if ($self->{cache}) {
+    return if $id > $self->{max_id};
+    my $vec_offset = (($id - 1) >> 3 << 3) | (7 - (($id - 1) & 7));
+    return vec($self->{cache}, $vec_offset, 1);
+  }
+
+  if ($self->{hcache} && exists $self->{hcache}->{$id}) {
+    return $self->{hcache}->{$id};
+  }
 
   return if $id > $self->{max_id};
 

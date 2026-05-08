@@ -18,17 +18,18 @@ sub Parse {
 
   croak "missing 'data'"      unless defined $args{data};
   croak "missing 'data_size'" unless defined $args{data_size};
+  croak "missing 'offset'"    unless defined $args{offset};
 
   croak "missing 'options'"      unless defined $args{options};
   croak "missing 'options.json'" unless defined $args{options}->{json};
 
   my $data      = $args{data};
   my $data_size = $args{data_size};
-  my $offset    = 0;
+  my $offset    = $args{offset};
   my $max_id    = ASSUMED_MAX_VENDOR_ID;
   my $options   = $args{options};
 
-  return if length($data) < 12;
+  return if ($offset >> 3) >= $data_size;
 
   my ($num_restrictions, $next_offset) = get_uint12($data, $offset);
 

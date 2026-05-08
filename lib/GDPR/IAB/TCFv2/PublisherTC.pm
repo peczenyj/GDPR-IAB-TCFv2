@@ -31,7 +31,7 @@ sub Parse {
   croak "missing 'options.json'" unless defined $args{options}->{json};
 
   my $data      = $args{data};
-  my $data_size = $args{data_size};
+  my $data_size = $args{data_size};    # size in bits
   my $options   = $args{options};
 
   croak "invalid min size" if $data_size < 57;
