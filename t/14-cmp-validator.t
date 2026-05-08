@@ -118,7 +118,7 @@ subtest "CMPValidator: URL fetch is opt-in" => sub {
   }
 };
 
-subtest "Validator integration: cmp_validator object" => sub {
+subtest "Validator integration: cmp_state_provider object" => sub {
   my $cmp_v = GDPR::IAB::TCFv2::CMPValidator->new(file => $cmp_file, now => $now_fresh,);
 
   # CMP 21 -- known and active in the fixture
@@ -127,7 +127,7 @@ subtest "Validator integration: cmp_validator object" => sub {
   # CMP 888 -- not in the fixture
   my $tc_unknown = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_validator => $cmp_v,);
+  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_state_provider => $cmp_v,);
 
   ok $validator->validate($tc_known)->is_valid, "validation passes when CMP is known";
 
@@ -136,11 +136,11 @@ subtest "Validator integration: cmp_validator object" => sub {
   is(($bad->reasons)[0], "CMP 888 is not valid/disclosed", "reason names the bad CMP");
 };
 
-subtest "Validator integration: cmp_validator hashref auto-instantiates" => sub {
+subtest "Validator integration: cmp_state_provider hashref auto-instantiates" => sub {
   my $tc_known = 'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA';
 
   my $validator
-    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_validator => {file => $cmp_file, now => $now_fresh},);
+    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_state_provider => {file => $cmp_file, now => $now_fresh},);
 
   ok $validator->validate($tc_known)->is_valid, "hashref form works as well as object form";
 };
@@ -148,20 +148,20 @@ subtest "Validator integration: cmp_validator hashref auto-instantiates" => sub 
 subtest "Validator integration: per-call override" => sub {
   my $tc_unknown = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
-  # Validator constructed without a cmp_validator -- the rule is off
+  # Validator constructed without a cmp_state_provider -- the rule is off
   my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1);
   ok $validator->validate($tc_unknown)->is_valid, "no cmp rule -> CMP 888 passes";
 
   # Per-call override turns the rule on.  Hashref form gets coerced.
-  my $bad = $validator->validate($tc_unknown, cmp_validator => {file => $cmp_file, now => $now_fresh},);
-  ok !$bad->is_valid, "per-call cmp_validator override fails the bad CMP";
+  my $bad = $validator->validate($tc_unknown, cmp_state_provider => {file => $cmp_file, now => $now_fresh},);
+  ok !$bad->is_valid, "per-call cmp_state_provider override fails the bad CMP";
 };
 
-subtest "Validator integration: bad cmp_validator value croaks" => sub {
+subtest "Validator integration: bad cmp_state_provider value croaks" => sub {
   throws_ok {
-    GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_validator => 42,);
+    GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_state_provider => 42,);
   }
-  qr/cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator/, "non-object, non-hashref cmp_validator croaks";
+  qr/cmp_state_provider must be a GDPR::IAB::TCFv2::CMPValidator/, "non-object, non-hashref cmp_state_provider croaks";
 };
 
 # A minimal HTTP::Tiny-compatible fake. One method (get); returns a

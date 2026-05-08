@@ -204,7 +204,7 @@ GDPR::IAB::TCFv2::CMPValidator - IAB Registry-based Consent Management Platform 
 
     my $validator = GDPR::IAB::TCFv2::Validator->new(
         vendor_id     => 284,
-        cmp_validator => $cmp_v,
+        cmp_state_provider => $cmp_v,
     );
 
     my $tc_string = '...';
@@ -408,6 +408,6 @@ from it.
 =head1 SEE ALSO
 
 L<GDPR::IAB::TCFv2::Validator> for the rule engine that composes this
-class as the C<cmp_validator> rule.
+class as the C<cmp_state_provider> rule.
 
 =cut

@@ -67,29 +67,29 @@ else {
 sub run_dump {
   my @args = @_;
   my %opts = (
-    pretty             => 0,
-    compact            => 0,
-    'ignore-errors'    => 0,
-    'fail-fast'        => 0,
-    'errors-to-stderr' => 0,
-    'quiet'            => 0,
-    'enable-warnings'  => 0,
-    'vendor-id'        => undef,
-    strict             => 0,
+    pretty               => 0,
+    compact              => 0,
+    'ignore-errors'      => 0,
+    'fail-fast'          => 0,
+    'errors-to-stderr'   => 0,
+    'quiet'              => 0,
+    'enable-warnings'    => 0,
+    'vendor-id'          => undef,
+    'strict-legal-basis' => 0,
   );
 
   GetOptionsFromArray(
     \@args,
-    'pretty|p'           => \$opts{pretty},
-    'compact|c'          => \$opts{compact},
-    'ignore-errors|i'    => \$opts{'ignore-errors'},
-    'fail-fast|f'        => \$opts{'fail-fast'},
-    'errors-to-stderr|e' => \$opts{'errors-to-stderr'},
-    'quiet|q'            => \$opts{'quiet'},
-    'enable-warnings|w'  => \$opts{'enable-warnings'},
-    'vendor-id|v=i'      => \$opts{'vendor-id'},
-    'strict|s'           => \$opts{strict},
-    'help|h'             => sub {
+    'pretty|p'             => \$opts{pretty},
+    'compact|c'            => \$opts{compact},
+    'ignore-errors|i'      => \$opts{'ignore-errors'},
+    'fail-fast|f'          => \$opts{'fail-fast'},
+    'errors-to-stderr|e'   => \$opts{'errors-to-stderr'},
+    'quiet|q'              => \$opts{'quiet'},
+    'enable-warnings|w'    => \$opts{'enable-warnings'},
+    'vendor-id|v=i'        => \$opts{'vendor-id'},
+    'strict-legal-basis|s' => \$opts{'strict-legal-basis'},
+    'help|h'               => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
     },
   ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP|BUGS");
@@ -130,7 +130,7 @@ sub _process_string {
     my $tcf = GDPR::IAB::TCFv2->Parse(
       $str,
       json   => {compact => $o->{compact}, vendor_id => $o->{'vendor-id'},},
-      strict => $o->{strict},
+      strict => $o->{'strict-legal-basis'},
     );
     $output_data = $tcf->TO_JSON;
   };
@@ -144,7 +144,7 @@ sub _process_string {
 
     return if $o->{'ignore-errors'};
 
-    $err = _clean_error($err);
+    $err         = _clean_error($err);
     $output_data = {tc_string => $str, error => $err, success => _json_false(),};
 
     if ($o->{'errors-to-stderr'}) {
@@ -181,25 +181,25 @@ sub _parse_id_list {
 sub run_validate {
   my @args = @_;
   my %opts = (
-    pretty                         => 0,
-    'ignore-errors'                => 0,
-    'fail-fast'                    => 0,
-    'errors-to-stderr'             => 0,
-    quiet                          => 0,
-    'enable-warnings'              => 0,
-    'vendor-id'                    => undef,
-    'consent-purposes'             => undef,
-    'legitimate-interest-purposes' => undef,
-    'flexible-purposes'            => undef,
-    'verify-disclosed-vendors'     => 0,
-    strict                         => 0,
-    'min-policy-version'           => undef,
-    'cmp-list'                     => undef,
-    'cmp-list-network-ok'          => 0,
-    'cmp-list-verify-ssl'          => 1,
-    'cmp-list-timeout'             => 30,
-    all                            => 0,
-    text                           => 0,
+    pretty                          => 0,
+    'ignore-errors'                 => 0,
+    'fail-fast'                     => 0,
+    'errors-to-stderr'              => 0,
+    quiet                           => 0,
+    'enable-warnings'               => 0,
+    'vendor-id'                     => undef,
+    'consent-purposes'              => undef,
+    'legitimate-interest-purposes'  => undef,
+    'flexible-purposes'             => undef,
+    'verify-disclosed-vendors'      => 0,
+    'strict-legal-basis'            => 0,
+    'min-tcf-policy-version'        => undef,
+    'cmp-state-provider'            => undef,
+    'cmp-state-provider-network-ok' => 0,
+    'cmp-state-provider-verify-ssl' => 1,
+    'cmp-state-provider-timeout'    => 30,
+    all                             => 0,
+    text                            => 0,
   );
 
   GetOptionsFromArray(
@@ -214,13 +214,13 @@ sub run_validate {
     'consent-purposes|C=s'             => \$opts{'consent-purposes'},
     'legitimate-interest-purposes|L=s' => \$opts{'legitimate-interest-purposes'},
     'flexible-purposes|F=s'            => \$opts{'flexible-purposes'},
-    'verify-disclosed-vendors|check-disclosed-vendors|d' => \$opts{'verify-disclosed-vendors'},
-    'strict|s'                         => \$opts{strict},
-    'min-policy-version|m=i'           => \$opts{'min-policy-version'},
-    'cmp-list=s'                       => \$opts{'cmp-list'},
-    'cmp-list-network-ok'              => \$opts{'cmp-list-network-ok'},
-    'cmp-list-verify-ssl!'             => \$opts{'cmp-list-verify-ssl'},
-    'cmp-list-timeout=i'               => \$opts{'cmp-list-timeout'},
+    'verify-disclosed-vendors|d'       => \$opts{'verify-disclosed-vendors'},
+    'strict-legal-basis|s'             => \$opts{'strict-legal-basis'},
+    'min-tcf-policy-version|m=i'       => \$opts{'min-tcf-policy-version'},
+    'cmp-state-provider=s'             => \$opts{'cmp-state-provider'},
+    'cmp-state-provider-network-ok'    => \$opts{'cmp-state-provider-network-ok'},
+    'cmp-state-provider-verify-ssl!'   => \$opts{'cmp-state-provider-verify-ssl'},
+    'cmp-state-provider-timeout=i'     => \$opts{'cmp-state-provider-timeout'},
     'all|a'                            => \$opts{all},
     'text|t'                           => \$opts{text},
     'help|h'                           => sub {
@@ -238,23 +238,24 @@ sub run_validate {
   my %vargs = (
     vendor_id                => $opts{'vendor-id'},
     verify_disclosed_vendors => $opts{'verify-disclosed-vendors'},
-    strict                   => $opts{strict},
+    strict_legal_basis       => $opts{'strict-legal-basis'},
   );
   $vargs{consent_purpose_ids} = _parse_id_list($opts{'consent-purposes'}) if defined $opts{'consent-purposes'};
   $vargs{legitimate_interest_purpose_ids} = _parse_id_list($opts{'legitimate-interest-purposes'})
     if defined $opts{'legitimate-interest-purposes'};
-  $vargs{flexible_purpose_ids} = _parse_id_list($opts{'flexible-purposes'}) if defined $opts{'flexible-purposes'};
-  $vargs{min_policy_version}   = $opts{'min-policy-version'}                if defined $opts{'min-policy-version'};
+  $vargs{flexible_purpose_ids}   = _parse_id_list($opts{'flexible-purposes'}) if defined $opts{'flexible-purposes'};
+  $vargs{min_tcf_policy_version} = $opts{'min-tcf-policy-version'} if defined $opts{'min-tcf-policy-version'};
 
-  if (defined $opts{'cmp-list'}) {
+  if (defined $opts{'cmp-state-provider'}) {
     require GDPR::IAB::TCFv2::CMPValidator;
 
-    my $src      = $opts{'cmp-list'};
-    my %cmp_args = (verify_ssl => $opts{'cmp-list-verify-ssl'}, timeout => $opts{'cmp-list-timeout'},);
+    my $src = $opts{'cmp-state-provider'};
+    my %cmp_args
+      = (verify_ssl => $opts{'cmp-state-provider-verify-ssl'}, timeout => $opts{'cmp-state-provider-timeout'},);
 
     if ($src =~ m{^https?://}i) {
       $cmp_args{url}        = $src;
-      $cmp_args{network_ok} = 1 if $opts{'cmp-list-network-ok'};
+      $cmp_args{network_ok} = 1 if $opts{'cmp-state-provider-network-ok'};
     }
     else {
       $cmp_args{file} = $src;
@@ -283,7 +284,7 @@ sub run_validate {
       exit 2;
     }
 
-    $vargs{cmp_validator} = $cmp_v;
+    $vargs{cmp_state_provider} = $cmp_v;
   }
 
   my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
@@ -477,7 +478,7 @@ Output a compact JSON representation (lists of IDs instead of boolean maps).
 
 Filter the output to only show data for a specific vendor ID.
 
-=item B<--strict>, B<-s>
+=item B<--strict-legal-basis>, B<-s>
 
 Enable strict specification validation. In this mode, the tool will fail if
 mandatory segments are missing (e.g., Disclosed Vendors in TCF v2.3).
@@ -636,22 +637,18 @@ legal basis used for the flexible-purpose check.
 
 Require the vendor to appear in the Disclosed Vendors segment. When the TC string
 carries the segment, the vendor must be present. If the segment is absent, it
-only fails if B<--min-policy-version> is set to 5 or higher (TCF v2.3+).
+only fails if B<--min-tcf-policy-version> is set to 5 or higher (TCF v2.3+).
 
-=item B<--check-disclosed-vendors>
-
-Alias for B<--verify-disclosed-vendors>.
-
-=item B<--strict>, B<-s>
+=item B<--strict-legal-basis>, B<-s>
 
 Enable strict spec validation in the underlying parser (see C<dump --strict>).
 
-=item B<--min-policy-version>, B<-m> I<N>
+=item B<--min-tcf-policy-version>, B<-m> I<N>
 
 Reject TC strings whose Global Vendor List policy version is below I<N>.
 Checked first, before any vendor- or purpose-level rules.
 
-=item B<--cmp-list> I<PATH-OR-URL>
+=item B<--cmp-state-provider> I<PATH-OR-URL>
 
 Validate the C<cmp_id> embedded in each TC string against an IAB CMP
 registry snapshot. The argument is detected as a URL when it starts
@@ -663,24 +660,24 @@ When the argument is a URL, the standard HTTP-proxy environment
 variables (C<https_proxy>, C<http_proxy>, C<no_proxy>) are honored
 automatically.
 
-=item B<--cmp-list-network-ok>
+=item B<--cmp-state-provider-network-ok>
 
-Required when B<--cmp-list> is a URL. Without this flag, URL fetching
+Required when B<--cmp-state-provider> is a URL. Without this flag, URL fetching
 is refused (mirrors the library's C<network_ok =E<gt> 1> opt-in:
 fetching from an arbitrary URL is intentional, never accidental).
-Has no effect when B<--cmp-list> is a file path.
+Has no effect when B<--cmp-state-provider> is a file path.
 
-=item B<--cmp-list-verify-ssl>, B<--no-cmp-list-verify-ssl>
+=item B<--cmp-state-provider-verify-ssl>, B<--no-cmp-state-provider-verify-ssl>
 
 Verify TLS certificates when fetching from an HTTPS URL. On by default;
-disable with B<--no-cmp-list-verify-ssl> only when targeting a server
+disable with B<--no-cmp-state-provider-verify-ssl> only when targeting a server
 with a self-signed or otherwise non-public-CA certificate. Has no
-effect when B<--cmp-list> is a file path.
+effect when B<--cmp-state-provider> is a file path.
 
-=item B<--cmp-list-timeout> I<SECONDS>
+=item B<--cmp-state-provider-timeout> I<SECONDS>
 
 Per-request timeout for the URL fetch, in seconds. Defaults to 30.
-Has no effect when B<--cmp-list> is a file path.
+Has no effect when B<--cmp-state-provider> is a file path.
 
 =item B<--all>, B<-a>
 
@@ -726,7 +723,7 @@ Route parse-error records to B<STDERR> instead of B<STDOUT>.
 =item B<--enable-warnings>, B<-w>
 
 Emit human-readable warning messages on B<STDERR> when a TC string fails to
-parse, and when the B<--cmp-list> registry snapshot is older than 28 days.
+parse, and when the B<--cmp-state-provider> registry snapshot is older than 28 days.
 Off by default.
 
 =item B<--quiet>, B<-q>
@@ -752,7 +749,7 @@ B<1> — at least one TC string failed validation or could not be parsed.
 =item *
 
 B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists,
-unreachable C<--cmp-list> source).
+unreachable C<--cmp-state-provider> source).
 
 =back
 
@@ -774,13 +771,13 @@ unreachable C<--cmp-list> source).
 
     # Reject TC strings that name an unknown or deleted CMP, using a
     # local snapshot of the IAB CMP registry.
-    iabtcfv2 validate -v 32 --cmp-list /etc/iab/cmp-list.json CO...AAA
+    iabtcfv2 validate -v 32 --cmp-state-provider /etc/iab/cmp-list.json CO...AAA
 
     # Same, but fetching the registry over HTTPS through whatever
     # proxy `https_proxy` points at.
     iabtcfv2 validate -v 32 \
-        --cmp-list https://cmplist.consensu.org/v2/cmp-list.json \
-        --cmp-list-network-ok \
+        --cmp-state-provider https://cmplist.consensu.org/v2/cmp-list.json \
+        --cmp-state-provider-network-ok \
         CO...AAA
 
 =head1 DESCRIPTION
