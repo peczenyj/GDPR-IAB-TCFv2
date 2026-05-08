@@ -115,8 +115,17 @@ sub run_dump {
     'enable-warnings|w'  => \$opts{'enable-warnings'},
     'vendor-id|v=i'      => \$opts{'vendor-id'},
     'strict|s'           => \$opts{strict},
-    'color:s'            => \$opts{color},
-    'help|h'             => sub {
+    'color:s'            => sub {
+      my ($n, $v) = @_;
+      if ($v =~ /^(auto|always|never)$/) {
+        $opts{color} = $v;
+      }
+      else {
+        $opts{color} = 'always';
+        unshift @args, $v if defined $v && $v ne '';
+      }
+    },
+    'help|h' => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
     },
   ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "DUMP|BUGS");
@@ -251,8 +260,17 @@ sub run_validate {
     'cmp-list-timeout=i'               => \$opts{'cmp-list-timeout'},
     'all|a'                            => \$opts{all},
     'text|t'                           => \$opts{text},
-    'color:s'                          => \$opts{color},
-    'help|h'                           => sub {
+    'color:s'                          => sub {
+      my ($n, $v) = @_;
+      if ($v =~ /^(auto|always|never)$/) {
+        $opts{color} = $v;
+      }
+      else {
+        $opts{color} = 'always';
+        unshift @args, $v if defined $v && $v ne '';
+      }
+    },
+    'help|h' => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
     },
   ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "VALIDATE|BUGS");
