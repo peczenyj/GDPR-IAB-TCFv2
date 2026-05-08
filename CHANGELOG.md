@@ -1,3 +1,23 @@
+## [unreleased]
+
+### Bug Fixes
+
+- *(cmp-validator)* Make JSON::PP and Time::Piece optional 
+- Replace // defined-or with defined() ternary for Perl 5.8 
+
+### Features
+
+- *(validator)* Per-call overrides for purpose ID lists 
+- *(validator)* Emit distinct ReasonPublisherRestriction* codes (Phase 6.4) 
+- *(validator)* Emit ReasonLegitimateInterestNotPermittedForPurpose for TCF carve-out (Phase 6.3) 
+- *(validator)* Structured Failure objects + Result accessors (Phase 6.2) 
+
+### Other
+
+- Merge tag 'v0.391' into devel
+
+Tagged for release. v0.391
+
 ## [0.391] - 2026-05-07
 
 ### Features
@@ -8,6 +28,7 @@
 
 ### Other
 
+- Release v0.391 include cmp validator in cli
 - Merge tag 'v0.390' into devel
 
 Tagged for release. v0.390
