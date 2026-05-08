@@ -6,6 +6,7 @@ use warnings;
 use Carp         qw<croak>;
 use Scalar::Util qw<blessed>;
 use GDPR::IAB::TCFv2;
+use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Failure;
 use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
@@ -212,7 +213,27 @@ sub _check_consent_purposes {
     my ( $self, $tc, $vendor_id, $strict, $failures, $stop_on_first ) = @_;
 
     foreach my $pid ( @{ $self->{consent_purpose_ids} } ) {
-        my $allowed = $self->{_flexible_set}->{$pid}
+        my $is_flexible = $self->{_flexible_set}->{$pid};
+
+        # Publisher-restriction inspection runs before the parser
+        # delegate so a restriction-driven failure carries the precise
+        # Reason* code (and restriction_type) rather than the generic
+        # vendor-not-allowed code. Skipped for flexible purposes: the
+        # flex API may flip the basis based on the restriction itself,
+        # so what looks like a contradiction here can still pass.
+        if ( !$is_flexible ) {
+            my $pr_failure = $self->_publisher_restriction_failure(
+                $tc,
+                $vendor_id, $pid, 0
+            );
+            if ($pr_failure) {
+                push @{$failures}, $pr_failure;
+                return if $stop_on_first;
+                next;
+            }
+        }
+
+        my $allowed = $is_flexible
           ? $tc->is_vendor_allowed_for_flexible_purpose(
             $vendor_id, $pid, 0,
             strict => $strict
@@ -268,6 +289,22 @@ sub _check_li_purposes {
             next;
         }
 
+        # Publisher-restriction inspection: same rationale as on the
+        # consent path. Skipped for flexible purposes (the flex API
+        # honors the restriction by flipping bases, so what looks like
+        # a contradiction here can still pass).
+        if ( !$is_flexible ) {
+            my $pr_failure = $self->_publisher_restriction_failure(
+                $tc,
+                $vendor_id, $pid, 1
+            );
+            if ($pr_failure) {
+                push @{$failures}, $pr_failure;
+                return if $stop_on_first;
+                next;
+            }
+        }
+
         my $allowed = $is_flexible
           ? $tc->is_vendor_allowed_for_flexible_purpose(
             $vendor_id, $pid, 1,
@@ -299,6 +336,64 @@ sub _li_carve_out_applies {
     return 1 if $pid == 1;
     return 1 if $pid >= 3 && $pid <= 6 && $policy_version >= 4;
     return 0;
+}
+
+# Inspect publisher restrictions for ($vendor_id, $pid) and return a
+# Failure object when a restriction contradicts the configured basis,
+# or undef when no restriction-driven failure applies.
+#
+# $basis: 0 = consent, 1 = legitimate interest.
+#
+# A NotAllowed restriction always wins (it terminates the rule for
+# either basis). Beyond that, only the restriction type that
+# contradicts the configured basis is reported here -- the matching
+# restriction (e.g. RequireConsent on a consent-basis purpose) is a
+# legal coexistence and falls through to the parser delegate.
+sub _publisher_restriction_failure {
+    my ( $self, $tc, $vendor_id, $pid, $basis ) = @_;
+
+    if ( $tc->check_publisher_restriction( $pid, NotAllowed, $vendor_id ) ) {
+        return GDPR::IAB::TCFv2::Validator::Failure->new(
+            code    => ReasonPublisherRestrictionNotAllowed,
+            message =>
+              "publisher restriction: purpose $pid not allowed (vendor $vendor_id)",
+            purpose_id       => $pid,
+            vendor_id        => $vendor_id,
+            restriction_type => NotAllowed,
+        );
+    }
+
+    if ($basis == 0
+        && $tc->check_publisher_restriction(
+            $pid, RequireLegitimateInterest, $vendor_id
+        )
+      )
+    {
+        return GDPR::IAB::TCFv2::Validator::Failure->new(
+            code    => ReasonPublisherRestrictionRequireLegitimateInterest,
+            message =>
+              "publisher restriction: purpose $pid requires legitimate interest (vendor $vendor_id)",
+            purpose_id       => $pid,
+            vendor_id        => $vendor_id,
+            restriction_type => RequireLegitimateInterest,
+        );
+    }
+
+    if (   $basis == 1
+        && $tc->check_publisher_restriction( $pid, RequireConsent, $vendor_id )
+      )
+    {
+        return GDPR::IAB::TCFv2::Validator::Failure->new(
+            code    => ReasonPublisherRestrictionRequireConsent,
+            message =>
+              "publisher restriction: purpose $pid requires consent (vendor $vendor_id)",
+            purpose_id       => $pid,
+            vendor_id        => $vendor_id,
+            restriction_type => RequireConsent,
+        );
+    }
+
+    return;
 }
 
 

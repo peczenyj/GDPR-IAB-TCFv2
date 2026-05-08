@@ -207,6 +207,108 @@ subtest
     ok( $result_v20, 'P3 LI passes at policy 2 (carve-out does not apply)' );
   };
 
+subtest
+  'Validator::Result: NotAllowed publisher restriction emits ReasonPublisherRestrictionNotAllowed'
+  => sub {
+
+    # COxPe2T... fixture (policy 2) has a NotAllowed (type 0)
+    # publisher restriction for vendor 32 / purpose 1. Configured under
+    # consent_purpose_ids the validator must report this as the
+    # publisher-restriction code, not the generic vendor-not-allowed
+    # code, even though the consent flags also happen to be missing.
+    my $tc_with_pr =
+      'COxPe2TOxPe2TALABAENAPCgAAAAAAAAAAAAAFAAAAoAAA4IACACAIABgACAFA4ADACAAIygAGADwAQBIAIAIB0AEAEBSACACAA';
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 32,
+        consent_purpose_ids => [1],
+    );
+    my $result = $validator->validate($tc_with_pr);
+
+    ok( !$result, 'NotAllowed restriction rejects the consent purpose' );
+
+    my @failures = $result->failures;
+    is( scalar @failures, 1, 'fail-fast yields exactly one failure' );
+    is( $failures[0]->code, ReasonPublisherRestrictionNotAllowed,
+        'code is ReasonPublisherRestrictionNotAllowed'
+    );
+    is( $failures[0]->restriction_type, 0,
+        'restriction_type is 0 (NotAllowed)'
+    );
+    is( $failures[0]->purpose_id, 1,  'purpose_id is 1' );
+    is( $failures[0]->vendor_id,  32, 'vendor_id is 32' );
+    like(
+        $failures[0]->message, qr/purpose 1 not allowed/,
+        'message names the restriction'
+    );
+  };
+
+subtest
+  'Validator::Result: RequireConsent restriction on LI basis emits ReasonPublisherRestrictionRequireConsent'
+  => sub {
+
+    # COwAdDh... (policy 2) has a RequireConsent restriction for
+    # vendor 32 / purpose 7. Configured under
+    # legitimate_interest_purpose_ids that's a contradiction the
+    # validator must surface as a restriction-driven reason rather
+    # than the generic LI-vendor reason.
+    my $tc_with_consent_pr =
+      'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id                       => 32,
+        legitimate_interest_purpose_ids => [7],
+    );
+    my $result = $validator->validate($tc_with_consent_pr);
+
+    ok( !$result, 'RequireConsent restriction rejects LI purpose' );
+
+    my @failures = $result->failures;
+    is( scalar @failures, 1, 'fail-fast yields exactly one failure' );
+    is( $failures[0]->code, ReasonPublisherRestrictionRequireConsent,
+        'code is ReasonPublisherRestrictionRequireConsent'
+    );
+    is( $failures[0]->restriction_type, 1,
+        'restriction_type is 1 (RequireConsent)'
+    );
+    is( $failures[0]->purpose_id, 7,  'purpose_id is 7' );
+    is( $failures[0]->vendor_id,  32, 'vendor_id is 32' );
+  };
+
+subtest
+  'Validator::Result: RequireLegitimateInterest restriction on consent basis emits matching reason'
+  => sub {
+
+    # gdpr_subset corpus row CQa0zsAQa0zsAAHABBENCEFsAP_AAELgA...
+    # (policy 5) has a RequireLegitimateInterest (type 2) restriction
+    # for vendor 2 / purpose 2. Vendor 2 has consent + purpose-consent
+    # set, so the failure can only be coming from the restriction.
+    my $tc_with_li_pr =
+      'CQa0zsAQa0zsAAHABBENCEFsAP_AAELgAAAoLstR_G__bXlr8bb3aftkeYxf9_hr7sQhBgbJk24FzLvW7JwXx2E7JAzatqIKmRIAu3BBIQNlHIDURVCgKIgFryDMaEyUoTtKJ6BkiFMRA2NYCExvi4pjWQCY5vr99ld1mR-J7dr82dzyy6hHv3a5_2S1UJCdIYctBfvsZBKT-9AE9_x8v4v4_F5pE2-eS1n_pGvp6jd-YnM_dBmxt-bSffTKn93rl_e7XvuZ_n37u94VX77v___vf6-7_u92C7CAZho1U0ZZOmgUKDxBAiIUFcQIUCAMAAEwbICBMyaFOQMAt9hMgBACgAGCBkQAIMUAQEASQAYVARQIQiAESIQ6AAMACAYCAKgZAAxEWIgEABID4OLYEEAkWICVnVUbYE4BCQSdtlY8sAwIa8QrFngFECYmCgDARgAKAgAAeHyFJNwWsyCiLiO6QIAgAATyzAiRSl2EMKw3RaB8DTqMjTANXzhMlp0mwBsFZCabMJ_QmHmmqIUEuTuzSzV3AGIQAYAAgu8VAAwABBd4eABgACC7xMADAAEF3goAGAAILvFwAMAAQXeA';
+
+    my $validator = GDPR::IAB::TCFv2::Validator->new(
+        vendor_id           => 2,
+        consent_purpose_ids => [2],
+    );
+    my $result = $validator->validate($tc_with_li_pr);
+
+    ok( !$result,
+        'RequireLegitimateInterest restriction rejects consent purpose'
+    );
+
+    my @failures = $result->failures;
+    is( scalar @failures, 1, 'fail-fast yields exactly one failure' );
+    is( $failures[0]->code,
+        ReasonPublisherRestrictionRequireLegitimateInterest,
+        'code is ReasonPublisherRestrictionRequireLegitimateInterest'
+    );
+    is( $failures[0]->restriction_type, 2,
+        'restriction_type is 2 (RequireLegitimateInterest)'
+    );
+    is( $failures[0]->purpose_id, 2, 'purpose_id is 2' );
+    is( $failures[0]->vendor_id,  2, 'vendor_id is 2' );
+  };
+
 subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
     require GDPR::IAB::TCFv2::CMPValidator;
 
