@@ -435,6 +435,8 @@ iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings
 
 iabtcfv2 [options] <subcommand> [subcommand-options]
 
+Run with --help for more information.
+
 =head1 OPTIONS
 
 =over 4
@@ -473,6 +475,8 @@ emitting one JSON record per string (or text lines with B<--text>).
 =head2 Usage
 
     iabtcfv2 dump [options] [tc_strings...]
+
+    Run with --help for more information.
 
 =head2 Description
 
@@ -583,6 +587,8 @@ To type strings manually:
 =head2 Usage
 
     iabtcfv2 validate --vendor-id <id> [options] [tc_strings...]
+
+    Run with --help for more information.
 
 =head2 Description
 
