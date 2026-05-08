@@ -206,7 +206,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::RangeSection - Transparency & Consent String version 2 range section parser
+GDPR::IAB::TCFv2::RangeSection - TCF v2.3 range section parser
 
 =head1 SYNOPSIS
 

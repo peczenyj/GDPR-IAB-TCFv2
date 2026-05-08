@@ -153,7 +153,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::PublisherRestrictions - Transparency & Consent String version 2 publisher restriction
+GDPR::IAB::TCFv2::PublisherRestrictions - TCF v2.3 publisher restrictions parser
 
 =head1 SYNOPSIS
 

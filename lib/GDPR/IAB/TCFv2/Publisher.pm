@@ -104,7 +104,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::Publisher - Transparency & Consent String version 2 publisher
+GDPR::IAB::TCFv2::Publisher - TCF v2.3 publisher section parser
 
 Combines the creation of L<GDPR::IAB::TCFv2::PublisherRestrictions> and L<GDPR::IAB::TCFv2::PublisherTC> based on the data available.
 
