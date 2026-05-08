@@ -34,13 +34,7 @@ sub Parse {
     }
   }
 
-  my $self = {
-    ranges  => [],
-    cache   => $cache,
-    max_id  => $max_id,
-    options => $options,
-    offset  => $offset,
-  };
+  my $self = {ranges => [], cache => $cache, max_id => $max_id, options => $options, offset => $offset,};
 
   bless $self, $klass;
 
