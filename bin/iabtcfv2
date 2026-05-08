@@ -34,11 +34,24 @@ sub _clean_error {
   return $err;
 }
 
-my %global_opts = (color => 0,);
+my %global_opts = (color => 'never',);
 
 sub _color {
   my ($str, $color, $local_opts) = @_;
-  return $str unless $global_opts{color} || ($local_opts && $local_opts->{color});
+  my $mode = ($local_opts && exists $local_opts->{color}) ? $local_opts->{color} : $global_opts{color};
+
+  # Normalize boolean-ish or empty values from GetOptions
+  # --color (no value) -> Sets $mode to '' -> treated as 'always'
+  # Missing flag -> $mode is 'never' (default)
+  $mode = 'always' if $mode eq '1' || $mode eq '';
+  $mode = 'never' unless defined $mode;
+
+  return $str if $mode eq 'never';
+
+  if ($mode eq 'auto') {
+    return $str unless -t STDOUT;
+  }
+
   eval { require Term::ANSIColor; 1 } or return $str;
   return Term::ANSIColor::colored([$color], $str);
 }
@@ -47,7 +60,7 @@ GetOptions(
   'help|h'    => \$global_opts{help},
   'man'       => \$global_opts{man},
   'version|V' => \$global_opts{version},
-  'color'     => \$global_opts{color},
+  'color:s'   => \$global_opts{color},
 ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 
 if ($global_opts{version}) {
@@ -88,7 +101,7 @@ sub run_dump {
     'enable-warnings'  => 0,
     'vendor-id'        => undef,
     strict             => 0,
-    color              => 0,
+    color              => 'never',
   );
 
   GetOptionsFromArray(
@@ -102,7 +115,7 @@ sub run_dump {
     'enable-warnings|w'  => \$opts{'enable-warnings'},
     'vendor-id|v=i'      => \$opts{'vendor-id'},
     'strict|s'           => \$opts{strict},
-    'color'              => \$opts{color},
+    'color:s'            => \$opts{color},
     'help|h'             => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
     },
@@ -214,7 +227,7 @@ sub run_validate {
     'cmp-list-timeout'             => 30,
     all                            => 0,
     text                           => 0,
-    color                          => 0,
+    color                          => 'never',
   );
 
   GetOptionsFromArray(
@@ -238,7 +251,7 @@ sub run_validate {
     'cmp-list-timeout=i'               => \$opts{'cmp-list-timeout'},
     'all|a'                            => \$opts{all},
     'text|t'                           => \$opts{text},
-    'color'                            => \$opts{color},
+    'color:s'                          => \$opts{color},
     'help|h'                           => sub {
       pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
     },
@@ -459,11 +472,28 @@ Print a brief help message and exits.
 
 Print the version and exits.
 
-=item B<--color>
+=item B<--color>[=I<MODE>]
 
-Enable colored output. Off by default. When enabled, the tool uses ANSI colors
-for text status (e.g. OK/FAIL), TC strings, and error prefixes. Requires
-C<Term::ANSIColor> (core).
+Enable colored output. Mode can be B<auto>, B<always>, or B<never>.
+
+When enabled, the tool uses ANSI colors for text status (e.g. OK/FAIL), TC
+strings, and error prefixes. Requires C<Term::ANSIColor> (core).
+
+=over 4
+
+=item *
+
+B<never> (Default): No colors are used.
+
+=item *
+
+B<always> or B<--color> (without value): Colors are always enabled.
+
+=item *
+
+B<auto>: Colors are enabled only if standard output is a terminal (TTY).
+
+=back
 
 =item B<--man>
 
