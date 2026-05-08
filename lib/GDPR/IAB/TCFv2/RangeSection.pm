@@ -77,7 +77,7 @@ sub _parse {
 sub _parse_range {
   my ($self, $data, $data_size, $offset, $prefetch) = @_;
 
-  croak "bit $offset was suppose to start a new range entry, but the consent string was only $data_size bytes long"
+  croak "bit $offset was supposed to start a new range entry, but the consent string was only $data_size bytes long"
     if ($offset >> 3) >= $data_size;
 
   my $max_id = $self->{max_id};
@@ -234,7 +234,7 @@ GDPR::IAB::TCFv2::RangeSection - TCF v2.3 range section parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash parameters: 
+Constructor C<Parse> receives a hash of 6 parameters: 
 
 =over
 
@@ -244,7 +244,7 @@ Key C<data> is the binary data
 
 =item *
 
-Key C<data_size> is the original binary data size
+Key C<data_size> is the original binary data size (in bits)
 
 =item *
 
@@ -260,7 +260,7 @@ Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to
 
 =item *
 
-Key C<prefetch> is an optional arrayref of vendor ids to populate the result as cache.
+Key C<prefetch> is an arrayref of IDs to pre-calculate bit vector presence. Optional.
 
 =back
 

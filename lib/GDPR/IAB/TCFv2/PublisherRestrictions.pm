@@ -160,23 +160,28 @@ GDPR::IAB::TCFv2::PublisherRestrictions - TCF v2.3 publisher restrictions parser
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash of 3 parameters: 
+Constructor C<Parse> receives a hash of 4 parameters: 
 
 =over
 
 =item *
 
-Key C<data> is the binary data
+Key C<data> is the binary core data
 
 =item *
 
-Key C<data_size> is the original binary data size
+Key C<data_size> is the core data size in bits
+
+=item *
+
+Key C<offset> is the bit offset
 
 =item *
 
 Key C<options> is the L<GDPR::IAB::TCFv2> options (includes the C<json> field to modify the L</TO_JSON> method output.
 
 =back
+
 
 =head1 METHODS
 

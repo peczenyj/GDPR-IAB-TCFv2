@@ -124,7 +124,7 @@ Combines the creation of L<GDPR::IAB::TCFv2::PublisherRestrictions> and L<GDPR::
 
 =head1 CONSTRUCTOR
 
-Constructor C<Parse> receives an hash of 4 parameters: 
+Constructor C<Parse> receives a hash of 5 parameters: 
 
 =over
 
@@ -135,6 +135,10 @@ Key C<core_data> is the binary core data
 =item *
 
 Key C<core_data_size> is the original binary core data size
+
+=item *
+
+Key C<offset> is the bit offset where the publisher section starts
 
 =item *
 

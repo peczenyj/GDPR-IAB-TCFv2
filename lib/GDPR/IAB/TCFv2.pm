@@ -11,7 +11,6 @@ use POSIX        qw<strftime>;
 
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
-  get_uint2
   get_uint3
   get_uint6
   get_uint12
@@ -62,7 +61,7 @@ use overload q<""> => \&tc_string;
 sub Parse {
   my ($klass, $tc_string, %opts) = @_;
 
-  croak 'missing gdpr consent string' unless $tc_string;
+  croak 'missing gdpr consent string' unless defined $tc_string && length $tc_string;
 
   my $segments = _decode_tc_string_segments($tc_string);
 
