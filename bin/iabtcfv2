@@ -21,6 +21,16 @@ sub _json_true {
   return JSON->can('true') ? JSON->true() : JSON::PP::true();
 }
 
+sub _clean_error {
+  my $err = shift;
+  return "" unless defined $err;
+
+  # Strip Perl/Carp's automatic " at ... line ..." location suffix
+  $err =~ s/ at \S+ line \d+\.?\n?\z//;
+  chomp $err;
+  return $err;
+}
+
 my %global_opts;
 GetOptions('help|h' => \$global_opts{help}, 'man' => \$global_opts{man}, 'version|V' => \$global_opts{version},)
   or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
@@ -131,7 +141,7 @@ sub _process_string {
 
     return if $o->{'ignore-errors'};
 
-    chomp $err;
+    $err = _clean_error($err);
     $output_data = {tc_string => $str, error => $err, success => _json_false(),};
 
     if ($o->{'errors-to-stderr'}) {
@@ -324,7 +334,7 @@ sub _validate_string {
 
     return if $o->{'ignore-errors'};
 
-    chomp $err;
+    $err = _clean_error($err);
     my $output_data = {tc_string => $str, error => $err, success => _json_false(),};
 
     if ($o->{'errors-to-stderr'}) {
