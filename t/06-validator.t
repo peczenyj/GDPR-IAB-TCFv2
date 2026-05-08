@@ -67,33 +67,13 @@ subtest "Validator with Disclosed Vendors" => sub {
   my $tc_v23
     = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA.ILrtR_G__bXlv-bb36ftkeYxf9_hr7sQxBgbJs24FzLvW7JwX32E7NEzatqYKmRIAu3TBIQNtHJjURVChKIgVrzDsaEyUoTtKJ-BkiHMRY2NYCFxvm4tjWQCZ5vr_91d9mT-N7dr-2dzyy7hnv3a9_-S1WJidKYetHfv8bBKT-_IU9_x-_4v4_N7pE2-eS1v_tGvt639-4vP_dpvxt-7yffz____73_e7X__d_______Xf_7____________4AAA';
 
-  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 284, verify_disclosed_vendors => 1,);
+  my $validator = GDPR::IAB::TCFv2::Validator->new(vendor_id => 284, check_disclosed_vendors => 1,);
 
   ok $validator->validate($tc_v23), 'pass for disclosed vendor 284';
 
   my $result = $validator->validate($tc_v23, vendor_id => 9999);
   ok !$result, 'fail for non-disclosed vendor 9999';
   like "$result", qr/not disclosed/, 'correct failure reason';
-
-  subtest "Missing disclosed vendors segment logic (Go alignment)" => sub {
-
-    # TC string without disclosed vendors segment (v2.0)
-    my $tc_v20 = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
-
-    # 1. No min_policy_version set (defaults to undef/<5) -> Silently pass
-    my $v1 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1,);
-    ok $v1->validate($tc_v20), 'missing segment passes when min_policy_version is not set';
-
-    # 2. min_policy_version < 5 -> Silently pass
-    my $v2 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_policy_version => 2,);
-    ok $v2->validate($tc_v20), 'missing segment passes when min_policy_version < 5';
-
-    # 3. min_policy_version >= 5 -> Failure
-    my $v3 = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_policy_version => 5,);
-    my $r3 = $v3->validate_all($tc_v20);
-    ok !$r3, 'missing segment fails when min_policy_version >= 5';
-    like "$r3", qr/missing disclosed vendors segment/, 'correct failure reason';
-  };
 };
 
 subtest "Validator accepts a pre-parsed GDPR::IAB::TCFv2 object" => sub {

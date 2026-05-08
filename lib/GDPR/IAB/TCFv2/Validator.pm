@@ -32,7 +32,7 @@ sub new {
     legitimate_interest_purpose_ids => $legitimate_interest,
     flexible_purpose_ids            => $flexible,
     _flexible_set                   => {map { $_ => 1 } @{$flexible}},
-    verify_disclosed_vendors        => $args{verify_disclosed_vendors} || 0,
+    check_disclosed_vendors         => $args{check_disclosed_vendors} || 0,
     min_policy_version              => $args{min_policy_version},
     cmp_validator                   => $cmp_v,
     strict                          => exists $args{strict} ? $args{strict} : 0,
@@ -98,10 +98,10 @@ sub _run_validation {
 
   my $vendor_id = exists $overrides{vendor_id} ? $overrides{vendor_id} : $self->{vendor_id};
   my $strict    = exists $overrides{strict}    ? $overrides{strict}    : $self->{strict};
-  my $verify_disclosed
-    = exists $overrides{verify_disclosed_vendors}
-    ? $overrides{verify_disclosed_vendors}
-    : $self->{verify_disclosed_vendors};
+  my $check_disclosed
+    = exists $overrides{check_disclosed_vendors}
+    ? $overrides{check_disclosed_vendors}
+    : $self->{check_disclosed_vendors};
   my $min_policy_version
     = exists $overrides{min_policy_version} ? $overrides{min_policy_version} : $self->{min_policy_version};
   my $cmp_validator
@@ -129,13 +129,13 @@ sub _run_validation {
 
   my @failures;
 
-  $self->_check_disclosed($tc, $vendor_id, $verify_disclosed, $min_policy_version, \@failures);
-  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
-
   $self->_check_min_policy_version($tc, $min_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
+
+  $self->_check_disclosed($tc, $vendor_id, $check_disclosed, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   $self->_check_consent_purposes($tc, $vendor_id, $strict, \@failures, $stop_on_first, $consent_ids, $flexible_set,);
@@ -184,29 +184,19 @@ sub _check_min_policy_version {
 }
 
 sub _check_disclosed {
-  my ($self, $tc, $vendor_id, $verify_disclosed, $min_policy_version, $failures) = @_;
+  my ($self, $tc, $vendor_id, $check_disclosed, $failures) = @_;
 
-  return unless $verify_disclosed;
+  return unless $check_disclosed;
+  return unless $tc->has_vendor_disclosure;
 
-  if ($tc->has_vendor_disclosure) {
-    unless ($tc->disclosed_vendor($vendor_id)) {
-      push @{$failures},
-        GDPR::IAB::TCFv2::Validator::Failure->new(
-        code      => ReasonVendorNotDisclosed,
-        message   => "vendor $vendor_id not disclosed",
-        vendor_id => $vendor_id,
-        );
-    }
-  }
-  elsif (defined $min_policy_version && $min_policy_version >= 5) {
+  unless ($tc->disclosed_vendor($vendor_id)) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
-      code      => ReasonMissingDisclosedVendors,
-      message   => "missing disclosed vendors segment",
+      code      => ReasonVendorNotDisclosed,
+      message   => "vendor $vendor_id not disclosed",
       vendor_id => $vendor_id,
       );
   }
-
   return;
 }
 
@@ -390,7 +380,7 @@ GDPR::IAB::TCFv2::Validator - declarative compliance checks for TC strings
         consent_purpose_ids             => [ 1, 3, 9 ],
         legitimate_interest_purpose_ids => [ 10 ],
         flexible_purpose_ids            => [ 10 ],
-        verify_disclosed_vendors        => 1,
+        check_disclosed_vendors         => 1,
     );
 
     # Fail-fast: stops at the first failing rule.
@@ -480,29 +470,11 @@ L<GDPR::IAB::TCFv2/is_vendor_allowed_for_flexible_purpose>.
 
 =item *
 
-C<verify_disclosed_vendors> — boolean. When true, the validator inspects
-the TC string's Disclosed Vendors segment.
-
-If the segment is present, the vendor must appear there or the rule
-fails with C<"vendor N not disclosed"> (ReasonVendorNotDisclosed).
-
-If the segment is B<absent>, the behavior depends on the
-C<min_policy_version> floor:
-
-=over 8
-
-=item *
-
-When C<min_policy_version> is set to B<5 or higher> (TCF v2.3+), the
-segment is mandatory; absence causes a failure
-(ReasonMissingDisclosedVendors).
-
-=item *
-
-Otherwise (if C<min_policy_version> is below 5 or unset), absence is
-B<silently ignored> (matches legacy behavior).
-
-=back
+C<check_disclosed_vendors> — boolean. When true B<and> the TC string
+carries a Disclosed Vendors segment, the vendor must appear there or
+the rule fails with C<"vendor N not disclosed">. If the segment is
+absent the check is silently skipped — set the parser's C<strict>
+mode at parse time if you need to require the segment's presence.
 
 =item *
 
@@ -523,7 +495,7 @@ the first failing rule (B<fail-fast> mode) and returns a
 L<GDPR::IAB::TCFv2::Validator::Result> carrying that one reason.
 
 C<%overrides> can replace the constructor values for C<vendor_id>,
-C<strict>, C<verify_disclosed_vendors>, C<min_policy_version>,
+C<strict>, C<check_disclosed_vendors>, C<min_policy_version>,
 C<cmp_validator>, C<consent_purpose_ids>,
 C<legitimate_interest_purpose_ids>, and C<flexible_purpose_ids> for
 this call only.
