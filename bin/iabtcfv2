@@ -34,11 +34,12 @@ sub _clean_error {
   return $err;
 }
 
-my %global_opts = (color => 'never',);
+my %global_opts;
 
 sub _color {
   my ($str, $color, $local_opts) = @_;
-  my $mode = ($local_opts && exists $local_opts->{color}) ? $local_opts->{color} : $global_opts{color};
+  return $str unless $local_opts && exists $local_opts->{color};
+  my $mode = $local_opts->{color};
 
   # Normalize boolean-ish or empty values from GetOptions
   # --color (no value) -> Sets $mode to '' -> treated as 'always'
@@ -60,7 +61,6 @@ GetOptions(
   'help|h'    => \$global_opts{help},
   'man'       => \$global_opts{man},
   'version|V' => \$global_opts{version},
-  'color:s'   => \$global_opts{color},
 ) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 
 if ($global_opts{version}) {
@@ -472,29 +472,6 @@ Print a brief help message and exits.
 
 Print the version and exits.
 
-=item B<--color>[=I<MODE>]
-
-Enable colored output. Mode can be B<auto>, B<always>, or B<never>.
-
-When enabled, the tool uses ANSI colors for text status (e.g. OK/FAIL), TC
-strings, and error prefixes. Requires C<Term::ANSIColor> (core).
-
-=over 4
-
-=item *
-
-B<never> (Default): No colors are used.
-
-=item *
-
-B<always> or B<--color> (without value): Colors are always enabled.
-
-=item *
-
-B<auto>: Colors are enabled only if standard output is a terminal (TTY).
-
-=back
-
 =item B<--man>
 
 Prints the manual page and exits.
@@ -540,6 +517,29 @@ Filter the output to only show data for a specific vendor ID.
 
 Enable strict specification validation. In this mode, the tool will fail if
 mandatory segments are missing (e.g., Disclosed Vendors in TCF v2.3).
+
+=item B<--color>[=I<MODE>]
+
+Enable colored output. Mode can be B<auto>, B<always>, or B<never>.
+
+When enabled, the tool uses ANSI colors for error prefixes and highlight
+metadata. Requires C<Term::ANSIColor> (core).
+
+=over 4
+
+=item *
+
+B<never> (Default): No colors are used.
+
+=item *
+
+B<always> or B<--color> (without value): Colors are always enabled.
+
+=item *
+
+B<auto>: Colors are enabled only if standard output is a terminal (TTY).
+
+=back
 
 =item B<--ignore-errors>, B<-i>
 
@@ -699,6 +699,29 @@ string carries one. Off by default.
 =item B<--strict>, B<-s>
 
 Enable strict spec validation in the underlying parser (see C<dump --strict>).
+
+=item B<--color>[=I<MODE>]
+
+Enable colored output. Mode can be B<auto>, B<always>, or B<never>.
+
+When enabled, the tool uses ANSI colors for text status (e.g. OK/FAIL), TC
+strings, and error prefixes. Requires C<Term::ANSIColor> (core).
+
+=over 4
+
+=item *
+
+B<never> (Default): No colors are used.
+
+=item *
+
+B<always> or B<--color> (without value): Colors are always enabled.
+
+=item *
+
+B<auto>: Colors are enabled only if standard output is a terminal (TTY).
+
+=back
 
 =item B<--min-policy-version>, B<-m> I<N>
 
