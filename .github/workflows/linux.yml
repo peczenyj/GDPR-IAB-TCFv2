@@ -16,7 +16,7 @@ jobs:
             coverage: true
     name: Perl ${{ matrix.perl }} on ubuntu
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up perl
         uses: shogo82148/actions-setup-perl@v1
         with:
