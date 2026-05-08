@@ -195,7 +195,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::PublisherTC - Transparency & Consent String version 2 publisher tc
+GDPR::IAB::TCFv2::PublisherTC - TCF v2.3 publisher TC section parser
 
 =head1 SYNOPSIS
 

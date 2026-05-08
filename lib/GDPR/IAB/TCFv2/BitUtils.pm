@@ -179,9 +179,9 @@ sub _add_padding {
 1;
 __END__
 
-=head1 NAME 
+=head1 NAME
 
-GDPR::IAB::TCFv2::BitUtils - utilities functions to manage bits
+GDPR::IAB::TCFv2::BitUtils - TCF v2.3 bit-level decoding utilities
  
 =head1 SYNOPSIS
     use GDPR::IAB::TCFv2::BitUtils qw<get_uint16>;

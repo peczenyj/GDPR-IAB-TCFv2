@@ -111,7 +111,7 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2::BitField - Transparency & Consent String version 2 bitfield parser
+GDPR::IAB::TCFv2::BitField - TCF v2.3 bitfield parser
 
 =head1 SYNOPSIS
 
