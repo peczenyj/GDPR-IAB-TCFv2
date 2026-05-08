@@ -269,6 +269,32 @@ subtest 'validate subcommand' => sub {
   my $ignore_out = `$perl -Ilib $bin validate -iv 32 INVALID_STRING 2>$devnull`;
   is($ignore_out, '', '--ignore-errors silences parse error JSON');
   is($? >> 8,     1,  '--ignore-errors still exits 1');
+
+  subtest 'Clean error messages' => sub {
+    my $malformed_str = "Foo";
+
+    # Dump error
+    my $dump_err      = `$perl -Ilib $bin dump $malformed_str 2>$devnull`;
+    my $dump_err_data = decode_helper($dump_err);
+    ok($dump_err_data && $dump_err_data->{error}, "Dump got error for malformed string");
+    unlike($dump_err_data->{error}, qr/ at \S+ line \d+/, "Dump error message is clean (no location info)");
+
+    # Validate error
+    my $val_err      = `$perl -Ilib $bin validate -v 32 $malformed_str 2>$devnull`;
+    my $val_err_data = decode_helper($val_err);
+    ok($val_err_data && $val_err_data->{error}, "Validate got error for malformed string");
+    unlike($val_err_data->{error}, qr/ at \S+ line \d+/, "Validate error message is clean (no location info)");
+
+    # Initialization error (invalid CLI arg value)
+    my $init_stderr = File::Spec->catfile(File::Spec->tmpdir(), "tcf_init_stderr_$$");
+    `$perl -Ilib $bin validate -v 32 --cmp-list /non/existent/file $tc_string 2>$init_stderr`;
+    open my $fh, '<', $init_stderr or die "open $init_stderr: $!";
+    my $init_msg = do { local $/ = undef; <$fh> };
+    close $fh;
+    unlink $init_stderr;
+    ok($init_msg, "Got initialization error");
+    unlike($init_msg, qr/ at \S+ line \d+/, "Initialization error message is clean");
+  };
 };
 
 subtest '--cmp-list integration' => sub {
