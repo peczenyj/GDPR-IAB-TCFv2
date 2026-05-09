@@ -1,32 +1,36 @@
-## [unreleased]
+## [0.400] - 2026-05-09
 
 ### Bug Fixes
 
+- Post-release audit (hash-form check + POD alignment) 
+- *(cli)* Provide concise usage errors 
+- Final review refinements (POD, CMPValidator, and Parse safety) 
+- Omit file path and line number from CLI error messages 
+- Correctly handle trailing padding bits in PublisherRestrictions 
 - *(cmp-validator)* Make JSON::PP and Time::Piece optional 
 - Replace // defined-or with defined() ternary for Perl 5.8 
 
 ### Documentation
 
+- Add Phase 10 (Advanced Error Handling) to roadmap
 - Align POD and error messages with implementation 
 
 ### Features
 
+- *(cli)* Short-help via -h and informative unknown-subcommand error 
+- *(validator)* Align disclosure logic and naming 
 - *(validator)* Per-call overrides for purpose ID lists 
 - *(validator)* Emit distinct ReasonPublisherRestriction* codes (Phase 6.4) 
 - *(validator)* Emit ReasonLegitimateInterestNotPermittedForPurpose for TCF carve-out (Phase 6.3) 
 - *(validator)* Structured Failure objects + Result accessors (Phase 6.2) 
 
-### Other
-
-- Regenerate readme
-- Update changelog
-- Merge tag 'v0.391' into devel
-
-Tagged for release. v0.391
-
 ### Performance
 
 - Implement vec() and regex optimizations for bitfields 
+
+### Refactor
+
+- Rename cmp_state_provider to cmp_validator 
 
 ## [0.391] - 2026-05-07
 

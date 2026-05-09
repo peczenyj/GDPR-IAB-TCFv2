@@ -123,6 +123,43 @@ subtest 'Help System' => sub {
   # 3. Help Subcommand
   my $help_cmd = `$perl -Ilib $bin help dump`;
   is($help_cmd, $dump_help, "'help dump' is same as 'dump --help'");
+
+  # 4. Top-level short help (`-h` is now distinct from `--help`).
+  my $short_top = `$perl -Ilib $bin -h 2>&1`;
+  like($short_top, qr/Subcommands:/,                    "Top-level -h lists subcommands header");
+  like($short_top, qr/dump\s+Parse TC strings/,         "Top-level -h describes 'dump'");
+  like($short_top, qr/validate\s+Validate TC strings/i, "Top-level -h describes 'validate'");
+  like($short_top, qr/--help.*for the full manual/,     "Top-level -h points to --help");
+
+  # 5. Bare invocation gets the same short help (mirrors no-args case).
+  my $bare = `$perl -Ilib $bin 2>&1`;
+  is($bare, $short_top, "Bare 'iabtcfv2' is the same short help as '-h'");
+
+  # 6. Subcommand short help (`dump -h`).
+  my $short_dump = `$perl -Ilib $bin dump -h 2>&1`;
+  like($short_dump, qr/iabtcfv2 dump - Parse TC strings/, "dump -h has subcommand summary header");
+  like($short_dump, qr/-p, --pretty\s+Indent JSON/,       "dump -h lists -p, --pretty with description");
+  like(
+    $short_dump,
+    qr/Run 'iabtcfv2 dump --help' for the full documentation/,
+    "dump -h points to dump --help for full docs"
+  );
+  unlike($short_dump, qr/^=head/m, "dump -h does not leak raw POD markers");
+
+  # 7. Validate short help shows the required vendor flag and cmp-validator.
+  my $short_val = `$perl -Ilib $bin validate -h 2>&1`;
+  like($short_val, qr/-v, --vendor-id <ID>\s+REQUIRED/, "validate -h marks --vendor-id as required");
+  like($short_val, qr/--cmp-validator <PATH-OR-URL>/,   "validate -h shows --cmp-validator with placeholder");
+
+  # 8. Unknown-subcommand error is informative and exits 2.
+  my $unknown_out  = `$perl -Ilib $bin frobnicate 2>&1`;
+  my $unknown_code = $? >> 8;
+  is($unknown_code, 2, "unknown subcommand exits 2");
+  like($unknown_out, qr/unknown subcommand 'frobnicate'/,      "unknown subcommand error names the bad token");
+  like($unknown_out, qr/Available subcommands:/,               "unknown subcommand error lists subcommands");
+  like($unknown_out, qr/dump\s+Parse TC strings/,              "unknown subcommand list includes dump");
+  like($unknown_out, qr/validate\s+Validate TC strings/i,      "unknown subcommand list includes validate");
+  like($unknown_out, qr/Run 'iabtcfv2 -h'.*'iabtcfv2 --help'/, "unknown subcommand error points at -h and --help");
 };
 
 # Test Version Option

@@ -120,9 +120,7 @@ C<undef> when the failure is not vendor-specific.
 
 The publisher restriction type (0 = NotAllowed, 1 = RequireConsent,
 2 = RequireLegitimateInterest) when the failure was caused by a
-publisher restriction, or C<undef> otherwise. Currently always
-C<undef> -- distinct restriction-type reasons are introduced in a
-follow-up phase.
+publisher restriction, or C<undef> otherwise.
 
 =head2 cmp_id
 

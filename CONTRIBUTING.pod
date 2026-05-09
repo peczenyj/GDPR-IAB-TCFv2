@@ -23,7 +23,7 @@ to render it in a terminal:
 
 =head1 PROJECT STATUS
 
-As of 2026-05-08 (the v0.400 release), C<GDPR-IAB-TCFv2> is in
+As of 2026-05-09 (the v0.400 release), C<GDPR-IAB-TCFv2> is in
 B<maintenance mode>. Bug fixes, security fixes, CPAN-tester
 regressions, and IAB-spec updates remain in scope. Larger feature work
 -- roadmap Phases 7-9, the distribution items (DockerHub automation,

@@ -9,7 +9,7 @@ TODO - Roadmap, ecosystem, and help-wanted items for GDPR::IAB::TCFv2
 
 =head1 STATUS
 
-C<GDPR-IAB-TCFv2> entered B<maintenance mode> on 2026-05-08 with the
+C<GDPR-IAB-TCFv2> entered B<maintenance mode> on 2026-05-09 with the
 v0.400 release. The core parser, validator, and CMP-validator surfaces
 are considered feature-complete for IAB TCF v2.3.
 
@@ -39,9 +39,6 @@ Larger feature work -- the three remaining roadmap phases below, the
 distribution items, and the sister-distribution ideas -- is now tracked
 as B<help-wanted> issues on GitHub. Patches and PRs from the community
 are still welcome and will continue to be reviewed.
-
-This document supersedes the older flat F<TODO.md>, which will be
-removed in a follow-up cleanup PR after v0.400 lands on CPAN.
 
 =head1 COMPLETED PHASES
 
@@ -202,13 +199,81 @@ configuration as JSON for debugging.
 
 =item *
 
-Tests: a CLI subtest that sets the env vars, runs C<validate> without
+**Tests:** a CLI subtest that sets the env vars, runs C<validate> without
 the matching flags, and asserts the same outcome as the explicit
 invocation.
 
 =back
 
+=head2 Phase 10 -- Advanced Error Handling
+
+Modernize exception handling across the library.
+
+Scope:
+
+=over 4
+
+=item *
+
+Implement C<GDPR::IAB::TCFv2::Error> exception objects.
+
+=item *
+
+Overload stringification to provide clean messages while retaining
+metadata (code, file, line).
+
+=item *
+
+Refactor C<croak> / C<die> calls in the library to throw objects.
+
+=item *
+
+Update CLI to catch objects and simplify its sanitization logic.
+
+=back
+
+=head2 Phase 6 follow-up -- CMPValidator structured failures (non-blocking)
+
+Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
+(Phase 5) onto the structured failure-reporting model the rest of the
+validator already uses. Today CMP-level failures are stringly-typed
+croaks; this item brings them onto C<Validator::Failure> with stable
+machine-readable codes.
+
+Scope:
+
+=over 4
+
+=item *
+
+Add a C<REASON_CMP_*> family to C<Validator::Reason>:
+C<REASON_INVALID_CMP> (CMP ID not in registry),
+C<REASON_CMP_DELETED> (retired CMP, C<deletedDate> honored),
+C<REASON_CMP_UNKNOWN> (registry loaded but ID unclassifiable).
+Update C<reason_string()> to cover them.
+
+=item *
+
+Refactor C<CMPValidator> (or its consumer wrapper inside the main
+C<Validator> rule) to emit C<Validator::Failure> objects with the
+matching codes instead of plain croaks.
+
+=item *
+
+Backwards compat: the human-readable text emitted by
+C<Validator::Result> stringification must stay the same so existing
+CLI output is unchanged.
+
+=item *
+
+Tests: extend F<t/14-cmp-validator.t> (and/or
+F<t/16-validator-failures.t>) with subtests asserting each new code,
+reusing the fixed reference dates already in place for determinism.
+
+=back
+
 =head1 HELP WANTED -- DISTRIBUTION
+
 
 These items are about packaging the existing code, not about adding
 features.
