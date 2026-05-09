@@ -34,34 +34,90 @@ sub _clean_error {
   return $err;
 }
 
+# Subcommand registry: drives dispatch, the short-help summaries, and
+# the unknown-subcommand error message. New subcommands plug in here
+# with no other code edits.
+#
+# Each `common` row is [short, long, value-placeholder, description].
+# Rows appear in the short help in the order listed. Niche flags (e.g.
+# --cmp-validator-timeout) are intentionally omitted from `common` and
+# documented only in the full POD.
+my %SUBCOMMANDS = (
+  dump => {
+    summary  => 'Parse TC strings and emit JSON.',
+    synopsis => 'iabtcfv2 dump [options] [tc_strings...]',
+    runner   => \&run_dump,
+    common   => [
+      ['-p', '--pretty',             '',     'Indent JSON output'],
+      ['-c', '--compact',            '',     'Compact JSON (lists of IDs instead of boolean maps)'],
+      ['-v', '--vendor-id',          '<ID>', 'Filter output to a single vendor ID'],
+      ['-s', '--strict-legal-basis', '',     'Strict spec validation in the underlying parser'],
+      ['-i', '--ignore-errors',      '',     'Skip parse-error JSON output (still bumps exit code)'],
+      ['-f', '--fail-fast',          '',     'Exit immediately on the first parse error'],
+      ['-e', '--errors-to-stderr',   '',     'Send error JSON objects to STDERR'],
+      ['-w', '--enable-warnings',    '',     'Emit human-readable warnings on STDERR'],
+      ['-q', '--quiet',              '',     'Suppress STDOUT (exit code only)'],
+    ],
+  },
+  validate => {
+    summary  => 'Validate TC strings against a vendor identity and a purpose policy.',
+    synopsis => 'iabtcfv2 validate -v <id> [options] [tc_strings...]',
+    runner   => \&run_validate,
+    common   => [
+      ['-v', '--vendor-id',                    '<ID>',   'REQUIRED: vendor ID to validate'],
+      ['-C', '--consent-purposes',             '<LIST>', 'Purpose IDs that must be allowed on consent (e.g. 1,3)'],
+      ['-L', '--legitimate-interest-purposes', '<LIST>', 'Purpose IDs that must be allowed on legitimate interest'],
+      ['-F', '--flexible-purposes',            '<LIST>', 'Purpose IDs declared flexible by the vendor'],
+      ['-d', '--verify-disclosed-vendors',     '',       'Require vendor in the Disclosed Vendors segment'],
+      ['-s', '--strict-legal-basis',           '',       'Strict spec validation in the underlying parser'],
+      ['-m', '--min-tcf-policy-version',       '<N>',    'Reject TC strings whose policy version is below N'],
+      ['',   '--cmp-validator',                '<PATH-OR-URL>', 'Validate cmp_id against an IAB CMP registry snapshot'],
+      ['-a', '--all',                          '',              'Accumulate every failing rule (reasons array)'],
+      ['-p', '--pretty',                       '',              'Indent JSON output'],
+      ['-t', '--text',                         '',              'Human-readable text output instead of JSON'],
+      ['-i', '--ignore-errors',                '',              'Skip parse-error JSON output'],
+      ['-f', '--fail-fast',                    '',              'Exit on first parse error or invalid TC string'],
+      ['-e', '--errors-to-stderr',             '',              'Send error JSON objects to STDERR'],
+      ['-w', '--enable-warnings',              '',              'Emit human-readable warnings on STDERR'],
+      ['-q', '--quiet',                        '',              'Suppress STDOUT (exit code only)'],
+    ],
+  },
+);
+
 my %global_opts;
-GetOptions('help|h' => \$global_opts{help}, 'man' => \$global_opts{man}, 'version|V' => \$global_opts{version},)
-  or pod2usage(-input => $script_path, -exitval => 2, -verbose => 0);
+GetOptions(
+  'help'      => \$global_opts{full_help},
+  'h'         => \$global_opts{short_help},
+  'man'       => \$global_opts{man},
+  'version|V' => \$global_opts{version},
+) or pod2usage(-input => $script_path, -exitval => 2, -verbose => 0);
 
 if ($global_opts{version}) {
   print "iabtcfv2 version $GDPR::IAB::TCFv2::VERSION\n";
   exit EXIT_SUCCESS;
 }
 
-if ($global_opts{help}) {
+if ($global_opts{short_help}) {
+  _show_short_help($ARGV[0]);
+}
+if ($global_opts{full_help}) {
   _show_help($ARGV[0]);
 }
 pod2usage(-input => $script_path, -exitval => 1, -verbose => 2) if $global_opts{man};
 
-my $subcommand = shift @ARGV || 'help';
+my $subcommand = shift @ARGV;
 
-if ($subcommand eq 'dump') {
-  run_dump(@ARGV);
-}
-elsif ($subcommand eq 'validate') {
-  run_validate(@ARGV);
-}
-elsif ($subcommand eq 'help') {
+# Bare invocation: brief overview, exit 1 (mirrors `--help` behavior).
+_show_short_help() unless defined $subcommand;
+
+# `iabtcfv2 help [<sub>]` keeps showing the full POD, same as before.
+if ($subcommand eq 'help') {
   _show_help(shift @ARGV);
 }
-else {
-  pod2usage(-input => $script_path, -exitval => 2, -message => "Unknown subcommand: $subcommand", -verbose => 0);
-}
+
+my $entry = $SUBCOMMANDS{$subcommand};
+_unknown_subcommand($subcommand) unless $entry;
+$entry->{runner}->(@ARGV);
 
 sub run_dump {
   my @args = @_;
@@ -93,9 +149,10 @@ sub run_dump {
       'enable-warnings|w'    => \$opts{'enable-warnings'},
       'vendor-id|v=i'        => \$opts{'vendor-id'},
       'strict-legal-basis|s' => \$opts{'strict-legal-basis'},
-      'help|h'               => sub {
+      'help'                 => sub {
         pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "DUMP|BUGS");
       },
+      'h' => sub { _show_subcommand_short_help('dump'); exit 1; },
     );
     @args = @ARGV;
   }
@@ -179,6 +236,85 @@ sub _show_help {
   pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "SYNOPSIS|OPTIONS|SUBCOMMANDS|BUGS");
 }
 
+# Brief overview shown by `iabtcfv2 -h`, by `iabtcfv2 -h <subcommand>`,
+# by a bare `iabtcfv2`, or as a fallback path. Always exits 1 so the
+# caller's shell sees "no command actually ran".
+sub _show_short_help {
+  my $topic = shift;
+
+  if (defined $topic && $SUBCOMMANDS{$topic}) {
+    _show_subcommand_short_help($topic);
+    exit 1;
+  }
+
+  print {*STDERR} "iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings\n\n";
+  print {*STDERR} "Usage:\n    iabtcfv2 <subcommand> [options] [tc_strings...]\n\n";
+  print {*STDERR} "Subcommands:\n";
+  for my $name (sort keys %SUBCOMMANDS) {
+    printf {*STDERR} "    %-10s %s\n", $name, $SUBCOMMANDS{$name}{summary};
+  }
+  print {*STDERR} "\n";
+  print {*STDERR} "Run 'iabtcfv2 <subcommand> -h' for a short summary of that subcommand.\n";
+  print {*STDERR} "Run 'iabtcfv2 --help'              for the full manual.\n";
+  exit 1;
+}
+
+sub _show_subcommand_short_help {
+  my $name  = shift;
+  my $entry = $SUBCOMMANDS{$name};
+
+  print {*STDERR} "iabtcfv2 $name - $entry->{summary}\n\n";
+  print {*STDERR} "Usage:\n    $entry->{synopsis}\n\n";
+  print {*STDERR} "Options:\n";
+
+  # `-h` / `--help` are appended as if they were registry rows so they
+  # share the two-pass alignment below and do not require hardcoded
+  # column widths.
+  my @rows
+    = (@{$entry->{common}}, ['-h', '', '', 'Show this short help'], ['', '--help', '', 'Show full documentation'],);
+
+  # Two-pass formatting so the description column is left-aligned across
+  # rows regardless of long-option / value-placeholder width.
+  my @lines;
+  my $left_width = 0;
+  for my $row (@rows) {
+    my ($s, $l, $v, $desc) = @{$row};
+    my $left;
+    if (length $l) {
+
+      # `-x, --long-name [<VAL>]` — comma only when both forms exist.
+      my $short_col = length($s) ? "$s," : '   ';
+      $left = sprintf "    %-3s %s%s", $short_col, $l, length($v) ? " $v" : '';
+    }
+    else {
+      # Short-only row (e.g. the `-h` line in the appended help block).
+      $left = sprintf "    %s", $s;
+    }
+    $left_width = length($left) if length($left) > $left_width;
+    push @lines, [$left, $desc];
+  }
+
+  for my $r (@lines) {
+    printf {*STDERR} "%-${left_width}s  %s\n", $r->[0], $r->[1];
+  }
+
+  print {*STDERR} "\nReads TC strings from positional args, or one per line from STDIN.\n";
+  print {*STDERR} "\nRun 'iabtcfv2 $name --help' for the full documentation.\n";
+}
+
+sub _unknown_subcommand {
+  my $name = shift;
+
+  print {*STDERR} "iabtcfv2: unknown subcommand '$name'\n\n";
+  print {*STDERR} "Available subcommands:\n";
+  for my $sc (sort keys %SUBCOMMANDS) {
+    printf {*STDERR} "    %-10s %s\n", $sc, $SUBCOMMANDS{$sc}{summary};
+  }
+  print {*STDERR} "\n";
+  print {*STDERR} "Run 'iabtcfv2 -h' for a short overview, or 'iabtcfv2 --help' for the full manual.\n";
+  exit 2;
+}
+
 sub _parse_id_list {
   my $s = shift;
   return [] unless defined $s && length $s;
@@ -188,25 +324,25 @@ sub _parse_id_list {
 sub run_validate {
   my @args = @_;
   my %opts = (
-    pretty                          => 0,
-    'ignore-errors'                 => 0,
-    'fail-fast'                     => 0,
-    'errors-to-stderr'              => 0,
-    quiet                           => 0,
-    'enable-warnings'               => 0,
-    'vendor-id'                     => undef,
-    'consent-purposes'              => undef,
-    'legitimate-interest-purposes'  => undef,
-    'flexible-purposes'             => undef,
-    'verify-disclosed-vendors'      => 0,
-    'strict-legal-basis'            => 0,
-    'min-tcf-policy-version'        => undef,
-    'cmp-validator'            => undef,
-    'cmp-validator-network-ok' => 0,
-    'cmp-validator-verify-ssl' => 1,
-    'cmp-validator-timeout'    => 30,
-    all                             => 0,
-    text                            => 0,
+    pretty                         => 0,
+    'ignore-errors'                => 0,
+    'fail-fast'                    => 0,
+    'errors-to-stderr'             => 0,
+    quiet                          => 0,
+    'enable-warnings'              => 0,
+    'vendor-id'                    => undef,
+    'consent-purposes'             => undef,
+    'legitimate-interest-purposes' => undef,
+    'flexible-purposes'            => undef,
+    'verify-disclosed-vendors'     => 0,
+    'strict-legal-basis'           => 0,
+    'min-tcf-policy-version'       => undef,
+    'cmp-validator'                => undef,
+    'cmp-validator-network-ok'     => 0,
+    'cmp-validator-verify-ssl'     => 1,
+    'cmp-validator-timeout'        => 30,
+    all                            => 0,
+    text                           => 0,
   );
 
   require Getopt::Long;
@@ -229,15 +365,16 @@ sub run_validate {
       'verify-disclosed-vendors|d'       => \$opts{'verify-disclosed-vendors'},
       'strict-legal-basis|s'             => \$opts{'strict-legal-basis'},
       'min-tcf-policy-version|m=i'       => \$opts{'min-tcf-policy-version'},
-      'cmp-validator=s'             => \$opts{'cmp-validator'},
-      'cmp-validator-network-ok'    => \$opts{'cmp-validator-network-ok'},
-      'cmp-validator-verify-ssl!'   => \$opts{'cmp-validator-verify-ssl'},
-      'cmp-validator-timeout=i'     => \$opts{'cmp-validator-timeout'},
+      'cmp-validator=s'                  => \$opts{'cmp-validator'},
+      'cmp-validator-network-ok'         => \$opts{'cmp-validator-network-ok'},
+      'cmp-validator-verify-ssl!'        => \$opts{'cmp-validator-verify-ssl'},
+      'cmp-validator-timeout=i'          => \$opts{'cmp-validator-timeout'},
       'all|a'                            => \$opts{all},
       'text|t'                           => \$opts{text},
-      'help|h'                           => sub {
+      'help'                             => sub {
         pod2usage(-input => $script_path, -exitval => 1, -verbose => 99, -sections => "VALIDATE|BUGS");
       },
+      'h' => sub { _show_subcommand_short_help('validate'); exit 1; },
     );
     @args = @ARGV;
   }
@@ -269,9 +406,8 @@ sub run_validate {
   if (defined $opts{'cmp-validator'}) {
     require GDPR::IAB::TCFv2::CMPValidator;
 
-    my $src = $opts{'cmp-validator'};
-    my %cmp_args
-      = (verify_ssl => $opts{'cmp-validator-verify-ssl'}, timeout => $opts{'cmp-validator-timeout'},);
+    my $src      = $opts{'cmp-validator'};
+    my %cmp_args = (verify_ssl => $opts{'cmp-validator-verify-ssl'}, timeout => $opts{'cmp-validator-timeout'},);
 
     if ($src =~ m{^https?://}i) {
       $cmp_args{url}        = $src;
@@ -445,15 +581,23 @@ iabtcfv2 - CLI tool for GDPR IAB TCF v2 strings
 
 iabtcfv2 [options] <subcommand> [subcommand-options]
 
-Run with --help for more information.
+Run with B<-h> for a short overview, or B<--help> for the full manual.
 
 =head1 OPTIONS
 
 =over 4
 
-=item B<--help>, B<-h>
+=item B<-h>
 
-Print a brief help message and exits.
+Print a brief summary (synopsis + common options + pointer to B<--help>) and
+exits. Pair with a subcommand for a per-subcommand summary, e.g.
+C<iabtcfv2 dump -h>.
+
+=item B<--help>
+
+Print the full manual (this document) and exits. Same as C<iabtcfv2 help>.
+For per-subcommand manuals, run C<iabtcfv2 <sub> --help> or
+C<iabtcfv2 help <sub>>.
 
 =item B<--version>, B<-V>
 
@@ -486,7 +630,7 @@ emitting one JSON record per string (or text lines with B<--text>).
 
     iabtcfv2 dump [options] [tc_strings...]
 
-    Run with --help for more information.
+    Run `iabtcfv2 dump -h` for a short summary, or `--help` for this manual.
 
 =head2 Description
 
@@ -598,7 +742,7 @@ To type strings manually:
 
     iabtcfv2 validate --vendor-id <id> [options] [tc_strings...]
 
-    Run with --help for more information.
+    Run `iabtcfv2 validate -h` for a short summary, or `--help` for this manual.
 
 =head2 Description
 
