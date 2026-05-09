@@ -1628,7 +1628,7 @@ The original documentation of the L<TCF v2 from IAB documentation|https://github
 
 =head1 AUTHOR
 
-Tiago Peczenyj L<mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com>
+Tiago Peczenyj L<mailto:tiago.peczenyj+cpan@gmail.com>
 
 =head1 THANKS
 

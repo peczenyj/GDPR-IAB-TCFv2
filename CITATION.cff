@@ -5,7 +5,7 @@ type: software
 authors:
   - given-names: Tiago
     family-names: Peczenyj
-    email: tiago.peczenyj+gdpr-iab-tcfv2@gmail.com
+    email: tiago.peczenyj+cpan@gmail.com
 abstract: >-
   Pure-Perl decoder for the IAB Europe Transparency and Consent Framework
   (TCF) v2.3 consent string (TC string).
