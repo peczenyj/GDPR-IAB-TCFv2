@@ -201,10 +201,10 @@ sub run_validate {
     'verify-disclosed-vendors'      => 0,
     'strict-legal-basis'            => 0,
     'min-tcf-policy-version'        => undef,
-    'cmp-state-provider'            => undef,
-    'cmp-state-provider-network-ok' => 0,
-    'cmp-state-provider-verify-ssl' => 1,
-    'cmp-state-provider-timeout'    => 30,
+    'cmp-validator'            => undef,
+    'cmp-validator-network-ok' => 0,
+    'cmp-validator-verify-ssl' => 1,
+    'cmp-validator-timeout'    => 30,
     all                             => 0,
     text                            => 0,
   );
@@ -229,10 +229,10 @@ sub run_validate {
       'verify-disclosed-vendors|d'       => \$opts{'verify-disclosed-vendors'},
       'strict-legal-basis|s'             => \$opts{'strict-legal-basis'},
       'min-tcf-policy-version|m=i'       => \$opts{'min-tcf-policy-version'},
-      'cmp-state-provider=s'             => \$opts{'cmp-state-provider'},
-      'cmp-state-provider-network-ok'    => \$opts{'cmp-state-provider-network-ok'},
-      'cmp-state-provider-verify-ssl!'   => \$opts{'cmp-state-provider-verify-ssl'},
-      'cmp-state-provider-timeout=i'     => \$opts{'cmp-state-provider-timeout'},
+      'cmp-validator=s'             => \$opts{'cmp-validator'},
+      'cmp-validator-network-ok'    => \$opts{'cmp-validator-network-ok'},
+      'cmp-validator-verify-ssl!'   => \$opts{'cmp-validator-verify-ssl'},
+      'cmp-validator-timeout=i'     => \$opts{'cmp-validator-timeout'},
       'all|a'                            => \$opts{all},
       'text|t'                           => \$opts{text},
       'help|h'                           => sub {
@@ -266,16 +266,16 @@ sub run_validate {
   $vargs{flexible_purpose_ids}   = _parse_id_list($opts{'flexible-purposes'}) if defined $opts{'flexible-purposes'};
   $vargs{min_tcf_policy_version} = $opts{'min-tcf-policy-version'} if defined $opts{'min-tcf-policy-version'};
 
-  if (defined $opts{'cmp-state-provider'}) {
+  if (defined $opts{'cmp-validator'}) {
     require GDPR::IAB::TCFv2::CMPValidator;
 
-    my $src = $opts{'cmp-state-provider'};
+    my $src = $opts{'cmp-validator'};
     my %cmp_args
-      = (verify_ssl => $opts{'cmp-state-provider-verify-ssl'}, timeout => $opts{'cmp-state-provider-timeout'},);
+      = (verify_ssl => $opts{'cmp-validator-verify-ssl'}, timeout => $opts{'cmp-validator-timeout'},);
 
     if ($src =~ m{^https?://}i) {
       $cmp_args{url}        = $src;
-      $cmp_args{network_ok} = 1 if $opts{'cmp-state-provider-network-ok'};
+      $cmp_args{network_ok} = 1 if $opts{'cmp-validator-network-ok'};
     }
     else {
       $cmp_args{file} = $src;
@@ -286,7 +286,7 @@ sub run_validate {
     # opted into warnings (--enable-warnings); otherwise filter it
     # out so routine CLI use stays quiet. Other warnings flow
     # through unchanged.
-    my $cmp_v;
+    my $cmp_validator;
     {
       local $SIG{__WARN__} = sub {
         my $msg = defined($_[0]) ? $_[0] : '';
@@ -295,7 +295,7 @@ sub run_validate {
         }
         if !$opts{'enable-warnings'};
 
-      $cmp_v = eval { GDPR::IAB::TCFv2::CMPValidator->new(%cmp_args) };
+      $cmp_validator = eval { GDPR::IAB::TCFv2::CMPValidator->new(%cmp_args) };
     }
 
     if (my $err = $@) {
@@ -304,7 +304,7 @@ sub run_validate {
       exit 2;
     }
 
-    $vargs{cmp_state_provider} = $cmp_v;
+    $vargs{cmp_validator} = $cmp_validator;
   }
 
   my $validator = eval { GDPR::IAB::TCFv2::Validator->new(%vargs) };
@@ -686,7 +686,7 @@ Enable strict spec validation in the underlying parser (see C<dump --strict>).
 Reject TC strings whose Global Vendor List policy version is below I<N>.
 Checked first, before any vendor- or purpose-level rules.
 
-=item B<--cmp-state-provider> I<PATH-OR-URL>
+=item B<--cmp-validator> I<PATH-OR-URL>
 
 Validate the C<cmp_id> embedded in each TC string against an IAB CMP
 registry snapshot. The argument is detected as a URL when it starts
@@ -698,24 +698,24 @@ When the argument is a URL, the standard HTTP-proxy environment
 variables (C<https_proxy>, C<http_proxy>, C<no_proxy>) are honored
 automatically.
 
-=item B<--cmp-state-provider-network-ok>
+=item B<--cmp-validator-network-ok>
 
-Required when B<--cmp-state-provider> is a URL. Without this flag, URL fetching
+Required when B<--cmp-validator> is a URL. Without this flag, URL fetching
 is refused (mirrors the library's C<network_ok =E<gt> 1> opt-in:
 fetching from an arbitrary URL is intentional, never accidental).
-Has no effect when B<--cmp-state-provider> is a file path.
+Has no effect when B<--cmp-validator> is a file path.
 
-=item B<--cmp-state-provider-verify-ssl>, B<--no-cmp-state-provider-verify-ssl>
+=item B<--cmp-validator-verify-ssl>, B<--no-cmp-validator-verify-ssl>
 
 Verify TLS certificates when fetching from an HTTPS URL. On by default;
-disable with B<--no-cmp-state-provider-verify-ssl> only when targeting a server
+disable with B<--no-cmp-validator-verify-ssl> only when targeting a server
 with a self-signed or otherwise non-public-CA certificate. Has no
-effect when B<--cmp-state-provider> is a file path.
+effect when B<--cmp-validator> is a file path.
 
-=item B<--cmp-state-provider-timeout> I<SECONDS>
+=item B<--cmp-validator-timeout> I<SECONDS>
 
 Per-request timeout for the URL fetch, in seconds. Defaults to 30.
-Has no effect when B<--cmp-state-provider> is a file path.
+Has no effect when B<--cmp-validator> is a file path.
 
 =item B<--all>, B<-a>
 
@@ -761,7 +761,7 @@ Route parse-error records to B<STDERR> instead of B<STDOUT>.
 =item B<--enable-warnings>, B<-w>
 
 Emit human-readable warning messages on B<STDERR> when a TC string fails to
-parse, and when the B<--cmp-state-provider> registry snapshot is older than 28 days.
+parse, and when the B<--cmp-validator> registry snapshot is older than 28 days.
 Off by default.
 
 =item B<--quiet>, B<-q>
@@ -787,7 +787,7 @@ B<1> — at least one TC string failed validation or could not be parsed.
 =item *
 
 B<2> — bad CLI usage (missing C<--vendor-id>, incoherent purpose lists,
-unreachable C<--cmp-state-provider> source).
+unreachable C<--cmp-validator> source).
 
 =back
 
@@ -809,13 +809,13 @@ unreachable C<--cmp-state-provider> source).
 
     # Reject TC strings that name an unknown or deleted CMP, using a
     # local snapshot of the IAB CMP registry.
-    iabtcfv2 validate -v 32 --cmp-state-provider /etc/iab/cmp-list.json CO...AAA
+    iabtcfv2 validate -v 32 --cmp-validator /etc/iab/cmp-list.json CO...AAA
 
     # Same, but fetching the registry over HTTPS through whatever
     # proxy `https_proxy` points at.
     iabtcfv2 validate -v 32 \
-        --cmp-state-provider https://cmplist.consensu.org/v2/cmp-list.json \
-        --cmp-state-provider-network-ok \
+        --cmp-validator https://cmplist.consensu.org/v2/cmp-list.json \
+        --cmp-validator-network-ok \
         CO...AAA
 
 =head1 DESCRIPTION

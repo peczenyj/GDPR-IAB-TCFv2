@@ -25,7 +25,7 @@ use FindBin;
 #   - Two flexible-purpose scenarios exist (consent default vs LI
 #     default) so the corpus exercises is_vendor_allowed_for_flexible_purpose
 #     for both default bases.
-#   - The cmp_state_provider scenario uses the small fixture in
+#   - The cmp_validator scenario uses the small fixture in
 #     t/corpus/cmp-list.json with `now` pinned so the deletedDate /
 #     stale-warning checks are deterministic.
 
@@ -52,8 +52,8 @@ return [
   {
     name => 'v284_cmp_registry',
     args => {
-      vendor_id          => 284,
-      cmp_state_provider => {
+      vendor_id     => 284,
+      cmp_validator => {
         file => $cmp_file,
         now  => 1776254400,    # 2026-04-15, fixture is fresh
       },

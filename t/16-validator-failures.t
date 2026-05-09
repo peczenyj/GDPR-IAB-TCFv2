@@ -248,7 +248,7 @@ subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
   my $tc_unknown_cmp = 'COwAdDhOwAdDhN4ABAENAPCgAAQAAv___wAAAFP_AAp_4AI6ACACAA';
 
   my $validator
-    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_state_provider => {file => $cmp_file, now => 1776254400},);
+    = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, cmp_validator => {file => $cmp_file, now => 1776254400},);
   my $result = $validator->validate($tc_unknown_cmp);
 
   ok(!$result, 'unknown CMP fails validation');
