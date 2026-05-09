@@ -28,7 +28,26 @@
 
 # NAME
 
-GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
+GDPR::IAB::TCFv2 - TCF v2.3 (Transparency & Consent String) parser
+
+# PROJECT STATUS
+
+`GDPR::IAB::TCFv2` entered **maintenance mode** on 2026-05-09 with the
+v0.400 release. The core parser, validator, and CMP-validator surfaces
+are considered feature-complete for the IAB TCF v2.3 specification.
+
+In maintenance mode the maintainer commits to bug fixes, security
+fixes, CPAN-tester regression triage, and tracking IAB-spec updates
+(TCF v2.4 / v3 if and when they ship). Larger feature work -- the
+remaining roadmap phases (GVL-aware validator, Special Features /
+Special Purposes, CLI configuration loading), the distribution items
+(DockerHub automation, Debian package), and the sister-distribution
+ideas in ["ECOSYSTEM"](#ecosystem) -- is now tracked as `help-wanted` issues on
+GitHub.
+
+Patches and PRs from the community are welcome and will continue to be
+reviewed. See `TODO.pod` at the repository root for the full
+help-wanted list and `CONTRIBUTING.pod` for the patching workflow.
 
 # SYNOPSIS
 
@@ -57,9 +76,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say $consent->consent_language;    # "EN"
     say $consent->vendor_list_version; # 23
 
-    use List::MoreUtils qw<all>;
-
-    say "find consent for purpose ids 1, 3, 9 and 10" if all {
+    say "find consent for purpose ids 1, 3, 9 and 10" if 4 == grep {
         $consent->is_purpose_consent_allowed($_)
     } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
         InfoStorageAccess,       #  1
@@ -91,15 +108,16 @@ the predicates above together by hand:
         legitimate_interest_purpose_ids => [ 7 ],
     );
 
-    my $result = $validator->validate($consent);   # fail-fast
-    # ...or $validator->validate_all($consent) to accumulate every reason
+    my $tc_string = '...';
+    my $result = $validator->validate($tc_string);   # fail-fast
+    # ...or $validator->validate_all($tc_string) to accumulate every reason
 
     if ($result) {
         # vendor 284 has every required permission
     }
     else {
         warn "compliance failed: $result\n";   # stringifies to the reasons
-        log_failure($_) for $result->reasons;
+        warn $_ for $result->reasons;
     }
 
 # COMMAND LINE TOOLS
@@ -572,7 +590,7 @@ Outputs:
                 7,
                 10
             ],
-            "custom_purpose" : {
+            "custom_purposes" : {
                 "consents" : [],
                 "legitimate_interests" : []
             },
@@ -615,6 +633,44 @@ using [ISO\_8601](https://en.wikipedia.org/wiki/ISO_8601). This behaviour can be
 
 Will check if a given tc string starts with a literal `C`.
 
+# ECOSYSTEM
+
+The following **sister distributions** are intentionally left as
+`help-wanted` ideas rather than shipped from this module. Each one is
+companion glue for a popular Perl framework and would add a runtime
+dependency on its host framework, so they belong as separate CPAN
+distributions rather than features of `GDPR::IAB::TCFv2` itself.
+
+- [GDPR::IAB::TCFv2::Validator::LIVR](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3ALIVR)
+
+    LIVR rule-engine binding for JSON-shaped TC string payloads.
+
+- [GDPR::IAB::TCFv2::Validator::TypeTiny](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3ATypeTiny)
+
+    Reusable Type::Tiny constraints (parameterized by purpose / vendor
+    sets) for Moo, Moose, or pure-Perl callers that prefer type-level
+    enforcement.
+
+- [Plack::Middleware::GDPR::TCFv2](https://metacpan.org/pod/Plack%3A%3AMiddleware%3A%3AGDPR%3A%3ATCFv2)
+
+    Plack middleware that decodes a TC string from a request header or
+    cookie, attaches a parsed `GDPR::IAB::TCFv2` object to `$env`,
+    and short-circuits the response when consent is missing or invalid.
+
+- [GDPR::IAB::TCFv2::Validator::Moose](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3AMoose)
+
+    Moose attribute traits and role-based validation for Moose-end-to-end
+    projects.
+
+- [GDPR::IAB::TCFv2::Validator::FormValidator](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator%3A%3AFormValidator)
+
+    `Data::FormValidator` profile glue for legacy applications that drive
+    business validation through DFV.
+
+The `help-wanted` issues on GitHub track each of these ideas; see
+[https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem](https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem)
+and `TODO.pod` for context.
+
 # SEE ALSO
 
 [GDPR::IAB::TCFv2::Validator](https://metacpan.org/pod/GDPR%3A%3AIAB%3A%3ATCFv2%3A%3AValidator) for declarative compliance checks against a
@@ -625,7 +681,7 @@ The original documentation of the [TCF v2 from IAB documentation](https://github
 
 # AUTHOR
 
-Tiago Peczenyj [mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com](mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com)
+Tiago Peczenyj [mailto:tiago.peczenyj+cpan@gmail.com](mailto:tiago.peczenyj+cpan@gmail.com)
 
 # THANKS
 
@@ -637,7 +693,7 @@ Please report any bugs or feature requests to [https://github.com/peczenyj/GDPR-
 
 # LICENSE AND COPYRIGHT
 
-Copyright 2023 Tiago Peczenyj
+Copyright 2023-2026 Tiago Peczenyj
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published

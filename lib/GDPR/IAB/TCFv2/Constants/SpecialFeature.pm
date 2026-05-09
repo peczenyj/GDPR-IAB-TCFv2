@@ -7,18 +7,18 @@ use base qw<Exporter>;
 
 use constant {
 
-    # Short, established names -- supported indefinitely.
-    Geolocation => 1,
-    DeviceScan  => 2,
+  # Short, established names -- supported indefinitely.
+  Geolocation => 1,
+  DeviceScan  => 2,
 
-    # TCF v2.3 spec-aligned long-form aliases (Phase 3).
-    UsePreciseGeolocationData                          => 1,
-    ActivelyScanDeviceCharacteristicsForIdentification => 2,
+  # TCF v2.3 spec-aligned long-form aliases (Phase 3).
+  UsePreciseGeolocationData                          => 1,
+  ActivelyScanDeviceCharacteristicsForIdentification => 2,
 };
 
 use constant SpecialFeatureDescription => {
-    Geolocation => "Use precise geolocation data",
-    DeviceScan  => "Actively scan device characteristics for identification"
+  Geolocation => "Use precise geolocation data",
+  DeviceScan  => "Actively scan device characteristics for identification"
 };
 
 our @EXPORT_OK = qw<
@@ -29,7 +29,7 @@ our @EXPORT_OK = qw<
   SpecialFeatureDescription
 >;
 
-our %EXPORT_TAGS = ( all => \@EXPORT_OK );
+our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 1;
 
@@ -71,11 +71,10 @@ With your acceptance, your precise location (within a radius of less than 500 me
 Special feature id 2: Actively scan device characteristics for identification
 
 With your acceptance, certain characteristics specific to your device might be requested and used to distinguish it from other devices (such as the installed fonts or plugins, the resolution of your screen) in support of the purposes explained in this notice.
-      "description": 
 
 =head2 SpecialFeatureDescription
 
-Returns a hashref with a mapping between all restriction types and their description.
+Returns a hashref with a mapping between all special feature ids and their description.
 
 =head1 NAME ALIASES
 

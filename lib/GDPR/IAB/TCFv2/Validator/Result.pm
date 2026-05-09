@@ -6,30 +6,37 @@ use warnings;
 use overload
   bool => sub { $_[0]->{ok} },
   '""' => sub {
-    my $self = shift;
-    return '' if $self->{ok};
+  my $self = shift;
+  return '' if $self->{ok};
 
-    # Use $ORS (Output Record Separator) or newline as fallback
-    my $sep = defined($\) ? $\ : "\n";
-    return join( $sep, @{ $self->{reasons} || [] } );
+  # Use $ORS (Output Record Separator) or newline as fallback
+  my $sep = defined($\) ? $\ : "\n";
+  return join($sep, map { $_->message } @{$self->{failures} || []});
   };
 
 sub new {
-    my ( $klass, %args ) = @_;
+  my ($klass, %args) = @_;
 
-    my $self = {
-        ok      => $args{ok}      || 0,
-        reasons => $args{reasons} || [],
-    };
+  my $self = {ok => $args{ok} || 0, failures => $args{failures} || [],};
 
-    return bless $self, $klass;
+  return bless $self, $klass;
 }
 
 sub is_valid { $_[0]->{ok} }
 
+sub failures {
+  my $self = shift;
+  return @{$self->{failures} || []};
+}
+
+sub reason_codes {
+  my $self = shift;
+  return map { $_->code } @{$self->{failures} || []};
+}
+
 sub reasons {
-    my $self = shift;
-    return @{ $self->{reasons} || [] };
+  my $self = shift;
+  return map { $_->message } @{$self->{failures} || []};
 }
 
 1;
@@ -43,6 +50,7 @@ GDPR::IAB::TCFv2::Validator::Result - outcome object returned by L<GDPR::IAB::TC
 
 =head1 SYNOPSIS
 
+    my ($validator, $tc_string) = ('...', '...');
     my $result = $validator->validate($tc_string);
 
     if ($result) {
@@ -50,7 +58,9 @@ GDPR::IAB::TCFv2::Validator::Result - outcome object returned by L<GDPR::IAB::TC
     }
     else {
         warn "$result\n";                 # one reason per line by default
-        for my $reason ( $result->reasons ) { ... }
+        for my $reason ( $result->reasons ) {
+             warn $reason;
+        }
     }
 
     # Use Perl's output record separator to control how reasons join:
@@ -107,8 +117,34 @@ prefer it.
 
     my @reasons = $result->reasons;
 
-Returns the list of human-readable failure reasons. Empty for a passing
-result.
+Returns the list of human-readable failure reason strings. Empty for
+a passing result. Equivalent to C<map { $_-E<gt>message } $result-E<gt>failures>.
+
+=head2 failures
+
+    my @failures = $result->failures;
+
+Returns the list of structured L<GDPR::IAB::TCFv2::Validator::Failure>
+objects. Each failure carries a stable integer C<code>, the
+human-readable C<message>, and any structured context (purpose,
+vendor, restriction type, CMP). Use this when you need to react
+programmatically to specific failure types.
+
+    use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
+
+    for my $f ( $result->failures ) {
+        if ( $f->code == ReasonVendorNotAllowedConsent ) {
+            handle_consent_gap( $f->purpose_id );
+        }
+    }
+
+=head2 reason_codes
+
+    my @codes = $result->reason_codes;
+
+Returns the list of integer reason codes. Equivalent to
+C<map { $_-E<gt>code } $result-E<gt>failures>; useful when only the
+codes are needed (e.g. for assertions or counters).
 
 =head1 CONSTRUCTOR
 
@@ -119,6 +155,8 @@ than directly.
 
 =head1 SEE ALSO
 
-L<GDPR::IAB::TCFv2::Validator>.
+L<GDPR::IAB::TCFv2::Validator>,
+L<GDPR::IAB::TCFv2::Validator::Failure>,
+L<GDPR::IAB::TCFv2::Validator::Reason>.
 
 =cut

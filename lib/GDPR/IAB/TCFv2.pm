@@ -11,7 +11,6 @@ use POSIX        qw<strftime>;
 
 use GDPR::IAB::TCFv2::BitField;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set
-  get_uint2
   get_uint3
   get_uint6
   get_uint12
@@ -23,45 +22,36 @@ use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
 
-our $VERSION = "0.391";
+our $VERSION = "0.400";
 
 use constant {
-    CONSENT_STRING_TCF_V2 => {
-        SEPARATOR     => quotemeta q<.>,
-        PREFIX        => q<C>,
-        MIN_BYTE_SIZE => 29,
-    },
-    EXPECTED_TCF_V2_VERSION => 2,
-    MAX_SPECIAL_FEATURE_ID  => 12,
-    MAX_PURPOSE_ID          => 24,
-    DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
-    TCF_V23_DEADLINE        => 1772236800,             # 2026-02-28T00:00:00Z
-    SEGMENT_TYPES           => {
-        CORE              => 0,
-        DISCLOSED_VENDORS => 1,
-        ALLOWED_VENDORS   => 2,
-        PUBLISHER_TC      => 3,
-    },
-    OFFSETS => {
-        SEGMENT_TYPE            => 0,
-        VERSION                 => 0,
-        CREATED                 => 6,
-        LAST_UPDATED            => 42,
-        CMP_ID                  => 78,
-        CMP_VERSION             => 90,
-        CONSENT_SCREEN          => 102,
-        CONSENT_LANGUAGE        => 108,
-        VENDOR_LIST_VERSION     => 120,
-        POLICY_VERSION          => 132,
-        SERVICE_SPECIFIC        => 138,
-        USE_NON_STANDARD_STACKS => 139,
-        SPECIAL_FEATURE_OPT_IN  => 140,
-        PURPOSE_CONSENT_ALLOWED => 152,
-        PURPOSE_LIT_ALLOWED     => 176,
-        PURPOSE_ONE_TREATMENT   => 200,
-        PUBLISHER_COUNTRY_CODE  => 201,
-        VENDOR_CONSENT          => 213,
-    },
+  CONSENT_STRING_TCF_V2   => {SEPARATOR => quotemeta q<.>, PREFIX => q<C>, MIN_BYTE_SIZE => 29,},
+  EXPECTED_TCF_V2_VERSION => 2,
+  MAX_SPECIAL_FEATURE_ID  => 12,
+  MAX_PURPOSE_ID          => 24,
+  DATE_FORMAT_ISO_8601    => '%Y-%m-%dT%H:%M:%SZ',
+  TCF_V23_DEADLINE        => 1772236800,                                                          # 2026-02-28T00:00:00Z
+  SEGMENT_TYPES           => {CORE => 0, DISCLOSED_VENDORS => 1, ALLOWED_VENDORS => 2, PUBLISHER_TC => 3,},
+  OFFSETS                 => {
+    SEGMENT_TYPE            => 0,
+    VERSION                 => 0,
+    CREATED                 => 6,
+    LAST_UPDATED            => 42,
+    CMP_ID                  => 78,
+    CMP_VERSION             => 90,
+    CONSENT_SCREEN          => 102,
+    CONSENT_LANGUAGE        => 108,
+    VENDOR_LIST_VERSION     => 120,
+    POLICY_VERSION          => 132,
+    SERVICE_SPECIFIC        => 138,
+    USE_NON_STANDARD_STACKS => 139,
+    SPECIAL_FEATURE_OPT_IN  => 140,
+    PURPOSE_CONSENT_ALLOWED => 152,
+    PURPOSE_LIT_ALLOWED     => 176,
+    PURPOSE_ONE_TREATMENT   => 200,
+    PUBLISHER_COUNTRY_CODE  => 201,
+    VENDOR_CONSENT          => 213,
+  },
 };
 
 use overload q<""> => \&tc_string;
@@ -69,558 +59,478 @@ use overload q<""> => \&tc_string;
 # ABSTRACT: gdpr iab tcf v2.3 consent string parser
 
 sub Parse {
-    my ( $klass, $tc_string, %opts ) = @_;
+  my ($klass, $tc_string, %opts) = @_;
 
-    croak 'missing gdpr consent string' unless $tc_string;
+  croak 'missing gdpr consent string' unless defined $tc_string && length $tc_string;
 
-    my $segments = _decode_tc_string_segments($tc_string);
+  my $segments = _decode_tc_string_segments($tc_string);
 
-    my $strict = !!$opts{strict};
+  my $strict = !!$opts{strict};
 
-    my %options = (
-        json   => $opts{json} || {},
-        strict => $strict,
-    );
+  my %options = (json => $opts{json} || {}, strict => $strict,);
 
-    $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
-    $options{json}->{boolean_values} ||= [ _json_false(), _json_true() ];
+  $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
+  $options{json}->{boolean_values} ||= [_json_false(), _json_true()];
 
-    if ( exists $opts{prefetch} ) {
-        my $prefetch = $opts{prefetch};
+  if (exists $opts{prefetch}) {
+    my $prefetch = $opts{prefetch};
 
-        $prefetch = [$prefetch] if ref($prefetch) ne ref( [] );
+    $prefetch = [$prefetch] if ref($prefetch) ne ref([]);
 
-        $options{prefetch} = $prefetch;
-    }
+    $options{prefetch} = $prefetch;
+  }
 
-    my $self = {
-        core_data              => $segments->{core_data},
-        disclosed_vendors_data => $segments->{disclosed_vendors},
-        allowed_vendors_data   => $segments->{allowed_vendors},
-        publisher_tc_data      => $segments->{publisher_tc},
-        options                => \%options,
-        tc_string              => $tc_string,
+  my $self = {
+    core_data              => $segments->{core_data},
+    disclosed_vendors_data => $segments->{disclosed_vendors},
+    allowed_vendors_data   => $segments->{allowed_vendors},
+    publisher_tc_data      => $segments->{publisher_tc},
+    options                => \%options,
+    tc_string              => $tc_string,
 
-        vendor_consents             => undef,
-        vendor_legitimate_interests => undef,
-        publisher                   => undef,
-        disclosed_vendors           => undef,
-        allowed_vendors             => undef,
-    };
+    vendor_consents             => undef,
+    vendor_legitimate_interests => undef,
+    publisher                   => undef,
+    disclosed_vendors           => undef,
+    allowed_vendors             => undef,
+  };
 
-    bless $self, $klass;
+  bless $self, $klass;
 
-    croak "consent string is not tcf version @{[ EXPECTED_TCF_V2_VERSION ]}"
-      if $strict && $self->version != EXPECTED_TCF_V2_VERSION;
+  croak "consent string is not tcf version @{[ EXPECTED_TCF_V2_VERSION ]}"
+    if $strict && $self->version != EXPECTED_TCF_V2_VERSION;
 
-    croak 'invalid vendor list version' if $self->vendor_list_version == 0;
+  croak 'invalid vendor list version' if $self->vendor_list_version == 0;
 
-    # TCF v2.3: Mandatory Disclosed Vendors segment check
-    if ( $strict && $self->is_v23 ) {
-        croak "TCF v2.3: Disclosed Vendors segment is mandatory"
-          unless $self->has_vendor_disclosure;
-    }
+  # TCF v2.3: Mandatory Disclosed Vendors segment check
+  if ($strict && $self->is_v23) {
+    croak "TCF v2.3: Disclosed Vendors segment is mandatory" unless $self->has_vendor_disclosure;
+  }
 
-    my $next_offset = $self->_parse_vendor_section();
+  my $next_offset = $self->_parse_vendor_section();
 
-    $self->_parse_publisher_section($next_offset);
+  $self->_parse_publisher_section($next_offset);
 
-    $self->_parse_disclosed_vendors();
-    $self->_parse_allowed_vendors();
+  $self->_parse_disclosed_vendors();
+  $self->_parse_allowed_vendors();
 
-    return $self;
+  return $self;
 }
 
 sub tc_string {
-    my $self = shift;
+  my $self = shift;
 
-    return $self->{tc_string};
+  return $self->{tc_string};
 }
 
 sub version {
-    my $self = shift;
+  my $self = shift;
 
-    return scalar( get_uint6( $self->{core_data}, OFFSETS->{VERSION} ) );
+  return scalar(get_uint6($self->{core_data}, OFFSETS->{VERSION}));
 }
 
 sub created {
-    my $self = shift;
+  my $self = shift;
 
-    my ( $seconds, $nanoseconds ) = $self->_get_epoch( OFFSETS->{CREATED} );
+  my ($seconds, $nanoseconds) = $self->_get_epoch(OFFSETS->{CREATED});
 
-    return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
+  return wantarray ? ($seconds, $nanoseconds) : $seconds;
 }
 
 sub last_updated {
-    my $self = shift;
+  my $self = shift;
 
-    my ( $seconds, $nanoseconds ) =
-      $self->_get_epoch( OFFSETS->{LAST_UPDATED} );
+  my ($seconds, $nanoseconds) = $self->_get_epoch(OFFSETS->{LAST_UPDATED});
 
-    return wantarray ? ( $seconds, $nanoseconds ) : $seconds;
+  return wantarray ? ($seconds, $nanoseconds) : $seconds;
 }
 
 sub _get_epoch {
-    my ( $self, $offset ) = @_;
+  my ($self, $offset) = @_;
 
-    # Drop the file-level `use integer` for this scope. TCF v2 stores
-    # Created and LastUpdated as a 36-bit deciseconds-since-epoch field,
-    # which exceeds a 32-bit signed IV. On a Perl built without 64-bit
-    # ints (e.g. the armv6l smokers), `get_uint36` returns the value as
-    # an NV via Math::BigInt->numify; the C-integer `/` and `%` of
-    # `use integer` would then coerce that NV back into an overflowing
-    # 32-bit IV. NV float math keeps full precision (36 bits fits in
-    # the 53-bit mantissa) and lands a correct integer result via int().
-    no integer;
+  # Drop the file-level `use integer` for this scope. TCF v2 stores
+  # Created and LastUpdated as a 36-bit deciseconds-since-epoch field,
+  # which exceeds a 32-bit signed IV. On a Perl built without 64-bit
+  # ints (e.g. the armv6l smokers), `get_uint36` returns the value as
+  # an NV via Math::BigInt->numify; the C-integer `/` and `%` of
+  # `use integer` would then coerce that NV back into an overflowing
+  # 32-bit IV. NV float math keeps full precision (36 bits fits in
+  # the 53-bit mantissa) and lands a correct integer result via int().
+  no integer;
 
-    my $deciseconds = scalar( get_uint36( $self->{core_data}, $offset ) );
+  my $deciseconds = scalar(get_uint36($self->{core_data}, $offset));
 
-    my $seconds     = int( $deciseconds / 10 );
-    my $nanoseconds = int( ( $deciseconds - $seconds * 10 ) * 100_000_000 );
+  my $seconds     = int($deciseconds / 10);
+  my $nanoseconds = int(($deciseconds - $seconds * 10) * 100_000_000);
 
-    return ( $seconds, $nanoseconds );
+  return ($seconds, $nanoseconds);
 }
 
 sub cmp_id {
-    my $self = shift;
+  my $self = shift;
 
-    return scalar( get_uint12( $self->{core_data}, OFFSETS->{CMP_ID} ) );
+  return scalar(get_uint12($self->{core_data}, OFFSETS->{CMP_ID}));
 }
 
 sub cmp_version {
-    my $self = shift;
+  my $self = shift;
 
-    return scalar( get_uint12( $self->{core_data}, OFFSETS->{CMP_VERSION} ) );
+  return scalar(get_uint12($self->{core_data}, OFFSETS->{CMP_VERSION}));
 }
 
 sub consent_screen {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar( get_uint6( $self->{core_data}, OFFSETS->{CONSENT_SCREEN} ) );
+  return scalar(get_uint6($self->{core_data}, OFFSETS->{CONSENT_SCREEN}));
 }
 
 sub consent_language {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar(
-        get_char6_pair( $self->{core_data}, OFFSETS->{CONSENT_LANGUAGE} ) );
+  return scalar(get_char6_pair($self->{core_data}, OFFSETS->{CONSENT_LANGUAGE}));
 }
 
 sub vendor_list_version {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar(
-        get_uint12( $self->{core_data}, OFFSETS->{VENDOR_LIST_VERSION} ) );
+  return scalar(get_uint12($self->{core_data}, OFFSETS->{VENDOR_LIST_VERSION}));
 }
 
 sub policy_version {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar( get_uint6( $self->{core_data}, OFFSETS->{POLICY_VERSION} ) );
+  return scalar(get_uint6($self->{core_data}, OFFSETS->{POLICY_VERSION}));
 }
 
 sub is_v22_plus {
-    my $self = shift;
-    return $self->policy_version >= 4 ? 1 : 0;
+  my $self = shift;
+  return $self->policy_version >= 4 ? 1 : 0;
 }
 
 sub is_v23 {
-    my $self = shift;
-    return $self->policy_version >= 5 ? 1 : 0;
+  my $self = shift;
+  return $self->policy_version >= 5 ? 1 : 0;
 }
 
 sub is_service_specific {
-    my $self = shift;
+  my $self = shift;
 
-    return scalar( is_set( $self->{core_data}, OFFSETS->{SERVICE_SPECIFIC} ) );
+  return scalar(is_set($self->{core_data}, OFFSETS->{SERVICE_SPECIFIC}));
 }
 
 sub use_non_standard_stacks {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar(
-        is_set( $self->{core_data}, OFFSETS->{USE_NON_STANDARD_STACKS} ) );
+  return scalar(is_set($self->{core_data}, OFFSETS->{USE_NON_STANDARD_STACKS}));
 }
 
 sub is_special_feature_opt_in {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    croak
-      "invalid special feature id $id: must be between 1 and @{[ MAX_SPECIAL_FEATURE_ID ]}"
-      if $id < 1 || $id > MAX_SPECIAL_FEATURE_ID;
+  croak "invalid special feature id $id: must be between 1 and @{[ MAX_SPECIAL_FEATURE_ID ]}"
+    if $id < 1 || $id > MAX_SPECIAL_FEATURE_ID;
 
-    return $self->_safe_is_special_feature_opt_in($id);
+  return $self->_safe_is_special_feature_opt_in($id);
 }
 
 sub _safe_is_special_feature_opt_in {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return scalar(
-        is_set(
-            $self->{core_data}, OFFSETS->{SPECIAL_FEATURE_OPT_IN} + $id - 1
-        )
-    );
+  return scalar(is_set($self->{core_data}, OFFSETS->{SPECIAL_FEATURE_OPT_IN} + $id - 1));
 }
 
 sub is_purpose_consent_allowed {
-    my ( $self, @ids ) = @_;
+  my ($self, @ids) = @_;
 
-    $self->_validate_purpose_ids( 'is_purpose_consent_allowed', @ids );
+  $self->_validate_purpose_ids('is_purpose_consent_allowed', @ids);
 
-    foreach my $id (@ids) {
-        return 0 unless $self->_safe_is_purpose_consent_allowed($id);
-    }
+  foreach my $id (@ids) {
+    return 0 unless $self->_safe_is_purpose_consent_allowed($id);
+  }
 
-    return 1;
+  return 1;
 }
 
 sub _safe_is_purpose_consent_allowed {
-    my ( $self, $id ) = @_;
-    return scalar(
-        is_set(
-            $self->{core_data}, OFFSETS->{PURPOSE_CONSENT_ALLOWED} + $id - 1
-        )
-    );
+  my ($self, $id) = @_;
+  return scalar(is_set($self->{core_data}, OFFSETS->{PURPOSE_CONSENT_ALLOWED} + $id - 1));
 }
 
 sub is_purpose_legitimate_interest_allowed {
-    my ( $self, @ids ) = @_;
+  my ($self, @ids) = @_;
 
-    $self->_validate_purpose_ids(
-        'is_purpose_legitimate_interest_allowed',
-        @ids
-    );
+  $self->_validate_purpose_ids('is_purpose_legitimate_interest_allowed', @ids);
 
-    foreach my $id (@ids) {
+  foreach my $id (@ids) {
 
-        # SPEC: Purpose 1 never allows Legitimate Interest
-        return 0 if $id == 1;
+    # SPEC: Purpose 1 never allows Legitimate Interest
+    return 0 if $id == 1;
 
-       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
-        if ( $self->is_v22_plus ) {
-            return 0 if $id >= 3 && $id <= 6;
-        }
-
-        return 0
-          unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
+    # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+    if ($self->is_v22_plus) {
+      return 0 if $id >= 3 && $id <= 6;
     }
 
-    return 1;
+    return 0 unless $self->_safe_is_purpose_legitimate_interest_allowed($id);
+  }
+
+  return 1;
 }
 
 sub _validate_purpose_ids {
-    my ( $self, $method_name, @ids ) = @_;
+  my ($self, $method_name, @ids) = @_;
 
-    croak "method $method_name requires at least one argument"
-      unless @ids;
+  croak "method $method_name requires at least one argument" unless @ids;
 
-    foreach my $id (@ids) {
-        croak
-          "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}"
-          if $id < 1 || $id > MAX_PURPOSE_ID;
-    }
+  foreach my $id (@ids) {
+    croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}" if $id < 1 || $id > MAX_PURPOSE_ID;
+  }
 }
 
 sub _safe_is_purpose_legitimate_interest_allowed {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return
-      scalar(
-        is_set( $self->{core_data}, OFFSETS->{PURPOSE_LIT_ALLOWED} + $id - 1 )
-      );
+  return scalar(is_set($self->{core_data}, OFFSETS->{PURPOSE_LIT_ALLOWED} + $id - 1));
 }
 
 sub purpose_one_treatment {
-    my $self = shift;
+  my $self = shift;
 
-    return
-      scalar( is_set( $self->{core_data}, OFFSETS->{PURPOSE_ONE_TREATMENT} ) );
+  return scalar(is_set($self->{core_data}, OFFSETS->{PURPOSE_ONE_TREATMENT}));
 }
 
 sub publisher_country_code {
-    my $self = shift;
+  my $self = shift;
 
-    return scalar(
-        get_char6_pair(
-            $self->{core_data}, OFFSETS->{PUBLISHER_COUNTRY_CODE}
-        )
-    );
+  return scalar(get_char6_pair($self->{core_data}, OFFSETS->{PUBLISHER_COUNTRY_CODE}));
 }
 
 sub max_vendor_id_consent {
-    my $self = shift;
+  my $self = shift;
 
-    return $self->{vendor_consents}->max_id;
+  return $self->{vendor_consents}->max_id;
 }
 
 sub max_vendor_id_legitimate_interest {
-    my $self = shift;
+  my $self = shift;
 
-    return $self->{vendor_legitimate_interests}->max_id;
+  return $self->{vendor_legitimate_interests}->max_id;
 }
 
 sub vendor_consent {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return $self->{vendor_consents}->contains($id);
+  return $self->{vendor_consents}->contains($id);
 }
 
 sub vendor_legitimate_interest {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return $self->{vendor_legitimate_interests}->contains($id);
+  return $self->{vendor_legitimate_interests}->contains($id);
 }
 
 sub disclosed_vendor {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return 0 unless defined $self->{disclosed_vendors};
+  return 0 unless defined $self->{disclosed_vendors};
 
-    return $self->{disclosed_vendors}->contains($id);
+  return $self->{disclosed_vendors}->contains($id);
 }
 
 sub has_vendor_disclosure {
-    my $self = shift;
-    return defined $self->{disclosed_vendors} ? 1 : 0;
+  my $self = shift;
+  return defined $self->{disclosed_vendors} ? 1 : 0;
 }
 
 sub allowed_vendor {
-    my ( $self, $id ) = @_;
+  my ($self, $id) = @_;
 
-    return 0 unless defined $self->{allowed_vendors};
+  return 0 unless defined $self->{allowed_vendors};
 
-    return $self->{allowed_vendors}->contains($id);
+  return $self->{allowed_vendors}->contains($id);
 }
 
 sub check_publisher_restriction {
-    my $self = shift;
+  my $self = shift;
 
-    my ( $purpose_id, $restriction_type, $vendor_id );
+  my ($purpose_id, $restriction_type, $vendor_id);
 
-    if ( scalar(@_) == 6 ) {
-        my (%opts) = @_;
+  if (scalar(@_) == 6) {
+    my (%opts) = @_;
 
-        $purpose_id       = $opts{purpose_id};
-        $restriction_type = $opts{restriction_type};
-        $vendor_id        = $opts{vendor_id};
-    }
+    $purpose_id       = $opts{purpose_id};
+    $restriction_type = $opts{restriction_type};
+    $vendor_id        = $opts{vendor_id};
+  }
+  else {
+    ($purpose_id, $restriction_type, $vendor_id) = @_;
+  }
 
-    ( $purpose_id, $restriction_type, $vendor_id ) = @_;
-
-    return $self->{publisher}
-      ->check_restriction( $purpose_id, $restriction_type, $vendor_id );
+  return $self->{publisher}->check_restriction($purpose_id, $restriction_type, $vendor_id);
 }
 
 sub has_publisher_restrictions {
-    my $self = shift;
-    return $self->{publisher} ? $self->{publisher}->has_restrictions : 0;
+  my $self = shift;
+  return $self->{publisher} ? $self->{publisher}->has_restrictions : 0;
 }
 
 sub publisher_restrictions {
-    my ( $self, $vendor_id ) = @_;
+  my ($self, $vendor_id) = @_;
 
-    return $self->{publisher}->restrictions($vendor_id);
+  return $self->{publisher}->restrictions($vendor_id);
 }
 
 sub publisher_tc {
-    my $self = shift;
+  my $self = shift;
 
-    return $self->{publisher}->publisher_tc;
+  return $self->{publisher}->publisher_tc;
 }
 
 sub is_vendor_consent_allowed {
-    my ( $self, $vendor_id, @args ) = @_;
+  my ($self, $vendor_id, @args) = @_;
 
-    my ( $purpose_ids, $opts ) = $self->_parse_vendor_args(@args);
+  my ($purpose_ids, $opts) = $self->_parse_vendor_args(@args);
 
-    foreach my $purpose_id (@$purpose_ids) {
-        return 0 unless $self->_check_purpose_id( $purpose_id, %$opts );
-    }
+  foreach my $purpose_id (@$purpose_ids) {
+    return 0 unless $self->_check_purpose_id($purpose_id, %$opts);
+  }
 
-    return 0 unless $self->vendor_consent($vendor_id);
+  return 0 unless $self->vendor_consent($vendor_id);
 
-    foreach my $purpose_id (@$purpose_ids) {
-        return 0
-          if $self->check_publisher_restriction(
-            $purpose_id, NotAllowed,
-            $vendor_id
-          );
-        return 0
-          if $self->check_publisher_restriction(
-            $purpose_id,
-            RequireLegitimateInterest, $vendor_id
-          );
+  foreach my $purpose_id (@$purpose_ids) {
+    return 0 if $self->check_publisher_restriction($purpose_id, NotAllowed,                $vendor_id);
+    return 0 if $self->check_publisher_restriction($purpose_id, RequireLegitimateInterest, $vendor_id);
 
-        return 0 unless $self->_safe_is_purpose_consent_allowed($purpose_id);
-    }
+    return 0 unless $self->_safe_is_purpose_consent_allowed($purpose_id);
+  }
 
-    return 1;
+  return 1;
 }
 
 sub is_vendor_legitimate_interest_allowed {
-    my ( $self, $vendor_id, @args ) = @_;
+  my ($self, $vendor_id, @args) = @_;
 
-    my ( $purpose_ids, $opts ) = $self->_parse_vendor_args(@args);
+  my ($purpose_ids, $opts) = $self->_parse_vendor_args(@args);
 
-    foreach my $purpose_id (@$purpose_ids) {
-        return 0 unless $self->_check_purpose_id( $purpose_id, %$opts );
+  foreach my $purpose_id (@$purpose_ids) {
+    return 0 unless $self->_check_purpose_id($purpose_id, %$opts);
+  }
+
+  return 0 unless $self->vendor_legitimate_interest($vendor_id);
+
+  foreach my $purpose_id (@$purpose_ids) {
+
+    # SPEC: Purpose 1 never allows Legitimate Interest
+    return 0 if $purpose_id == 1;
+
+    # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+    if ($self->is_v22_plus) {
+      return 0 if $purpose_id >= 3 && $purpose_id <= 6;
     }
 
-    return 0 unless $self->vendor_legitimate_interest($vendor_id);
+    return 0 if $self->check_publisher_restriction($purpose_id, NotAllowed,     $vendor_id);
+    return 0 if $self->check_publisher_restriction($purpose_id, RequireConsent, $vendor_id);
 
-    foreach my $purpose_id (@$purpose_ids) {
+    return 0 unless $self->_safe_is_purpose_legitimate_interest_allowed($purpose_id);
+  }
 
-        # SPEC: Purpose 1 never allows Legitimate Interest
-        return 0 if $purpose_id == 1;
-
-       # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
-        if ( $self->is_v22_plus ) {
-            return 0 if $purpose_id >= 3 && $purpose_id <= 6;
-        }
-
-        return 0
-          if $self->check_publisher_restriction(
-            $purpose_id, NotAllowed,
-            $vendor_id
-          );
-        return 0
-          if $self->check_publisher_restriction(
-            $purpose_id, RequireConsent,
-            $vendor_id
-          );
-
-        return 0
-          unless $self->_safe_is_purpose_legitimate_interest_allowed(
-            $purpose_id);
-    }
-
-    return 1;
+  return 1;
 }
 
 sub _parse_vendor_args {
-    my ( $self, @args ) = @_;
+  my ($self, @args) = @_;
 
-    if ( @args && ref $args[-1] eq 'HASH' ) {
-        my $opts = pop @args;
-        return ( \@args, $opts );
+  if (@args && ref $args[-1] eq 'HASH') {
+    my $opts = pop @args;
+    return (\@args, $opts);
+  }
+
+  my @purposes;
+  my %opts;
+  while (@args) {
+    if ($args[0] =~ /^\d+$/) {
+      push @purposes, shift @args;
     }
-
-    my @purposes;
-    my %opts;
-    while (@args) {
-        if ( $args[0] =~ /^\d+$/ ) {
-            push @purposes, shift @args;
-        }
-        else {
-            %opts = @args;
-            last;
-        }
+    else {
+      %opts = @args;
+      last;
     }
+  }
 
-    return ( \@purposes, \%opts );
+  return (\@purposes, \%opts);
 }
 
 sub is_vendor_allowed_for_any_basis {
-    my ( $self, $vendor_id, @args ) = @_;
+  my ($self, $vendor_id, @args) = @_;
 
-    return 1 if $self->is_vendor_consent_allowed( $vendor_id, @args );
-    return 1
-      if $self->is_vendor_legitimate_interest_allowed( $vendor_id, @args );
+  return 1 if $self->is_vendor_consent_allowed($vendor_id, @args);
+  return 1 if $self->is_vendor_legitimate_interest_allowed($vendor_id, @args);
 
-    return 0;
+  return 0;
 }
 
 sub is_vendor_allowed_for_flexible_purpose {
-    my ( $self, $vendor_id, $purpose_id, $default_is_li, %opts ) = @_;
+  my ($self, $vendor_id, $purpose_id, $default_is_li, %opts) = @_;
 
-    return 0 unless $self->_check_purpose_id( $purpose_id, %opts );
+  return 0 unless $self->_check_purpose_id($purpose_id, %opts);
 
-    # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
-    if ( $self->is_v22_plus && $purpose_id >= 3 && $purpose_id <= 6 ) {
-        $default_is_li = 0;
-    }
+  # SPEC: TCF v2.2+ (Policy >= 4) prohibits LI for Purposes 3, 4, 5, and 6
+  if ($self->is_v22_plus && $purpose_id >= 3 && $purpose_id <= 6) {
+    $default_is_li = 0;
+  }
 
-    # SPEC: Purpose 1 never allows Legitimate Interest
-    if ( $purpose_id == 1 ) {
-        $default_is_li = 0;
-    }
+  # SPEC: Purpose 1 never allows Legitimate Interest
+  if ($purpose_id == 1) {
+    $default_is_li = 0;
+  }
 
-    if ($self->check_publisher_restriction(
-            $purpose_id, RequireConsent, $vendor_id
-        )
-      )
-    {
-        return $self->is_vendor_consent_allowed(
-            $vendor_id, $purpose_id,
-            %opts
-        );
-    }
+  if ($self->check_publisher_restriction($purpose_id, RequireConsent, $vendor_id)) {
+    return $self->is_vendor_consent_allowed($vendor_id, $purpose_id, %opts);
+  }
 
-    if ($self->check_publisher_restriction(
-            $purpose_id, RequireLegitimateInterest, $vendor_id
-        )
-      )
-    {
-        return $self->is_vendor_legitimate_interest_allowed(
-            $vendor_id,
-            $purpose_id, %opts
-        );
-    }
+  if ($self->check_publisher_restriction($purpose_id, RequireLegitimateInterest, $vendor_id)) {
+    return $self->is_vendor_legitimate_interest_allowed($vendor_id, $purpose_id, %opts);
+  }
 
-    if ($self->check_publisher_restriction(
-            $purpose_id, NotAllowed, $vendor_id
-        )
-      )
-    {
-        return 0;
-    }
+  if ($self->check_publisher_restriction($purpose_id, NotAllowed, $vendor_id)) {
+    return 0;
+  }
 
-    if ($default_is_li) {
-        return $self->is_vendor_legitimate_interest_allowed(
-            $vendor_id,
-            $purpose_id, %opts
-        );
-    }
+  if ($default_is_li) {
+    return $self->is_vendor_legitimate_interest_allowed($vendor_id, $purpose_id, %opts);
+  }
 
-    return $self->is_vendor_consent_allowed( $vendor_id, $purpose_id, %opts );
+  return $self->is_vendor_consent_allowed($vendor_id, $purpose_id, %opts);
 }
 
 sub _check_purpose_id {
-    my ( $self, $id, %opts ) = @_;
+  my ($self, $id, %opts) = @_;
 
-    my $strict =
-      exists $opts{strict} ? $opts{strict} : $self->{options}->{strict};
+  my $strict = exists $opts{strict} ? $opts{strict} : $self->{options}->{strict};
 
-    if ( $id < 1 || $id > MAX_PURPOSE_ID ) {
-        if ($strict) {
-            croak
-              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
-        }
-        else {
-            carp
-              "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
-            return 0;
-        }
+  if ($id < 1 || $id > MAX_PURPOSE_ID) {
+    if ($strict) {
+      croak "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
     }
+    else {
+      carp "invalid purpose id $id: must be between 1 and @{[ MAX_PURPOSE_ID ]}";
+      return 0;
+    }
+  }
 
-    return 1;
+  return 1;
 }
 
 sub _format_date {
-    my ( $self, $epoch, $nanoseconds ) = @_;
+  my ($self, $epoch, $nanoseconds) = @_;
 
-    return $epoch if !!$self->{options}->{json}->{use_epoch};
+  return $epoch if !!$self->{options}->{json}->{use_epoch};
 
-    my $format = $self->{options}->{json}->{date_format};
+  my $format = $self->{options}->{json}->{date_format};
 
-    return $format->( $epoch, $nanoseconds ) if ref($format) eq ref( sub { } );
+  return $format->($epoch, $nanoseconds) if ref($format) eq ref(sub { });
 
-    return strftime( $format, gmtime($epoch) );
+  return strftime($format, gmtime($epoch));
 }
 
 sub _json_true { 1 == 1 }
@@ -628,138 +538,114 @@ sub _json_true { 1 == 1 }
 sub _json_false { 1 == 0 }
 
 sub _format_json_subsection {
-    my ( $self, @data ) = @_;
+  my ($self, @data) = @_;
 
-    if ( !!$self->{options}->{json}->{compact} ) {
-        return [ map { $_->[0] } grep { $_->[1] } @data ];
-    }
+  if (!!$self->{options}->{json}->{compact}) {
+    return [map { $_->[0] } grep { $_->[1] } @data];
+  }
 
-    my $verbose = !!$self->{options}->{json}->{verbose};
+  my $verbose = !!$self->{options}->{json}->{verbose};
 
-    return { map { @{$_} } grep { $verbose || $_->[1] } @data };
+  return {map { @{$_} } grep { $verbose || $_->[1] } @data};
 }
 
 sub TO_JSON {
-    my $self = shift;
+  my $self = shift;
 
-    my %args      = ( @_ && ref $_[-1] eq 'HASH' ) ? %{ pop @_ } : @_;
-    my $filter_id = $args{vendor_id} || $self->{options}->{json}->{vendor_id};
+  my %args      = (@_ && ref $_[-1] eq 'HASH') ? %{pop @_} : @_;
+  my $filter_id = $args{vendor_id} || $self->{options}->{json}->{vendor_id};
 
-    my ( $false, $true ) = @{ $self->{options}->{json}->{boolean_values} };
+  my ($false, $true) = @{$self->{options}->{json}->{boolean_values}};
 
-    my $created      = $self->_format_date( $self->created );
-    my $last_updated = $self->_format_date( $self->last_updated );
+  my $created      = $self->_format_date($self->created);
+  my $last_updated = $self->_format_date($self->last_updated);
 
-    my $purpose_consents = $self->_format_json_subsection(
-        map {
-            [   $_ => (
-                      $filter_id
-                    ? $self->is_vendor_allowed_for_any_basis( $filter_id, $_ )
-                    : $self->_safe_is_purpose_consent_allowed($_)
-                ) ? $true : $false
-            ]
-        } 1 .. MAX_PURPOSE_ID,
-    );
+  my $purpose_consents = $self->_format_json_subsection(
+    map { [
+      $_ => (
+          $filter_id
+        ? $self->is_vendor_allowed_for_any_basis($filter_id, $_)
+        : $self->_safe_is_purpose_consent_allowed($_)
+      ) ? $true : $false
+    ] } 1 .. MAX_PURPOSE_ID,
+  );
 
-    my $purpose_li = $self->_format_json_subsection(
-        map {
-            [   $_ => (
-                    $filter_id
-                    ? $self->is_vendor_legitimate_interest_allowed(
-                        $filter_id, $_
-                      )
-                    : $self->_safe_is_purpose_legitimate_interest_allowed($_)
-                ) ? $true : $false
-            ]
-        } 1 .. MAX_PURPOSE_ID,
-    );
+  my $purpose_li = $self->_format_json_subsection(
+    map { [
+      $_ => (
+          $filter_id
+        ? $self->is_vendor_legitimate_interest_allowed($filter_id, $_)
+        : $self->_safe_is_purpose_legitimate_interest_allowed($_)
+      ) ? $true : $false
+    ] } 1 .. MAX_PURPOSE_ID,
+  );
 
-    return {
-        tc_string               => $self->tc_string,
-        version                 => $self->version,
-        created                 => $created,
-        last_updated            => $last_updated,
-        cmp_id                  => $self->cmp_id,
-        cmp_version             => $self->cmp_version,
-        consent_screen          => $self->consent_screen,
-        consent_language        => $self->consent_language,
-        vendor_list_version     => $self->vendor_list_version,
-        policy_version          => $self->policy_version,
-        is_service_specific     => $self->is_service_specific ? $true : $false,
-        use_non_standard_stacks => $self->use_non_standard_stacks
-        ? $true
-        : $false,
-        purpose_one_treatment => $self->purpose_one_treatment ? $true : $false,
-        publisher_country_code  => $self->publisher_country_code,
-        special_features_opt_in => $self->_format_json_subsection(
-            map {
-                [     $_ => $self->_safe_is_special_feature_opt_in($_)
-                    ? $true
-                    : $false
-                ]
-            } 1 .. MAX_SPECIAL_FEATURE_ID
-        ),
-        purpose => {
-            consents             => $purpose_consents,
-            legitimate_interests => $purpose_li,
-        },
-        vendor => {
-            consents => $self->{vendor_consents}->TO_JSON($filter_id),
-            legitimate_interests =>
-              $self->{vendor_legitimate_interests}->TO_JSON($filter_id),
-            (   $self->{disclosed_vendors}
-                ? ( disclosed =>
-                      $self->{disclosed_vendors}->TO_JSON($filter_id) )
-                : ()
-            ),
-            (   $self->{allowed_vendors}
-                ? ( allowed => $self->{allowed_vendors}->TO_JSON($filter_id) )
-                : ()
-            ),
-        },
-        publisher => $self->{publisher}->TO_JSON($filter_id),
-    };
+  return {
+    tc_string               => $self->tc_string,
+    version                 => $self->version,
+    created                 => $created,
+    last_updated            => $last_updated,
+    cmp_id                  => $self->cmp_id,
+    cmp_version             => $self->cmp_version,
+    consent_screen          => $self->consent_screen,
+    consent_language        => $self->consent_language,
+    vendor_list_version     => $self->vendor_list_version,
+    policy_version          => $self->policy_version,
+    is_service_specific     => $self->is_service_specific     ? $true : $false,
+    use_non_standard_stacks => $self->use_non_standard_stacks ? $true : $false,
+    purpose_one_treatment   => $self->purpose_one_treatment   ? $true : $false,
+    publisher_country_code  => $self->publisher_country_code,
+    special_features_opt_in => $self->_format_json_subsection(
+      map { [$_ => $self->_safe_is_special_feature_opt_in($_) ? $true : $false] } 1 .. MAX_SPECIAL_FEATURE_ID
+    ),
+    purpose => {consents => $purpose_consents, legitimate_interests => $purpose_li,},
+    vendor  => {
+      consents             => $self->{vendor_consents}->TO_JSON($filter_id),
+      legitimate_interests => $self->{vendor_legitimate_interests}->TO_JSON($filter_id),
+      ($self->{disclosed_vendors} ? (disclosed => $self->{disclosed_vendors}->TO_JSON($filter_id)) : ()),
+      ($self->{allowed_vendors}   ? (allowed   => $self->{allowed_vendors}->TO_JSON($filter_id))   : ()),
+    },
+    publisher => $self->{publisher}->TO_JSON($filter_id),
+  };
 }
 
 sub _decode_tc_string_segments {
-    my $tc_string = shift;
+  my $tc_string = shift;
 
-    my ( $core, @parts ) = split CONSENT_STRING_TCF_V2->{SEPARATOR},
-      $tc_string;
+  my ($core, @parts) = split CONSENT_STRING_TCF_V2->{SEPARATOR}, $tc_string;
 
-    my $core_data      = _validate_and_decode_base64($core);
-    my $core_data_size = length($core_data) / 8;
+  my $core_data      = _validate_and_decode_base64($core);
+  my $core_data_size = length($core_data);
 
-    croak
-      "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
-      if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
+  croak
+    "vendor consent strings are at least @{[ CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE} ]} bytes long (got ${core_data_size} bytes)"
+    if $core_data_size < CONSENT_STRING_TCF_V2->{MIN_BYTE_SIZE};
 
-    my %segments;
+  my %segments;
 
-    foreach my $part (@parts) {
-        my $decoded = _validate_and_decode_base64($part);
+  foreach my $part (@parts) {
+    my $decoded = _validate_and_decode_base64($part);
 
-        my $segment_type = get_uint3( $decoded, OFFSETS->{SEGMENT_TYPE} );
+    my $segment_type = get_uint3($decoded, OFFSETS->{SEGMENT_TYPE});
 
-        croak "duplicate segment type $segment_type"
-          if exists $segments{$segment_type};
+    croak "duplicate segment type $segment_type" if exists $segments{$segment_type};
 
-        $segments{$segment_type} = $decoded;
-    }
+    $segments{$segment_type} = $decoded;
+  }
 
-    return {
-        core_data         => $core_data,
-        disclosed_vendors => $segments{ SEGMENT_TYPES->{DISCLOSED_VENDORS} },
-        allowed_vendors   => $segments{ SEGMENT_TYPES->{ALLOWED_VENDORS} },
-        publisher_tc      => $segments{ SEGMENT_TYPES->{PUBLISHER_TC} },
-    };
+  return {
+    core_data         => $core_data,
+    disclosed_vendors => $segments{SEGMENT_TYPES->{DISCLOSED_VENDORS}},
+    allowed_vendors   => $segments{SEGMENT_TYPES->{ALLOWED_VENDORS}},
+    publisher_tc      => $segments{SEGMENT_TYPES->{PUBLISHER_TC}},
+  };
 }
 
 sub _validate_and_decode_base64 {
-    my $s = shift;
+  my $s = shift;
 
-    # see: https://www.perlmonks.org/?node_id=775820
-    croak "invalid base64 format" unless $s =~ m{
+  # see: https://www.perlmonks.org/?node_id=775820
+  croak "invalid base64 format" unless $s =~ m{
         ^
         (?:[-A-Za-z0-9_]{4})*
         (?:
@@ -770,104 +656,92 @@ sub _validate_and_decode_base64 {
         \z
     }x;
 
-    return unpack 'B*', _decode_base64url($s);
+  return _decode_base64url($s);
 }
 
 sub _decode_base64url {
-    my $s = shift;
-    $s =~ tr/-_/+\//;
-    $s .= '=' while length($s) % 4;
-    return decode_base64($s);
+  my $s = shift;
+  $s =~ tr/-_/+\//;
+  $s .= '=' while length($s) % 4;
+  return decode_base64($s);
 }
 
 sub _parse_vendor_section {
-    my $self = shift;
+  my $self = shift;
 
-    # parse vendor consent
+  # parse vendor consent
 
-    my $legitimate_interest_offset =
-      $self->_parse_vendor_consents( OFFSETS->{VENDOR_CONSENT} );
+  my $legitimate_interest_offset = $self->_parse_vendor_consents(OFFSETS->{VENDOR_CONSENT});
 
-    # parse vendor legitimate interest
+  # parse vendor legitimate interest
 
-    my $pub_restriction_offset =
-      $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
+  my $pub_restriction_offset = $self->_parse_vendor_legitimate_interests($legitimate_interest_offset);
 
-    return $pub_restriction_offset;
+  return $pub_restriction_offset;
 }
 
 sub _parse_vendor_consents {
-    my ( $self, $vendor_consent_offset ) = @_;
+  my ($self, $vendor_consent_offset) = @_;
 
-    my ( $vendor_consents, $legitimate_interest_offset ) =
-      $self->_parse_bitfield_or_range(
-        $vendor_consent_offset,
-      );
+  my ($vendor_consents, $legitimate_interest_offset) = $self->_parse_bitfield_or_range($vendor_consent_offset,);
 
-    $self->{vendor_consents} = $vendor_consents;
+  $self->{vendor_consents} = $vendor_consents;
 
-    return $legitimate_interest_offset;
+  return $legitimate_interest_offset;
 }
 
 sub _parse_vendor_legitimate_interests {
-    my ( $self, $legitimate_interest_offset ) = @_;
+  my ($self, $legitimate_interest_offset) = @_;
 
-    my $data_size = length( $self->{core_data} );
+  my $data_size_bits = length($self->{core_data}) << 3;
 
-    my ( $vendor_legitimate_interests, $pub_restriction_offset ) =
-      $self->_parse_bitfield_or_range(
-        $legitimate_interest_offset,
-        sub {
-            my $legitimate_interest_start = shift;
+  my ($vendor_legitimate_interests, $pub_restriction_offset) = $self->_parse_bitfield_or_range(
+    $legitimate_interest_offset,
+    sub {
+      my $legitimate_interest_start = shift;
 
-            croak "invalid consent data: no legitimate interest start position"
-              if $legitimate_interest_start >= $data_size;
-        }
-      );
+      croak "invalid consent data: no legitimate interest start position"
+        if $legitimate_interest_start >= $data_size_bits;
+    }
+  );
 
-    $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
+  $self->{vendor_legitimate_interests} = $vendor_legitimate_interests;
 
-    return $pub_restriction_offset;
+  return $pub_restriction_offset;
 }
 
 sub _parse_publisher_section {
-    my ( $self, $pub_restriction_offset ) = @_;
+  my ($self, $pub_restriction_offset) = @_;
 
-    # parse public restrictions
+  # parse public restrictions
 
-    my $core_data      = substr( $self->{core_data}, $pub_restriction_offset );
-    my $core_data_size = length( $self->{core_data} );
+  my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
+    core_data         => $self->{core_data},
+    core_data_size    => length($self->{core_data}),
+    offset            => $pub_restriction_offset,
+    publisher_tc_data => $self->{publisher_tc_data},
+    options           => $self->{options},
+  );
 
-    my $publisher = GDPR::IAB::TCFv2::Publisher->Parse(
-        core_data         => $core_data,
-        core_data_size    => $core_data_size,
-        publisher_tc_data => $self->{publisher_tc_data},
-        options           => $self->{options},
-    );
-
-    $self->{publisher} = $publisher;
+  $self->{publisher} = $publisher;
 }
 
 sub _parse_disclosed_vendors {
-    my $self = shift;
+  my $self = shift;
 
-    return unless defined $self->{disclosed_vendors_data};
+  return unless defined $self->{disclosed_vendors_data};
 
-    $self->{disclosed_vendors} = $self->_parse_vendor_bitfield_or_range(
-        $self->{disclosed_vendors_data},
-        SEGMENT_TYPES->{DISCLOSED_VENDORS},
-    );
+  $self->{disclosed_vendors}
+    = $self->_parse_vendor_bitfield_or_range($self->{disclosed_vendors_data}, SEGMENT_TYPES->{DISCLOSED_VENDORS},);
 }
 
 sub _parse_allowed_vendors {
-    my $self = shift;
+  my $self = shift;
 
-    return unless defined $self->{allowed_vendors_data};
+  return unless defined $self->{allowed_vendors_data};
 
-    $self->{allowed_vendors} = $self->_parse_vendor_bitfield_or_range(
-        $self->{allowed_vendors_data},
-        SEGMENT_TYPES->{ALLOWED_VENDORS},
-    );
+  $self->{allowed_vendors}
+    = $self->_parse_vendor_bitfield_or_range($self->{allowed_vendors_data}, SEGMENT_TYPES->{ALLOWED_VENDORS},);
 }
 
 # Returns only $vendors_section -- unlike _parse_bitfield_or_range, which
@@ -875,158 +749,141 @@ sub _parse_allowed_vendors {
 # segment.  Disclosed/Allowed Vendors live in their own base64 segment
 # with nothing trailing the bitfield/range, so there is no offset to chain.
 sub _parse_vendor_bitfield_or_range {
-    my ( $self, $data, $expected_segment_type ) = @_;
+  my ($self, $data, $expected_segment_type) = @_;
 
-    my ( $segment_type, $offset ) = get_uint3( $data, 0 );
+  # If data looks like a string of 0/1 (from legacy tests), pack it.
+  if ($data =~ /^[01]+$/) {
+    $data = pack("B*", $data);
+  }
 
-    croak
-      "invalid segment type $segment_type: expected $expected_segment_type"
-      if defined $expected_segment_type
-      && $segment_type != $expected_segment_type;
+  my ($segment_type, $offset) = get_uint3($data, 0);
 
-    my ( $max_id, $next_offset ) = get_uint16( $data, $offset );
+  croak "invalid segment type $segment_type: expected $expected_segment_type"
+    if defined $expected_segment_type && $segment_type != $expected_segment_type;
 
-    # Spec: MaxVendorId == 0 means "field unused".  Skip the IsRange flag
-    # and any trailing payload entirely; return an empty BitField so that
-    # has_vendor_disclosure() still reports the segment as present while
-    # contains() always returns false for any vendor id.
-    if ( $max_id == 0 ) {
-        my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
-            data      => '',
-            data_size => 0,
-            max_id    => 0,
-            options   => $self->{options},
-        );
-        return $empty_section;
-    }
+  my ($max_id, $next_offset) = get_uint16($data, $offset);
 
-    my ( $is_range, $bf_offset ) = is_set( $data, $next_offset );
+  # Spec: MaxVendorId == 0 means "field unused".  Skip the IsRange flag
+  # and any trailing payload entirely; return an empty BitField so that
+  # has_vendor_disclosure() still reports the segment as present while
+  # contains() always returns false for any vendor id.
+  if ($max_id == 0) {
+    my ($empty_section) = GDPR::IAB::TCFv2::BitField->Parse(
+      data      => $data,
+      data_size => length($data),
+      max_id    => 0,
+      offset    => $next_offset,
+      options   => $self->{options},
+    );
+    return $empty_section;
+  }
 
-    my $vendors_section;
-    if ($is_range) {
-        my $range_data = substr( $data, $bf_offset );
-        ( $vendors_section, ) = GDPR::IAB::TCFv2::RangeSection->Parse(
-            data      => $range_data,
-            data_size => length($range_data),
-            offset    => 0,
-            max_id    => $max_id,
-            options   => $self->{options},
-        );
-    }
-    else {
-        my $bitfield_data = substr( $data, $bf_offset, $max_id );
-        ( $vendors_section, ) = GDPR::IAB::TCFv2::BitField->Parse(
-            data      => $bitfield_data,
-            data_size => length($bitfield_data),
-            max_id    => $max_id,
-            options   => $self->{options},
-        );
-    }
+  my ($is_range, $bf_offset) = is_set($data, $next_offset);
 
-    return $vendors_section;
+  my $vendors_section;
+  if ($is_range) {
+    ($vendors_section,) = GDPR::IAB::TCFv2::RangeSection->Parse(
+      data      => $data,
+      data_size => length($data),
+      offset    => $bf_offset,
+      max_id    => $max_id,
+      options   => $self->{options},
+    );
+  }
+  else {
+    ($vendors_section,) = GDPR::IAB::TCFv2::BitField->Parse(
+      data      => $data,
+      data_size => length($data),
+      offset    => $bf_offset,
+      max_id    => $max_id,
+      options   => $self->{options},
+    );
+  }
+
+  return $vendors_section;
 }
 
 sub _parse_bitfield_or_range {
-    my ( $self, $offset, $validate_next_offset ) = @_;
+  my ($self, $offset, $validate_next_offset) = @_;
 
-    my $vendors_section;
+  my $vendors_section;
 
-    my ( $max_id, $next_offset ) = get_uint16( $self->{core_data}, $offset );
+  my ($max_id, $next_offset) = get_uint16($self->{core_data}, $offset);
 
-    $validate_next_offset->($next_offset) if defined $validate_next_offset;
+  $validate_next_offset->($next_offset) if defined $validate_next_offset;
 
-    my $is_range;
+  my $is_range;
 
-    ( $is_range, $next_offset ) = is_set(
-        $self->{core_data},
-        $next_offset,
-    );
+  ($is_range, $next_offset) = is_set($self->{core_data}, $next_offset,);
 
-    if ($is_range) {
-        ( $vendors_section, $next_offset ) = $self->_parse_range_section(
-            $max_id,
-            $next_offset,
-        );
-    }
-    else {
-        ( $vendors_section, $next_offset ) = $self->_parse_bitfield(
-            $max_id,
-            $next_offset,
-        );
-    }
+  if ($is_range) {
+    ($vendors_section, $next_offset) = $self->_parse_range_section($max_id, $next_offset,);
+  }
+  else {
+    ($vendors_section, $next_offset) = $self->_parse_bitfield($max_id, $next_offset,);
+  }
 
-    return wantarray ? ( $vendors_section, $next_offset ) : $vendors_section;
+  return wantarray ? ($vendors_section, $next_offset) : $vendors_section;
 }
 
 sub _parse_range_section {
-    my ( $self, $max_id, $range_section_start_offset ) = @_;
+  my ($self, $max_id, $range_section_start_offset) = @_;
 
-    my $data = substr( $self->{core_data}, $range_section_start_offset );
+  my ($range_section, $next_offset) = GDPR::IAB::TCFv2::RangeSection->Parse(
+    data      => $self->{core_data},
+    data_size => length($self->{core_data}),
+    offset    => $range_section_start_offset,
+    max_id    => $max_id,
+    options   => $self->{options},
+  );
 
-    my ( $range_section, $next_offset ) =
-      GDPR::IAB::TCFv2::RangeSection->Parse(
-        data      => $data,
-        data_size => length($data),
-        offset    => 0,
-        max_id    => $max_id,
-        options   => $self->{options},
-      );
-
-    return
-      wantarray
-      ? ( $range_section, $range_section_start_offset + $next_offset )
-      : $range_section;
+  return wantarray ? ($range_section, $next_offset) : $range_section;
 }
 
 sub _parse_bitfield {
-    my ( $self, $max_id, $bitfield_start_offset ) = @_;
+  my ($self, $max_id, $bitfield_start_offset) = @_;
 
-    my $data = substr( $self->{core_data}, $bitfield_start_offset, $max_id );
+  my ($bitfield, $next_offset) = GDPR::IAB::TCFv2::BitField->Parse(
+    data      => $self->{core_data},
+    data_size => length($self->{core_data}),
+    offset    => $bitfield_start_offset,
+    max_id    => $max_id,
+    options   => $self->{options},
+  );
 
-    my ( $bitfield, $next_offset ) = GDPR::IAB::TCFv2::BitField->Parse(
-        data      => $data,
-        data_size => length($data),
-        max_id    => $max_id,
-        options   => $self->{options},
-    );
-
-    return wantarray
-      ? ( $bitfield, $bitfield_start_offset + $next_offset )
-      : $bitfield;
+  return wantarray ? ($bitfield, $next_offset) : $bitfield;
 }
 
 sub looksLikeIsConsentVersion2 {
-    my ($gdpr_consent_string) = @_;
+  my ($gdpr_consent_string) = @_;
 
-    return unless defined $gdpr_consent_string;
+  return unless defined $gdpr_consent_string;
 
-    return
-      rindex( $gdpr_consent_string, CONSENT_STRING_TCF_V2->{PREFIX}, 0 ) == 0;
+  return rindex($gdpr_consent_string, CONSENT_STRING_TCF_V2->{PREFIX}, 0) == 0;
 }
 
 BEGIN {
-    if ( my $native_decode_base64url = MIME::Base64->can("decode_base64url") )
-    {
-        no warnings q<redefine>;
+  if (my $native_decode_base64url = MIME::Base64->can("decode_base64url")) {
+    no warnings q<redefine>;
 
-        *_decode_base64url = $native_decode_base64url;
+    *_decode_base64url = $native_decode_base64url;
+  }
+
+  eval {
+    require JSON;
+
+    if (my $native_json_true = JSON->can("true")) {
+      no warnings q<redefine>;
+
+      *_json_true = $native_json_true;
     }
 
-    eval {
-        require JSON;
+    if (my $native_json_false = JSON->can("false")) {
+      no warnings q<redefine>;
 
-        if ( my $native_json_true = JSON->can("true") ) {
-            no warnings q<redefine>;
-
-            *_json_true = $native_json_true;
-        }
-
-        if ( my $native_json_false = JSON->can("false") ) {
-            no warnings q<redefine>;
-
-            *_json_false = $native_json_false;
-        }
-    };
+      *_json_false = $native_json_false;
+    }
+  };
 }
 
 
@@ -1053,7 +910,26 @@ __END__
 
 =head1 NAME
 
-GDPR::IAB::TCFv2 - Transparency & Consent String version 2 parser 
+GDPR::IAB::TCFv2 - TCF v2.3 (Transparency & Consent String) parser
+
+=head1 PROJECT STATUS
+
+C<GDPR::IAB::TCFv2> entered B<maintenance mode> on 2026-05-09 with the
+v0.400 release. The core parser, validator, and CMP-validator surfaces
+are considered feature-complete for the IAB TCF v2.3 specification.
+
+In maintenance mode the maintainer commits to bug fixes, security
+fixes, CPAN-tester regression triage, and tracking IAB-spec updates
+(TCF v2.4 / v3 if and when they ship). Larger feature work -- the
+remaining roadmap phases (GVL-aware validator, Special Features /
+Special Purposes, CLI configuration loading), the distribution items
+(DockerHub automation, Debian package), and the sister-distribution
+ideas in L</ECOSYSTEM> -- is now tracked as C<help-wanted> issues on
+GitHub.
+
+Patches and PRs from the community are welcome and will continue to be
+reviewed. See F<TODO.pod> at the repository root for the full
+help-wanted list and F<CONTRIBUTING.pod> for the patching workflow.
 
 =head1 SYNOPSIS
 
@@ -1082,9 +958,7 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say $consent->consent_language;    # "EN"
     say $consent->vendor_list_version; # 23
 
-    use List::MoreUtils qw<all>;
-
-    say "find consent for purpose ids 1, 3, 9 and 10" if all {
+    say "find consent for purpose ids 1, 3, 9 and 10" if 4 == grep {
         $consent->is_purpose_consent_allowed($_)
     } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
         InfoStorageAccess,       #  1
@@ -1116,16 +990,18 @@ the predicates above together by hand:
         legitimate_interest_purpose_ids => [ 7 ],
     );
 
-    my $result = $validator->validate($consent);   # fail-fast
-    # ...or $validator->validate_all($consent) to accumulate every reason
+    my $tc_string = '...';
+    my $result = $validator->validate($tc_string);   # fail-fast
+    # ...or $validator->validate_all($tc_string) to accumulate every reason
 
     if ($result) {
         # vendor 284 has every required permission
     }
     else {
         warn "compliance failed: $result\n";   # stringifies to the reasons
-        log_failure($_) for $result->reasons;
+        warn $_ for $result->reasons;
     }
+
 
 =head1 COMMAND LINE TOOLS
 
@@ -1646,7 +1522,7 @@ Outputs:
                 7,
                 10
             ],
-            "custom_purpose" : {
+            "custom_purposes" : {
                 "consents" : [],
                 "legitimate_interests" : []
             },
@@ -1690,6 +1566,58 @@ using L<ISO_8601|https://en.wikipedia.org/wiki/ISO_8601>. This behaviour can be 
 
 Will check if a given tc string starts with a literal C<C>.
 
+=head1 ECOSYSTEM
+
+The following B<sister distributions> are intentionally left as
+C<help-wanted> ideas rather than shipped from this module. Each one is
+companion glue for a popular Perl framework and would add a runtime
+dependency on its host framework, so they belong as separate CPAN
+distributions rather than features of C<GDPR::IAB::TCFv2> itself.
+
+=over 4
+
+=item *
+
+L<GDPR::IAB::TCFv2::Validator::LIVR>
+
+LIVR rule-engine binding for JSON-shaped TC string payloads.
+
+=item *
+
+L<GDPR::IAB::TCFv2::Validator::TypeTiny>
+
+Reusable Type::Tiny constraints (parameterized by purpose / vendor
+sets) for Moo, Moose, or pure-Perl callers that prefer type-level
+enforcement.
+
+=item *
+
+L<Plack::Middleware::GDPR::TCFv2>
+
+Plack middleware that decodes a TC string from a request header or
+cookie, attaches a parsed C<GDPR::IAB::TCFv2> object to C<< $env >>,
+and short-circuits the response when consent is missing or invalid.
+
+=item *
+
+L<GDPR::IAB::TCFv2::Validator::Moose>
+
+Moose attribute traits and role-based validation for Moose-end-to-end
+projects.
+
+=item *
+
+L<GDPR::IAB::TCFv2::Validator::FormValidator>
+
+C<Data::FormValidator> profile glue for legacy applications that drive
+business validation through DFV.
+
+=back
+
+The C<help-wanted> issues on GitHub track each of these ideas; see
+L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem>
+and F<TODO.pod> for context.
+
 =head1 SEE ALSO
 
 L<GDPR::IAB::TCFv2::Validator> for declarative compliance checks against a
@@ -1700,7 +1628,7 @@ The original documentation of the L<TCF v2 from IAB documentation|https://github
 
 =head1 AUTHOR
 
-Tiago Peczenyj L<mailto:tiago.peczenyj+gdpr-iab-tcfv2@gmail.com>
+Tiago Peczenyj L<mailto:tiago.peczenyj+cpan@gmail.com>
 
 =head1 THANKS
 
@@ -1712,7 +1640,7 @@ Please report any bugs or feature requests to L<https://github.com/peczenyj/GDPR
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2023 Tiago Peczenyj
+Copyright 2023-2026 Tiago Peczenyj
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
