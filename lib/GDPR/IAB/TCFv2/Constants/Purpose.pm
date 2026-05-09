@@ -191,7 +191,7 @@ A profile created for personalised advertising in relation to a person having se
 =back
 
 =head2  ContentProfile
-	
+
 Purpose id 5: Create profiles to personalise content
 
 Information about your activity on this service (for instance, forms you submit, non-advertising content you look at) can be stored and combined with other information about you (such as your previous activity on this service or other websites or apps) or similar users. This is then used to build or improve a profile about you (which might for example include possible interests and personal aspects). Your profile can be used (also later) to present content that appears more relevant based on your possible interests, such as by adapting the order in which content is shown to you, so that it is even easier for you to find content that matches your interests.
@@ -211,7 +211,7 @@ You have viewed three videos on space exploration across different TV apps. An u
 =back
 
 =head2  ContentSelection
-	
+
 Purpose id 6: Use profiles to select personalised content
 
 Content presented to you on this service can be based on your content personalisation profiles, which can reflect your activity on this or other services (for instance, the forms you submit, content you look at), possible interests and personal aspects, such as by adapting the order in which content is shown to you, so that it is even easier for you to find (non-advertising) content that matches your interests.
@@ -224,7 +224,7 @@ Illustrations:
 
 You read articles on vegetarian food on a social media platform and then use the cooking app of an unrelated company. The profile built about you on the social media platform will be used to present you vegetarian recipes on the welcome screen of the cooking app.
 
-=item* 
+=item *
 
 You have viewed three videos about rowing across different websites. An unrelated video sharing platform will recommend five other videos on rowing that may be of interest to you when you use your TV app, based on a profile built about you when you visited those different websites to watch online videos.
 

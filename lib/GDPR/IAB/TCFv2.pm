@@ -362,8 +362,9 @@ sub check_publisher_restriction {
     $restriction_type = $opts{restriction_type};
     $vendor_id        = $opts{vendor_id};
   }
-
-  ($purpose_id, $restriction_type, $vendor_id) = @_;
+  else {
+    ($purpose_id, $restriction_type, $vendor_id) = @_;
+  }
 
   return $self->{publisher}->check_restriction($purpose_id, $restriction_type, $vendor_id);
 }
@@ -956,14 +957,15 @@ The purpose of this package is to parse Transparency & Consent String (TC String
     say $consent->consent_screen;      # 2
     say $consent->consent_language;    # "EN"
     say $consent->vendor_list_version; # 23
-say "find consent for purpose ids 1, 3, 9 and 10" if 4 == grep {
-    $consent->is_purpose_consent_allowed($_)
-} ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
-    InfoStorageAccess,       #  1
-    PersonalizationProfile,  #  3
-    MarketResearch,          #  9
-    DevelopImprove,          # 10
-);
+
+    say "find consent for purpose ids 1, 3, 9 and 10" if 4 == grep {
+        $consent->is_purpose_consent_allowed($_)
+    } ( # constants exported by GDPR::IAB::TCFv2::Constants::Purpose
+        InfoStorageAccess,       #  1
+        PersonalizationProfile,  #  3
+        MarketResearch,          #  9
+        DevelopImprove,          # 10
+    );
 
     say "find consent for vendor id 284 (Weborama)" if $consent->vendor_consent(284);
 
@@ -1520,7 +1522,7 @@ Outputs:
                 7,
                 10
             ],
-            "custom_purpose" : {
+            "custom_purposes" : {
                 "consents" : [],
                 "legitimate_interests" : []
             },

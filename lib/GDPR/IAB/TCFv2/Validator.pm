@@ -512,9 +512,10 @@ B<silently ignored> (matches legacy behavior).
 
 =item *
 
-C<strict> — boolean. Passed through to the underlying
-C<is_vendor_*_allowed> calls so invalid purpose IDs cause C<croak>
-instead of a silent failure.
+C<strict_legal_basis> — boolean. Passed through to the underlying
+C<is_vendor_*_allowed> calls (as the C<strict> named argument) so
+invalid purpose IDs cause C<croak> instead of a silent failure.
+Defaults to C<0>.
 
 =back
 
@@ -529,10 +530,10 @@ the first failing rule (B<fail-fast> mode) and returns a
 L<GDPR::IAB::TCFv2::Validator::Result> carrying that one reason.
 
 C<%overrides> can replace the constructor values for C<vendor_id>,
-C<strict>, C<verify_disclosed_vendors>, C<min_tcf_policy_version>,
-C<cmp_state_provider>, C<consent_purpose_ids>,
-C<legitimate_interest_purpose_ids>, and C<flexible_purpose_ids> for
-this call only.
+C<strict_legal_basis>, C<verify_disclosed_vendors>,
+C<min_tcf_policy_version>, C<cmp_state_provider>,
+C<consent_purpose_ids>, C<legitimate_interest_purpose_ids>, and
+C<flexible_purpose_ids> for this call only.
 
 The list overrides (C<consent_purpose_ids>,
 C<legitimate_interest_purpose_ids>, C<flexible_purpose_ids>) do B<not>

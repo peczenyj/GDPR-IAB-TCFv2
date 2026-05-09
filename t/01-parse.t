@@ -441,6 +441,12 @@ subtest "check publisher restriction" => sub {
     ok $consent->check_publisher_restriction(7, 1, 32),
       "must have publisher restriction to vendor 32 regarding purpose id 7 of type 1 'Require Consent'";
 
+    ok $consent->check_publisher_restriction(purpose_id => 7, restriction_type => 1, vendor_id => 32),
+      "hash form: must have publisher restriction to vendor 32 regarding purpose id 7 of type 1 'Require Consent'";
+
+    ok !$consent->check_publisher_restriction(purpose_id => 7, restriction_type => 1, vendor_id => 7),
+      "hash form: should have no publisher restriction to vendor 7 regarding purpose id 7 of type 1 'Require Consent'";
+
     ok !$consent->check_publisher_restriction(7, 1, 7),
       "must have publisher restriction to vendor 7 regarding purpose id 7 of type 1 'Require Consent'";
 
