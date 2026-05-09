@@ -202,13 +202,41 @@ configuration as JSON for debugging.
 
 =item *
 
-Tests: a CLI subtest that sets the env vars, runs C<validate> without
+**Tests:** a CLI subtest that sets the env vars, runs C<validate> without
 the matching flags, and asserts the same outcome as the explicit
 invocation.
 
 =back
 
+=head2 Phase 10 -- Advanced Error Handling
+
+Modernize exception handling across the library.
+
+Scope:
+
+=over 4
+
+=item *
+
+Implement C<GDPR::IAB::TCFv2::Error> exception objects.
+
+=item *
+
+Overload stringification to provide clean messages while retaining
+metadata (code, file, line).
+
+=item *
+
+Refactor C<croak> / C<die> calls in the library to throw objects.
+
+=item *
+
+Update CLI to catch objects and simplify its sanitization logic.
+
+=back
+
 =head1 HELP WANTED -- DISTRIBUTION
+
 
 These items are about packaging the existing code, not about adding
 features.
