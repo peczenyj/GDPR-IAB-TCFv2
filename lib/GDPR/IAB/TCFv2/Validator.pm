@@ -20,11 +20,11 @@ sub new {
 
   _check_coherence($consent, $legitimate_interest, $flexible);
 
-  # Compute cmp_state_provider in scalar context so a bare `return` from the
+  # Compute cmp_validator in scalar context so a bare `return` from the
   # coercer correctly yields undef -- a list-context call inside the
   # anonymous-hash construction below would collapse the key/value
   # pair instead.
-  my $cmp_v = _coerce_cmp_state_provider($args{cmp_state_provider});
+  my $cmp_validator = _coerce_cmp_validator($args{cmp_validator});
 
   my $self = {
     vendor_id                       => $args{vendor_id},
@@ -34,7 +34,7 @@ sub new {
     _flexible_set                   => {map { $_ => 1 } @{$flexible}},
     verify_disclosed_vendors        => $args{verify_disclosed_vendors} || 0,
     min_tcf_policy_version          => $args{min_tcf_policy_version},
-    cmp_state_provider              => $cmp_v,
+    cmp_validator                   => $cmp_validator,
     strict_legal_basis              => exists $args{strict_legal_basis} ? $args{strict_legal_basis} : 0,
   };
 
@@ -45,16 +45,16 @@ sub new {
 # (auto-instantiated lazily on the first call), or undef.  Defer the
 # `require` so callers who never opt into the CMP rule never pay for
 # loading JSON::PP / Time::Piece.
-sub _coerce_cmp_state_provider {
+sub _coerce_cmp_validator {
   my ($spec) = @_;
 
   # Bare `return` is fine -- callers always invoke this in scalar
-  # context (see the explicit `my $cmp_v = ...` in `new` and the
-  # `my $cmp_state_provider = ...` in `_run_validation`).
+  # context (see the explicit `my $cmp_validator = ...` in `new` and the
+  # `my $cmp_validator = ...` in `_run_validation`).
   return unless defined $spec;
   return $spec if blessed($spec) && $spec->isa('GDPR::IAB::TCFv2::CMPValidator');
 
-  croak "cmp_state_provider must be a GDPR::IAB::TCFv2::CMPValidator object " . "or a hashref of constructor arguments"
+  croak "cmp_validator must be a GDPR::IAB::TCFv2::CMPValidator object " . "or a hashref of constructor arguments"
     unless ref($spec) eq 'HASH';
 
   require GDPR::IAB::TCFv2::CMPValidator;
@@ -105,10 +105,8 @@ sub _run_validation {
     : $self->{verify_disclosed_vendors};
   my $min_tcf_policy_version
     = exists $overrides{min_tcf_policy_version} ? $overrides{min_tcf_policy_version} : $self->{min_tcf_policy_version};
-  my $cmp_state_provider
-    = exists $overrides{cmp_state_provider}
-    ? _coerce_cmp_state_provider($overrides{cmp_state_provider})
-    : $self->{cmp_state_provider};
+  my $cmp_validator
+    = exists $overrides{cmp_validator} ? _coerce_cmp_validator($overrides{cmp_validator}) : $self->{cmp_validator};
 
   # Per-call list overrides. Coherence is not re-validated here:
   # orphan flexible purposes (a pid in flexible_purpose_ids that
@@ -135,7 +133,7 @@ sub _run_validation {
   $self->_check_min_tcf_policy_version($tc, $min_tcf_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_cmp_state_provider($tc, $cmp_state_provider, \@failures);
+  $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   $self->_check_disclosed($tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, \@failures);
@@ -154,13 +152,13 @@ sub _run_validation {
   return $self->_make_result(1, []);
 }
 
-sub _check_cmp_state_provider {
-  my ($self, $tc, $cmp_state_provider, $failures) = @_;
+sub _check_cmp_validator {
+  my ($self, $tc, $cmp_validator, $failures) = @_;
 
-  return unless defined $cmp_state_provider;
+  return unless defined $cmp_validator;
 
   my $cmp_id = $tc->cmp_id;
-  unless ($cmp_state_provider->is_valid($cmp_id)) {
+  unless ($cmp_validator->is_valid($cmp_id)) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonInvalidCMP,
@@ -531,7 +529,7 @@ L<GDPR::IAB::TCFv2::Validator::Result> carrying that one reason.
 
 C<%overrides> can replace the constructor values for C<vendor_id>,
 C<strict_legal_basis>, C<verify_disclosed_vendors>,
-C<min_tcf_policy_version>, C<cmp_state_provider>,
+C<min_tcf_policy_version>, C<cmp_validator>,
 C<consent_purpose_ids>, C<legitimate_interest_purpose_ids>, and
 C<flexible_purpose_ids> for this call only.
 

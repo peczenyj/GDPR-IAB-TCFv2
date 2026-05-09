@@ -197,11 +197,11 @@ GDPR::IAB::TCFv2::CMPValidator - IAB Registry-based Consent Management Platform 
     use GDPR::IAB::TCFv2::CMPValidator;
 
     # Load from a local snapshot of the IAB CMP registry JSON
-    my $cmp_v = GDPR::IAB::TCFv2::CMPValidator->new(
+    my $cmp_validator = GDPR::IAB::TCFv2::CMPValidator->new(
         file => '/path/to/cmp-list.json',
     );
 
-    if ( $cmp_v->is_valid(21) ) {
+    if ( $cmp_validator->is_valid(21) ) {
         print "CMP 21 exists and has not been retired\n";
     }
 
@@ -210,7 +210,7 @@ GDPR::IAB::TCFv2::CMPValidator - IAB Registry-based Consent Management Platform 
 
     my $validator = GDPR::IAB::TCFv2::Validator->new(
         vendor_id     => 284,
-        cmp_state_provider => $cmp_v,
+        cmp_validator => $cmp_validator,
     );
 
     my $tc_string = '...';
@@ -388,7 +388,7 @@ pre-built object via C<http_client>:
     sub new { bless { responses => $_[1] }, $_[0] }
     sub get { my $self = shift; shift @{ $self->{responses} } }
 
-    my $cmp_v = GDPR::IAB::TCFv2::CMPValidator->new(
+    my $cmp_validator = GDPR::IAB::TCFv2::CMPValidator->new(
         url         => 'https://does-not-matter.example/',
         network_ok  => 1,
         http_client => FakeHttp->new( [
@@ -414,6 +414,6 @@ from it.
 =head1 SEE ALSO
 
 L<GDPR::IAB::TCFv2::Validator> for the rule engine that composes this
-class as the C<cmp_state_provider> rule.
+class as the C<cmp_validator> rule.
 
 =cut
