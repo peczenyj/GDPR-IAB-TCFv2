@@ -129,6 +129,13 @@ Tests: golden GVL fixture covering vendors with and without flexible
 purposes; round-trip C<from_gvl_vendor_entry> against a hand-crafted
 entry.
 
+=item *
+
+Freshness contract: the GVL loader must accept the C<max_age_days> /
+C<on_stale> knobs defined in L</Phase 11 -- Registry freshness policy
+and CMP-list hot-reload>. Coordinate the default value with that
+issue.
+
 =back
 
 =head2 Phase 8 -- Features, Special Features, Special Purposes
@@ -229,6 +236,131 @@ Refactor C<croak> / C<die> calls in the library to throw objects.
 =item *
 
 Update CLI to catch objects and simplify its sanitization logic.
+
+=back
+
+=head2 Phase 11 -- Registry freshness policy and CMP-list hot-reload
+
+Make CMP list and GVL freshness configurable, symmetric, and
+opt-in-strict, and add a hot-reload capability to C<CMPValidator> so
+long-running services can refresh their snapshot without restarting.
+
+Background:
+
+C<CMPValidator> currently emits a hardcoded C<carp> when its snapshot
+is older than 28 days (see C<_check_age>). The threshold is not
+configurable, there is no escalation to C<croak>, and the GVL pipeline
+introduced in Phase 7 has no equivalent freshness contract. This Phase
+makes the policy a first-class API surface on both registries.
+
+Scope:
+
+=over 4
+
+=item *
+
+Add C<max_age_days> and C<on_stale> constructor arguments to
+C<CMPValidator>. C<on_stale> accepts C<'warn'> (current behavior,
+default), C<'croak'>, or C<'ignore'>. Defaults match v0.400 exactly:
+C<max_age_days =E<gt> 28>, C<on_stale =E<gt> 'warn'>. Configurability
+is the new feature; no v0.400 user sees a behavior change.
+
+=item *
+
+Add the same two arguments to whatever entry point Phase 7 introduces
+for GVL loading (e.g. C<from_gvl_file>, C<from_gvl_url>). Defaults
+should likewise be conservative -- B<TBD> per Phase 7's eventual
+shape; the issue records the contract that GVL must honor an
+identically-named knob even if the default value differs.
+
+=item *
+
+Freshness clock measures the C<lastUpdated> field inside the JSON
+payload. Filesystem mtime is intentionally not consulted (it lies
+across C<cp -p>, container rebuilds, and image bakes; the IAB
+C<lastUpdated> field is the canonical contract).
+
+=item *
+
+Hot-reload (B<bonus, CMP only>):
+
+=over 4
+
+=item *
+
+C<$cmp_validator-E<gt>reload()> -- explicit, caller-driven,
+parameterless. Reuses the source(s) the validator was constructed
+with.
+
+=item *
+
+C<reload_on_stale =E<gt> 1> -- when set and C<network_ok =E<gt> 1>,
+C<_check_age> auto-triggers C<reload()> instead of just
+C<carp>/C<croak>ing. Off by default.
+
+=item *
+
+B<No background/timer-based refresh.> Perl is single-threaded and
+this distribution will not introduce scheduling primitives.
+
+=item *
+
+Source fallback: the constructor accepts C<url> + C<file>
+simultaneously (today they are mutually exclusive). When both are
+present, C<reload()> tries C<url> first, falls back to C<file> on
+network failure. This is also the behavior at first construction
+when both are passed.
+
+=back
+
+=item *
+
+Tests: F<t/14-cmp-validator.t> grows subtests for each
+C<on_stale> branch, for the URL-then-file fallback, for
+C<reload()> against a stub HTTP client, and for the
+C<reload_on_stale> integration. A new test file covers GVL
+freshness once Phase 7 lands.
+
+=item *
+
+Documentation: update C<CMPValidator> POD to describe the knobs and
+the C<lastUpdated> contract; document that the existing 28-day
+default is preserved.
+
+=back
+
+CLI surface (env vars / flags) is deliberately B<out of scope> for
+Phase 11 and tracked under L</Phase 9 -- CLI Configuration Loading>.
+Phase 9 will pick up C<IABTCFV2_CMP_LIST_MAX_AGE> /
+C<IABTCFV2_CMP_LIST_ON_STALE> (and GVL counterparts) once Phase 11
+lands.
+
+Open questions (TBD, deferred to whoever picks the work up):
+
+=over 4
+
+=item *
+
+Exact behavior of C<reload()> on failure: croak vs return false vs
+return previous-state-with-warning?
+
+=item *
+
+Loop-prevention semantics for C<reload_on_stale> if upstream is
+persistently unreachable -- minimum back-off interval, max retry
+count, or stateless "try once per validation"?
+
+=item *
+
+Whether C<reload_on_stale> should be a no-op (rather than croak)
+when no C<url> was configured -- file-only setups can never auto-
+reload from the network.
+
+=item *
+
+GVL-side default for C<max_age_days>: GVL updates more frequently
+than the CMP list, so 28 days may be too lax. Pin once Phase 7's
+loading API is finalized.
 
 =back
 
