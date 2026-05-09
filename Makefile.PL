@@ -5,10 +5,10 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
   NAME             => 'GDPR::IAB::TCFv2',
-  AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj+cpan@gmail.com>',
-  LICENSE          => "perl_5",
-  ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
   VERSION_FROM     => 'lib/GDPR/IAB/TCFv2.pm',
+  ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
+  AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj+cpan@gmail.com>',
+  LICENSE          => 'perl_5',
   MIN_PERL_VERSION => '5.008009',
   EXE_FILES        => ['bin/iabtcfv2'],
   TEST_REQUIRES    => {
@@ -30,37 +30,53 @@ WriteMakefile(
     'IO::Compress::Gzip'     => 0,
     'IO::Uncompress::Gunzip' => 0,
   },
+
+  # META_MERGE is gated on EUMM 6.46 (META v2 support) so installs on
+  # ancient toolchains -- notably the EUMM 6.42 that shipped with Perl
+  # 5.8.9, our MIN_PERL_VERSION floor -- still build cleanly. Modern
+  # CPAN clients see the full meta block.
   (
     eval { ExtUtils::MakeMaker->VERSION(6.46) }
     ? (
       META_MERGE => {
-        'meta-spec'    => {version => 2},
         dynamic_config => 0,
-        provides       => _get_provides(),
-        resources      => {
+        'meta-spec'    => {version => 2},
+
+        # `t` is auto-injected by EUMM, so listing it here would
+        # produce a duplicate entry in the rendered META. List only
+        # the dirs EUMM does not already exclude.
+        no_index => {directory => ['xt', 'bench', 'docs']},
+        prereqs  => {
+          runtime => {
+            requires   => {perl => '5.008009'},
+            recommends => {
+
+              # CMPValidator opt-in feature: lazy-required at first
+              # use, with a clear croak when missing. Listed here
+              # so toolchains that honor `recommends` install them
+              # automatically; base parser users do not pay the
+              # dep cost.
+              'JSON::PP'    => 0,
+              'Time::Piece' => 0,
+              'HTTP::Tiny'  => 0,
+
+              'JSON'               => 0,
+              'JSON::XS'           => 0,
+              'DateTimeX::TO_JSON' => 0,
+            },
+          },
+        },
+        provides  => _get_provides(),
+        resources => {
+          bugtracker => {web => 'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'},
           homepage   => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
+          license    => ['http://dev.perl.org/licenses/'],
           repository => {
             type => 'git',
             url  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2.git',
             web  => 'https://github.com/peczenyj/GDPR-IAB-TCFv2',
           },
           x_security_policy => 'https://github.com/peczenyj/GDPR-IAB-TCFv2/blob/devel/SECURITY.md',
-          bugtracker        => {web => 'https://github.com/peczenyj/GDPR-IAB-TCFv2/issues'},
-        },
-        recommends => {
-
-          # CMPValidator opt-in feature: lazy-required at first
-          # use, with a clear croak when missing. Listed here
-          # so toolchains that honor `recommends` install them
-          # automatically; base parser users do not pay the
-          # dep cost.
-          'JSON::PP'    => 0,
-          'Time::Piece' => 0,
-          'HTTP::Tiny'  => 0,
-
-          'JSON'               => 0,
-          'JSON::XS'           => 0,
-          'DateTimeX::TO_JSON' => 0,
         },
         x_authority => 'cpan:PACMAN',
       }
