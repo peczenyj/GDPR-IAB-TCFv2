@@ -914,7 +914,7 @@ GDPR::IAB::TCFv2 - TCF v2.3 (Transparency & Consent String) parser
 
 =head1 PROJECT STATUS
 
-C<GDPR::IAB::TCFv2> entered B<maintenance mode> on 2026-05-08 with the
+C<GDPR::IAB::TCFv2> entered B<maintenance mode> on 2026-05-09 with the
 v0.400 release. The core parser, validator, and CMP-validator surfaces
 are considered feature-complete for the IAB TCF v2.3 specification.
 

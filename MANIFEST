@@ -1,6 +1,7 @@
 bench/performance.pl
 bin/iabtcfv2
 CHANGELOG.md
+CITATION.cff
 CODE_OF_CONDUCT.md
 CONTRIBUTING.pod
 lib/GDPR/IAB/TCFv2.pm
