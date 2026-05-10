@@ -325,4 +325,54 @@ subtest "Validator validate_all accumulates across rule families" => sub {
       'flexible P6 with default consent reports as a consent failure';
 };
 
+subtest "from_gvl_vendor_entry maps GVL JSON to constructor args" => sub {
+    my $entry = {
+        id               => 284,
+        name             => 'Weborama',    # ignored
+        purposes         => [ 1, 3, 4, 5, 6 ],
+        legIntPurposes   => [ 2, 7, 8, 9, 10, 11 ],
+        flexiblePurposes => [ 2, 7, 8, 9, 10, 11 ],
+    };
+
+    my %args = GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry($entry);
+
+    is $args{vendor_id}, 284, 'vendor_id maps from id';
+    is_deeply $args{consent_purpose_ids},
+      [ 1, 3, 4, 5, 6 ],
+      'consent_purpose_ids maps from purposes';
+    is_deeply $args{legitimate_interest_purpose_ids},
+      [ 2, 7, 8, 9, 10, 11 ],
+      'legitimate_interest_purpose_ids maps from legIntPurposes';
+    is_deeply $args{flexible_purpose_ids},
+      [ 2, 7, 8, 9, 10, 11 ],
+      'flexible_purpose_ids maps from flexiblePurposes';
+
+    # Returned args splat into the constructor cleanly, mixed with extras.
+    my $v = GDPR::IAB::TCFv2::Validator->new( %args, strict => 1 );
+    isa_ok $v, 'GDPR::IAB::TCFv2::Validator';
+
+    # Croak on missing id
+    throws_ok {
+        GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry(
+            {   purposes         => [],
+                legIntPurposes   => [],
+                flexiblePurposes => [],
+            }
+        );
+    }
+    qr/from_gvl_vendor_entry: missing 'id'/,
+      'croaks on a vendor entry missing the id field';
+
+    # Missing list fields default to empty arrayrefs (a vendor with no
+    # legIntPurposes is valid in the GVL schema).
+    my %sparse =
+      GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry( { id => 1 } );
+    is_deeply $sparse{consent_purpose_ids}, [],
+      'missing purposes defaults to empty arrayref';
+    is_deeply $sparse{legitimate_interest_purpose_ids}, [],
+      'missing legIntPurposes defaults to empty arrayref';
+    is_deeply $sparse{flexible_purpose_ids}, [],
+      'missing flexiblePurposes defaults to empty arrayref';
+};
+
 done_testing;

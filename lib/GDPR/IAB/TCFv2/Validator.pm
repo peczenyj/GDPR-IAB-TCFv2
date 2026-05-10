@@ -51,6 +51,20 @@ sub _check_coherence {
     return;
 }
 
+sub from_gvl_vendor_entry {
+    my ($entry) = @_;
+
+    croak "from_gvl_vendor_entry: missing 'id' in vendor entry"
+      unless defined $entry->{id};
+
+    return (
+        vendor_id                       => $entry->{id},
+        consent_purpose_ids             => $entry->{purposes}         || [],
+        legitimate_interest_purpose_ids => $entry->{legIntPurposes}   || [],
+        flexible_purpose_ids            => $entry->{flexiblePurposes} || [],
+    );
+}
+
 sub validate {
     my ( $self, $input, %overrides ) = @_;
 
