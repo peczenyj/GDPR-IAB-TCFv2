@@ -369,7 +369,7 @@ sub _validate_string {
     my ( $str, $state, $o, $j, $validator ) = @_;
 
     my $result = eval {
-        $o->{all}
+            $o->{all}
           ? $validator->validate_all($str)
           : $validator->validate($str);
     };
@@ -466,7 +466,7 @@ sub _emit_validate {
             else {
                 $line = join "\n",
                   "FAIL   $tc vendor $vid:",
-                  map { "  - $_" } @reasons;
+                  map {"  - $_"} @reasons;
             }
         }
         print "$line\n";
