@@ -66,6 +66,16 @@ if (@missing) {
         . "Add `our \$VERSION = \"$current_version\";` to each before bumping.\n";
 }
 
+my @unwritable;
+for my $pm (@pms) {
+    push @unwritable, $pm unless -w $pm;
+}
+if (@unwritable) {
+    die "bump-version: the following files are not writable:\n"
+        . join('', map { "  $_\n" } @unwritable)
+        . "Fix permissions before bumping.\n";
+}
+
 print "Bumping " . scalar(@pms) . " files: $current_version -> $new_version\n";
 for my $pm (@pms) {
     rewrite_version($pm, $new_version);

@@ -246,17 +246,18 @@ B<vanilla git:>
 
 =item 3. Bump the version in both files
 
-    $EDITOR lib/GDPR/IAB/TCFv2.pm
-    # Edit:  our $VERSION = "0.360";
+    tools/bump-version 0.360         # rewrites $VERSION across lib/**.pm
 
     $EDITOR CITATION.cff
     # Edit:
     #   version: "0.360"
     #   date-released: "YYYY-MM-DD"     # the actual tag/release date
 
-F<Makefile.PL> reads C<$VERSION> from the C<.pm> via C<VERSION_FROM>;
-F<CITATION.cff> is the only other file that has to be hand-bumped, and
-both its C<version> and C<date-released> fields must be updated together.
+See L</Bumping the version> above for what the helper does and the
+sanity checks it enforces. F<Makefile.PL> reads C<$VERSION> from the
+C<.pm> via C<VERSION_FROM>; F<CITATION.cff> is the only other file
+that has to be hand-bumped, and both its C<version> and
+C<date-released> fields must be updated together.
 
 =item 4. Regenerate the changelog
 
