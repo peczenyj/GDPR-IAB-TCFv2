@@ -355,6 +355,45 @@ Identical to L</validate> but runs B<every> rule and accumulates all
 failures into the result. Use when you want a complete error report
 rather than the first failure.
 
+=head1 FUNCTIONS
+
+=head2 from_gvl_vendor_entry
+
+    my %args = GDPR::IAB::TCFv2::Validator::from_gvl_vendor_entry($vendor_entry);
+    my $validator = GDPR::IAB::TCFv2::Validator->new( %args, strict => 1 );
+
+Maps a parsed IAB Global Vendor List vendor-entry hashref to the constructor
+arguments L</new> expects. Field aliases:
+
+=over 4
+
+=item *
+
+C<id> ⟶ C<vendor_id>
+
+=item *
+
+C<purposes> ⟶ C<consent_purpose_ids>
+
+=item *
+
+C<legIntPurposes> ⟶ C<legitimate_interest_purpose_ids>
+
+=item *
+
+C<flexiblePurposes> ⟶ C<flexible_purpose_ids>
+
+=back
+
+Returns a list (key-value pairs), so callers can splat into the constructor
+alongside additional keys like C<strict> and C<check_disclosed_vendors>.
+Other fields on the vendor entry (C<name>, C<policyUrl>, etc.) are ignored —
+they aren't relevant to validation.
+
+C<croak>s only when C<id> is missing. Missing list fields default to empty
+arrayrefs, since the GVL schema permits a vendor to declare no
+legitimate-interest or flexible purposes.
+
 =head1 SEE ALSO
 
 L<GDPR::IAB::TCFv2::Validator::Result> for the result-object API,
