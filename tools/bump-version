@@ -1,0 +1,120 @@
+#!/usr/bin/env perl
+# tools/bump-version — release helper for GDPR-IAB-TCFv2
+#
+# Rewrites every `our $VERSION = "..."` declaration under lib/ to
+# the version passed on the command line. Refuses to run if the
+# new version is not strictly greater than the current dist version
+# (PAUSE-style sanity check) or if any .pm under lib/ is missing
+# the `$VERSION` line entirely (means the file drifted out of sync;
+# author should investigate before bumping).
+#
+# Usage:
+#     tools/bump-version 0.402
+#
+# Does NOT touch CHANGELOG, run git-cliff, commit, tag, or push.
+# Those steps remain manual per CONTRIBUTING.pod.
+
+use strict;
+use warnings;
+use File::Find ();
+use version    ();
+
+my $new_version = shift @ARGV;
+die usage() unless defined $new_version && length $new_version;
+
+# Validate the argument parses as a version object.
+my $new_v = eval { version->parse($new_version) };
+die "bump-version: '$new_version' is not a valid version string\n"
+    if !defined $new_v || $@;
+
+# Read current dist version from the canonical source.
+my $dist_pm = 'lib/GDPR/IAB/TCFv2.pm';
+die "bump-version: cannot find $dist_pm (run from the repo root)\n"
+    unless -f $dist_pm;
+
+my $current_version = read_version($dist_pm);
+die "bump-version: $dist_pm has no \$VERSION declaration\n"
+    unless defined $current_version;
+
+my $cur_v = version->parse($current_version);
+die "bump-version: refusing to downgrade ($current_version -> $new_version)\n"
+    if $new_v <= $cur_v;
+
+# Collect every .pm under lib/, verify each declares $VERSION.
+my @pms;
+File::Find::find(
+    {
+        wanted => sub {
+            return unless /\.pm\z/;
+            return if /\.bak\z/;
+            push @pms, $File::Find::name;
+        },
+        no_chdir => 1,
+    },
+    'lib',
+);
+
+@pms = sort @pms;
+
+my @missing;
+for my $pm (@pms) {
+    push @missing, $pm unless defined read_version($pm);
+}
+if (@missing) {
+    die "bump-version: the following files have no \$VERSION line:\n"
+        . join('', map { "  $_\n" } @missing)
+        . "Add `our \$VERSION = \"$current_version\";` to each before bumping.\n";
+}
+
+print "Bumping " . scalar(@pms) . " files: $current_version -> $new_version\n";
+for my $pm (@pms) {
+    rewrite_version($pm, $new_version);
+    print "  $pm\n";
+}
+print "Done. Run `git diff` to review, then `prove -lr xt` to confirm.\n";
+
+exit 0;
+
+sub read_version {
+    my $file = shift;
+    open my $fh, '<', $file or die "open $file: $!\n";
+    while (my $line = <$fh>) {
+        if ($line =~ /^\s*our\s+\$VERSION\s*=\s*(["'])([^"']+)\1\s*;/) {
+            close $fh;
+            return $2;
+        }
+    }
+    close $fh;
+    return undef;
+}
+
+sub rewrite_version {
+    my ($file, $version) = @_;
+    open my $in, '<', $file or die "open $file: $!\n";
+    my @lines = <$in>;
+    close $in;
+
+    my $changed = 0;
+    for my $line (@lines) {
+        if ($line =~ s/^(\s*our\s+\$VERSION\s*=\s*)(["'])[^"']+\2(\s*;)/$1"$version"$3/) {
+            $changed++;
+        }
+    }
+    die "bump-version: failed to rewrite \$VERSION in $file\n" unless $changed;
+
+    open my $out, '>', $file or die "open >$file: $!\n";
+    print {$out} @lines;
+    close $out;
+}
+
+sub usage {
+    return <<'EOF';
+Usage: tools/bump-version <new-version>
+
+Rewrites `our $VERSION = "..."` in every lib/**/*.pm to <new-version>.
+Refuses to downgrade. Refuses to run if any file is missing $VERSION.
+
+Example:
+    tools/bump-version 0.402
+EOF
+}

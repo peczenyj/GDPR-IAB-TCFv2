@@ -50,6 +50,14 @@ REGEN_CORPUS=1 prove -lv t/07-golden.t
 
 The corpus lives at `t/corpus/golden.jsonl`; the generator is `t/generate_golden.pl` and reads input strings from `t/corpus/gdpr_subset.txt`.
 
+Bump the dist version with the helper instead of hand-editing every `.pm`:
+
+```sh
+tools/bump-version 0.402     # rewrites `our $VERSION = "..."` across lib/**.pm
+```
+
+The script refuses to downgrade and refuses to run if any `.pm` is missing `$VERSION`.
+
 ## Release flow
 
 Documented in `CONTRIBUTING.pod`. Summary: bump `$VERSION` in `lib/GDPR/IAB/TCFv2.pm`, run `git cliff -o CHANGELOG.md` (config in `cliff.toml` — uses Conventional Commits), regenerate `README.md` from POD with `pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`. 
