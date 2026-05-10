@@ -12,6 +12,8 @@ use base qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
 
+our $VERSION = "0.401";
+
 our $CAN_PACK_QUADS;
 our $CAN_FORCE_BIG_ENDIAN;
 

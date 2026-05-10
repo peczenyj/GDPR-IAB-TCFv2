@@ -5,6 +5,8 @@ use warnings;
 require Exporter;
 use base qw<Exporter>;
 
+our $VERSION = "0.401";
+
 use constant {
 
   # Short, established names -- supported indefinitely.  Used by examples
