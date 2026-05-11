@@ -232,6 +232,76 @@ Update CLI to catch objects and simplify its sanitization logic.
 
 =back
 
+=head2 Phase 2 follow-up -- couple Validator C<strict_legal_basis> to strict parse + vendor prefetch
+
+When C<GDPR::IAB::TCFv2::Validator> is invoked with C<strict_legal_basis>
+and given a raw C<$tc_string>, its internal call to
+C<< GDPR::IAB::TCFv2->Parse >> should pass
+C<< strict => 1, prefetch => $vendor_id >> rather than parsing in
+default (non-strict) mode without prefetch.
+
+Two coupled motivations:
+
+=over 4
+
+=item *
+
+B<Correctness.> C<strict_legal_basis> already asserts the stricter spec
+semantics; pairing it with the parser's C<strict> mode rejects
+malformed or wrong-version TC strings up front instead of letting them
+slip into the legal-basis check. Without strict parse, a v1 string --
+or a v2.3 string missing the Disclosed Vendors segment -- can reach
+the validator and produce a misleading verdict.
+
+=item *
+
+B<Performance.> C<strict_legal_basis> always checks a specific vendor's
+permissions across multiple purposes. For range-encoded TC strings,
+repeated C<vendor_consent> / C<vendor_legitimate_interest> calls walk
+the range list O(N) each. Passing C<< prefetch => $vendor_id >> to
+C<Parse> pre-walks the ranges once and caches answers (see
+F<lib/GDPR/IAB/TCFv2.pm> C<Parse()> and F<lib/GDPR/IAB/TCFv2/RangeSection.pm>).
+
+=back
+
+Scope:
+
+=over 4
+
+=item *
+
+In C<validate> / C<validate_all>, when the input is a raw
+C<$tc_string> and the effective C<strict_legal_basis> is true, build
+the parsed object with C<< strict => 1, prefetch => $vendor_id >>.
+Today the call site is unconditional:
+C<< GDPR::IAB::TCFv2->Parse($input) >> (see
+F<lib/GDPR/IAB/TCFv2/Validator.pm>, around line 99).
+
+=item *
+
+When C<validate> / C<validate_all> receives a pre-parsed
+C<GDPR::IAB::TCFv2> object, the strict/prefetch decision was already
+made by the caller; the validator cannot retro-apply it. Document this
+in the POD for C<strict_legal_basis> and consider warning (or croaking
+under a future opt-in flag) if the parsed object was built without
+strict / prefetch state.
+
+=item *
+
+Tests: extend F<t/06-validator.t> with a regression covering a
+non-strict-rejected TC string (e.g. a C<version != 2> fixture) passed
+with C<strict_legal_basis> true -- expect a parse-time croak, not a
+silent validation pass. Add a second subtest using a range-encoded
+fixture to confirm prefetch is honored.
+
+=item *
+
+Documentation: update the C<strict_legal_basis> POD entry in
+F<lib/GDPR/IAB/TCFv2/Validator.pm> to spell out the coupling, and note
+the caller-owned case for pre-parsed objects.
+
+=back
+
 =head2 Phase 6 follow-up -- CMPValidator structured failures (non-blocking)
 
 Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
