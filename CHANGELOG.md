@@ -1,3 +1,9 @@
+## [0.401] - 2026-05-11
+
+### Bug Fixes
+
+- Restore PAUSE indexation regressed by #72 (CMPValidator $VERSION) 
+
 ## [0.400] - 2026-05-09
 
 ### Bug Fixes
@@ -12,6 +18,8 @@
 
 ### Documentation
 
+- Retire TODO.md, sync remaining items into TODO.pod
+- Final v0.400 prep (POD fix + roadmap sync)
 - Add Phase 10 (Advanced Error Handling) to roadmap
 - Align POD and error messages with implementation 
 
@@ -23,6 +31,17 @@
 - *(validator)* Emit distinct ReasonPublisherRestriction* codes (Phase 6.4) 
 - *(validator)* Emit ReasonLegitimateInterestNotPermittedForPurpose for TCF carve-out (Phase 6.3) 
 - *(validator)* Structured Failure objects + Result accessors (Phase 6.2) 
+
+### Other
+
+- Merge branch 'release/0.400'
+- Try normalize email
+- Update changelog
+- Regenerate readme
+- Update changelog
+- Merge tag 'v0.391' into devel
+
+Tagged for release. v0.391
 
 ### Performance
 

@@ -5,6 +5,8 @@ use warnings;
 require Exporter;
 use base qw<Exporter>;
 
+our $VERSION = "0.401";
+
 use constant {
 
   # Successful validation: no failure to report.

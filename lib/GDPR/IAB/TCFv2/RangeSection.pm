@@ -7,6 +7,8 @@ use bytes;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
 use Carp                       qw<croak>;
 
+our $VERSION = "0.401";
+
 sub Parse {
   my ($klass, %args) = @_;
 
