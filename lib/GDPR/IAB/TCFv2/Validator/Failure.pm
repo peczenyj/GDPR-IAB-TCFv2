@@ -7,6 +7,8 @@ use overload
   '""'     => sub { $_[0]->{message} },
   fallback => 1;
 
+our $VERSION = "0.401";
+
 sub new {
   my ($klass, %args) = @_;
 

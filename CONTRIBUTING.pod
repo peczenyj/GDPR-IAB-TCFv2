@@ -182,6 +182,45 @@ in steps of 10 for normal releases (e.g. C<0.350 → 0.360>) and by 1 for
 pure bug-fix follow-ups (e.g. C<0.350 → 0.351>). The git tag prepends
 C<v> (e.g. C<v0.360>); the C<$VERSION> string in the F<.pm> does not.
 
+=head2 Bumping the version
+
+Use the F<tools/bump-version> helper rather than hand-editing the
+fifteen C<our $VERSION = "..."> declarations under F<lib/>. Pass the
+new version as the only argument:
+
+    tools/bump-version 0.402
+
+The script:
+
+=over 4
+
+=item *
+
+Reads the current dist version from F<lib/GDPR/IAB/TCFv2.pm> and
+refuses to run if the new version is not strictly greater (the same
+sanity check PAUSE itself enforces against version regressions).
+
+=item *
+
+Rewrites C<our $VERSION = "..."> in every F<lib/**/*.pm> file in
+place.
+
+=item *
+
+Refuses to run if any F<.pm> under F<lib/> is missing the
+C<$VERSION> declaration entirely. That signals either a new module
+that was added without seeding C<$VERSION>, or a drift caused by
+hand-editing. Investigate and reconcile before bumping.
+
+=back
+
+The script does B<not> touch F<CHANGELOG.md>, run C<git cliff>,
+amend git, or push. Those remain manual steps in the
+L</Step-by-step release> flow below.
+
+After running the bumper, run C<prove -lr xt> to confirm
+F<xt/version.t> stays green.
+
 =head2 Step-by-step release
 
 =over 4
@@ -207,17 +246,18 @@ B<vanilla git:>
 
 =item 3. Bump the version in both files
 
-    $EDITOR lib/GDPR/IAB/TCFv2.pm
-    # Edit:  our $VERSION = "0.360";
+    tools/bump-version 0.360         # rewrites $VERSION across lib/**.pm
 
     $EDITOR CITATION.cff
     # Edit:
     #   version: "0.360"
     #   date-released: "YYYY-MM-DD"     # the actual tag/release date
 
-F<Makefile.PL> reads C<$VERSION> from the C<.pm> via C<VERSION_FROM>;
-F<CITATION.cff> is the only other file that has to be hand-bumped, and
-both its C<version> and C<date-released> fields must be updated together.
+See L</Bumping the version> above for what the helper does and the
+sanity checks it enforces. F<Makefile.PL> reads C<$VERSION> from the
+C<.pm> via C<VERSION_FROM>; F<CITATION.cff> is the only other file
+that has to be hand-bumped, and both its C<version> and
+C<date-released> fields must be updated together.
 
 =item 4. Regenerate the changelog
 

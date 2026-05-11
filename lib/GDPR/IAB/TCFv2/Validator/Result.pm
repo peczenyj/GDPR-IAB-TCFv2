@@ -14,6 +14,8 @@ use overload
   return join($sep, map { $_->message } @{$self->{failures} || []});
   };
 
+our $VERSION = "0.401";
+
 sub new {
   my ($klass, %args) = @_;
 
