@@ -97,6 +97,7 @@ GitHub.
 
 Bridge the IAB Global Vendor List schema to the Phase 2 validator so
 callers do not have to translate vendor entries by hand.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/77>
 
 Scope:
 
@@ -143,6 +144,7 @@ issue.
 Extend the validator beyond standard purposes to cover the rest of the
 TCF taxonomy. Should consume the C<REASON_*> codes introduced in
 Phase 6.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/78>
 
 Scope:
 
@@ -180,6 +182,7 @@ F<t/10-cli-iabtcfv2.t> with CLI subtests.
 
 Reduce CLI boilerplate by letting common flags come from the
 environment or a config file.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/79>
 
 Scope:
 
@@ -215,6 +218,7 @@ invocation.
 =head2 Phase 10 -- Advanced Error Handling
 
 Modernize exception handling across the library.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/104>
 
 Scope:
 
@@ -244,6 +248,7 @@ Update CLI to catch objects and simplify its sanitization logic.
 Make CMP list and GVL freshness configurable, symmetric, and
 opt-in-strict, and add a hot-reload capability to C<CMPValidator> so
 long-running services can refresh their snapshot without restarting.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/114>
 
 Background:
 
@@ -406,6 +411,7 @@ and given a raw C<$tc_string>, its internal call to
 C<< GDPR::IAB::TCFv2->Parse >> should pass
 C<< strict => 1, prefetch => $vendor_id >> rather than parsing in
 default (non-strict) mode without prefetch.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/122>
 
 Two coupled motivations:
 
@@ -476,6 +482,7 @@ Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
 validator already uses. Today CMP-level failures are stringly-typed
 croaks; this item brings them onto C<Validator::Failure> with stable
 machine-readable codes.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/112>
 
 Scope:
 
@@ -522,6 +529,7 @@ C<.deb> and a C<.rpm> from the released tarball and uploads both as
 assets on the corresponding GitHub Release. Both packages are pure
 Perl (noarch / C<all>), so a single Linux runner per format is
 enough; no build matrix, no cross-arch concerns.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/81>
 
 Suggested toolchain:
 
@@ -557,6 +565,7 @@ or C<dnf install ./perl-GDPR-IAB-TCFv2-VERSION-1.noarch.rpm>.
 Stand up a self-hosted Homebrew tap repository
 (C<peczenyj/homebrew-tap>) with a C<Formula/iabtcfv2.rb> formula that
 installs the CLI from the released CPAN tarball. Users opt in with:
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/88>
 
     brew tap peczenyj/tap
     brew install iabtcfv2
@@ -576,6 +585,7 @@ free.
 Author a C<snapcraft.yaml> that packages C<bin/iabtcfv2> and the Perl
 runtime, and publish to C<snapcraft.io> on every C<v*> tag. Users
 install with:
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/89>
 
     sudo snap install iabtcfv2
 
@@ -593,6 +603,7 @@ short -- C<makepkg> drives a C<perl Makefile.PL && make && make
 install> against the release tarball. Best handled by a community
 co-maintainer rather than this repo's CI; volunteer contributions
 welcome.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/90>
 
 =head1 ECOSYSTEM -- SISTER DISTRIBUTIONS
 
@@ -608,12 +619,14 @@ C<GDPR::IAB::TCFv2>'s own deps lean.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::LIVR>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/82>
 
 LIVR rule-engine binding for JSON-shaped TC payloads.
 
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::TypeTiny>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/83>
 
 Reusable Type::Tiny constraints (parameterized by purpose / vendor
 sets) for Moo, Moose, or pure-Perl callers that prefer type-level
@@ -622,6 +635,7 @@ enforcement.
 =item *
 
 L<Plack::Middleware::GDPR::TCFv2>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/84>
 
 Plack middleware that decodes a TC string from a request header or
 cookie, attaches the parsed C<GDPR::IAB::TCFv2> object to C<< $env >>,
@@ -636,6 +650,7 @@ and short-circuits the response when consent is missing or invalid.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::Moose>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/85>
 
 Moose attribute traits and role-based validation for projects that
 already use Moose end-to-end.
@@ -643,6 +658,7 @@ already use Moose end-to-end.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::FormValidator>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/86>
 
 C<Data::FormValidator> profile glue for legacy applications that drive
 business validation through DFV.
@@ -650,6 +666,7 @@ business validation through DFV.
 =item *
 
 L<GDPR::IAB::TCFv1>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/92>
 
 A standalone parser for the legacy IAB TCF v1 / v1.1 consent string
 format (April 2018 -- August 2020, superseded by TCF v2.0). The wire
