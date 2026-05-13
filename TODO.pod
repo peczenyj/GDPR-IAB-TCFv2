@@ -364,6 +364,38 @@ loading API is finalized.
 
 =back
 
+=head2 Phase 12 -- Modernization
+
+Once all previous functional phases are complete, the library will transition 
+to a modern Perl baseline, dropping support for legacy Perl versions and 
+adopting industry-standard dependencies.
+
+Scope:
+
+=over 4
+
+=item *
+
+B<Phase 12.1 -- Perl 5.36 Baseline.>
+Update C<MIN_PERL_VERSION> to 5.036. Adopt C<use v5.36;> everywhere, 
+enabling subroutine signatures and native booleans. Remove 32-bit/Math::BigInt 
+fallbacks and manual bit-manipulation hacks that target ancient Perls.
+
+=item *
+
+B<Phase 12.2 -- Modern OO and Dependencies.>
+Replace C<bless>-based hashes with B<Moo> or B<Object::Pad>. Use 
+B<Types::Standard> for attribute validation. Adopt B<JSON::MaybeXS> for 
+transparent performance.
+
+=item *
+
+B<Phase 12.3 -- Dist::Zilla.>
+Migrate from C<ExtUtils::MakeMaker> to C<Dist::Zilla>. Automate versioning, 
+manifest management, and release workflows.
+
+=back
+
 =head2 Phase 2 follow-up -- couple Validator C<strict_legal_basis> to strict parse + vendor prefetch
 
 When C<GDPR::IAB::TCFv2::Validator> is invoked with C<strict_legal_basis>
