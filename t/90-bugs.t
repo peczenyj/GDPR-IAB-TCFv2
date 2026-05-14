@@ -16,7 +16,7 @@ subtest "BUG index out of bounds on offset, see: https://github.com/peczenyj/GDP
   }
   'should not throw exception';
 
-  isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+  isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
   done_testing;
 };

@@ -13,6 +13,8 @@ BEGIN {
   use_ok('GDPR::IAB::TCFv2::PublisherTC');
   use_ok('GDPR::IAB::TCFv2::RangeSection');
   use_ok('GDPR::IAB::TCFv2');
+  use_ok('GDPR::IAB::TCFv2::Parser');
+  use_ok('iabtcfv2');
 }
 
 require_ok('GDPR::IAB::TCFv2::Constants::Purpose');
@@ -25,6 +27,8 @@ require_ok('GDPR::IAB::TCFv2::PublisherRestrictions');
 require_ok('GDPR::IAB::TCFv2::PublisherTC');
 require_ok 'GDPR::IAB::TCFv2::RangeSection';
 require_ok 'GDPR::IAB::TCFv2';
+require_ok 'GDPR::IAB::TCFv2::Parser';
+require_ok 'iabtcfv2';
 
 subtest "check interfaces" => sub {
   isa_ok 'GDPR::IAB::TCFv2::BitUtils',                   'Exporter';
@@ -46,6 +50,27 @@ subtest "check interfaces" => sub {
     is_purpose_legitimate_interest_allowed
     is_custom_purpose_consent_allowed
     is_custom_purpose_legitimate_interest_allowed>;
+
+  done_testing;
+};
+
+subtest 'parser-split BC contract' => sub {
+  my $tc_string
+    = 'CLcVDxRMWfGmWAVAHCENAXCkAKDAADnAABRgA5mdfCKZuYJez-NQm0TBMYA4oCAAGQYIAAAAAAEAIAEgAA.argAC0gAAAAAAAAAAAA';
+
+  my $c = GDPR::IAB::TCFv2->Parse($tc_string);
+  is(ref($c), 'GDPR::IAB::TCFv2::Parser', 'hub Parse returns a GDPR::IAB::TCFv2::Parser instance');
+
+  isa_ok(GDPR::IAB::TCFv2::Parser->Parse($tc_string),
+    'GDPR::IAB::TCFv2::Parser', 'direct Parser->Parse returns a ::Parser instance');
+
+  done_testing;
+};
+
+subtest 'looksLikeIsConsentVersion2 placement' => sub {
+  ok(GDPR::IAB::TCFv2->can('looksLikeIsConsentVersion2'), 'hub exposes looksLikeIsConsentVersion2');
+  is(GDPR::IAB::TCFv2::Parser->can('looksLikeIsConsentVersion2'),
+    undef, 'Parser deliberately does not expose looksLikeIsConsentVersion2');
 
   done_testing;
 };

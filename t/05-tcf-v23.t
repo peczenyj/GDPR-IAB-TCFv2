@@ -94,8 +94,8 @@ subtest "MaxVendorId == 0 yields an empty vendor section" => sub {
 
   my $section;
   lives_ok {
-    $section
-      = $consent->_parse_vendor_bitfield_or_range($segment, GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},);
+    $section = $consent->_parse_vendor_bitfield_or_range($segment,
+      GDPR::IAB::TCFv2::Parser::SEGMENT_TYPES->{DISCLOSED_VENDORS},);
   }
   'max_id=0 segment parses without error';
 
@@ -116,7 +116,7 @@ subtest "Disclosed Vendors helper rejects mis-typed payload" => sub {
   my $bad = '010' . ('0' x 16) . '0';
 
   throws_ok {
-    $consent->_parse_vendor_bitfield_or_range($bad, GDPR::IAB::TCFv2::SEGMENT_TYPES->{DISCLOSED_VENDORS},);
+    $consent->_parse_vendor_bitfield_or_range($bad, GDPR::IAB::TCFv2::Parser::SEGMENT_TYPES->{DISCLOSED_VENDORS},);
   }
   qr/invalid segment type/, 'helper croaks when payload header does not match expected type';
 };

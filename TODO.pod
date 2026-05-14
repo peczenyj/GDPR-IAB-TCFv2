@@ -519,6 +519,40 @@ today (F<t/06-validator.t>:120) becomes "parse the TC string once,
 construct one Validator per vendor, pass the parsed object in" -- both
 documented examples and tests should change in lockstep.
 
+=head2 v0.510 follow-up -- C<< Validator->Validate >> class-method shortcut
+
+Additive (no BC concerns), tiny: ~5 LOC plus one test subtest.
+
+Add a class-method front door C<< Validator->Validate($tc_string, %opts) >>
+that is shorthand for C<< Validator->new(%opts)->validate($tc_string) >>.
+Mirrors the existing C<< GDPR::IAB::TCFv2::Parser->Parse($s, %opts) >>
+shape and prepares the symmetry that the v0.600 Parser/VendorConsent
+refactor will complete.
+
+Scope:
+
+=over 4
+
+=item *
+
+In F<lib/GDPR/IAB/TCFv2/Validator.pm>, add C<sub Validate> that
+detects class vs instance invocation, builds a transient C<$self>
+on class invocation, and calls C<< $self->validate($tc_string) >>.
+
+=item *
+
+Extend F<t/06-validator.t> with a subtest that exercises both
+C<< Validator->new(%opts)->validate($s) >> and
+C<< Validator->Validate($s, %opts) >> against the same fixture and
+asserts identical C<Validator::Result> output.
+
+=item *
+
+Update C<Validator.pm> POD to document both invocation forms and
+note they are equivalent.
+
+=back
+
 =head2 Phase 6 follow-up -- CMPValidator structured failures (non-blocking)
 
 Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
