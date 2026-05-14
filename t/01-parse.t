@@ -16,7 +16,7 @@ subtest "bitfield" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->tc_string, $tc_string, 'should return the original tc string';
 
@@ -150,7 +150,7 @@ subtest "bitfield" => sub {
       }
       'should not throw exception';
 
-      isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+      isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
       is $consent->tc_string, $tc_string, 'should return the original tc string';
 
@@ -198,7 +198,7 @@ subtest "bitfield" => sub {
       }
       'should not throw exception';
 
-      isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+      isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
       is $consent->tc_string, $tc_string, 'should return the original tc string';
 
@@ -268,7 +268,7 @@ subtest "range" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->tc_string, $tc_string, 'should return the original tc string';
 
@@ -382,7 +382,7 @@ subtest "range" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->tc_string, $tc_string, 'should return the original tc string';
 
@@ -431,7 +431,7 @@ subtest "check publisher restriction" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->version, 2, 'should return version 2';
 
@@ -471,7 +471,7 @@ subtest "check publisher restriction" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->version, 2, 'should return version 2';
 
@@ -515,7 +515,7 @@ subtest "check publisher restriction" => sub {
     }
     'should not throw exception';
 
-    isa_ok $consent, 'GDPR::IAB::TCFv2', 'gdpr iab tcf v2 consent';
+    isa_ok $consent, 'GDPR::IAB::TCFv2::Parser', 'gdpr iab tcf v2 consent';
 
     is $consent->version, 2, 'should return version 2';
 

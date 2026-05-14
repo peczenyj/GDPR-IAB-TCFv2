@@ -97,6 +97,7 @@ GitHub.
 
 Bridge the IAB Global Vendor List schema to the Phase 2 validator so
 callers do not have to translate vendor entries by hand.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/77>
 
 Scope:
 
@@ -129,6 +130,13 @@ Tests: golden GVL fixture covering vendors with and without flexible
 purposes; round-trip C<from_gvl_vendor_entry> against a hand-crafted
 entry.
 
+=item *
+
+Freshness contract: the GVL loader must accept the C<max_age_days> /
+C<on_stale> knobs defined in L</Phase 11 -- Registry freshness policy
+and CMP-list hot-reload>. Coordinate the default value with that
+issue.
+
 =back
 
 =head2 Phase 8 -- Features, Special Features, Special Purposes
@@ -136,6 +144,7 @@ entry.
 Extend the validator beyond standard purposes to cover the rest of the
 TCF taxonomy. Should consume the C<REASON_*> codes introduced in
 Phase 6.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/78>
 
 Scope:
 
@@ -173,6 +182,7 @@ F<t/10-cli-iabtcfv2.t> with CLI subtests.
 
 Reduce CLI boilerplate by letting common flags come from the
 environment or a config file.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/79>
 
 Scope:
 
@@ -208,6 +218,7 @@ invocation.
 =head2 Phase 10 -- Advanced Error Handling
 
 Modernize exception handling across the library.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/104>
 
 Scope:
 
@@ -232,6 +243,316 @@ Update CLI to catch objects and simplify its sanitization logic.
 
 =back
 
+=head2 Phase 11 -- Registry freshness policy and CMP-list hot-reload
+
+Make CMP list and GVL freshness configurable, symmetric, and
+opt-in-strict, and add a hot-reload capability to C<CMPValidator> so
+long-running services can refresh their snapshot without restarting.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/114>
+
+Background:
+
+C<CMPValidator> currently emits a hardcoded C<carp> when its snapshot
+is older than 28 days (see C<_check_age>). The threshold is not
+configurable, there is no escalation to C<croak>, and the GVL pipeline
+introduced in Phase 7 has no equivalent freshness contract. This Phase
+makes the policy a first-class API surface on both registries.
+
+Scope:
+
+=over 4
+
+=item *
+
+Add C<max_age_days> and C<on_stale> constructor arguments to
+C<CMPValidator>. C<on_stale> accepts C<'warn'> (current behavior,
+default), C<'croak'>, or C<'ignore'>. Defaults match v0.400 exactly:
+C<max_age_days =E<gt> 28>, C<on_stale =E<gt> 'warn'>. Configurability
+is the new feature; no v0.400 user sees a behavior change.
+
+=item *
+
+Add the same two arguments to whatever entry point Phase 7 introduces
+for GVL loading (e.g. C<from_gvl_file>, C<from_gvl_url>). Defaults
+should likewise be conservative -- B<TBD> per Phase 7's eventual
+shape; the issue records the contract that GVL must honor an
+identically-named knob even if the default value differs.
+
+=item *
+
+Freshness clock measures the C<lastUpdated> field inside the JSON
+payload. Filesystem mtime is intentionally not consulted (it lies
+across C<cp -p>, container rebuilds, and image bakes; the IAB
+C<lastUpdated> field is the canonical contract).
+
+=item *
+
+Hot-reload (B<bonus, CMP only>):
+
+=over 4
+
+=item *
+
+C<$cmp_validator-E<gt>reload()> -- explicit, caller-driven,
+parameterless. Reuses the source(s) the validator was constructed
+with.
+
+=item *
+
+C<reload_on_stale =E<gt> 1> -- when set and C<network_ok =E<gt> 1>,
+C<_check_age> auto-triggers C<reload()> instead of just
+C<carp>/C<croak>ing. Off by default.
+
+=item *
+
+B<No background/timer-based refresh.> Perl is single-threaded and
+this distribution will not introduce scheduling primitives.
+
+=item *
+
+Source fallback: the constructor accepts C<url> + C<file>
+simultaneously (today they are mutually exclusive). When both are
+present, C<reload()> tries C<url> first, falls back to C<file> on
+network failure. This is also the behavior at first construction
+when both are passed.
+
+=back
+
+=item *
+
+Tests: F<t/14-cmp-validator.t> grows subtests for each
+C<on_stale> branch, for the URL-then-file fallback, for
+C<reload()> against a stub HTTP client, and for the
+C<reload_on_stale> integration. A new test file covers GVL
+freshness once Phase 7 lands.
+
+=item *
+
+Documentation: update C<CMPValidator> POD to describe the knobs and
+the C<lastUpdated> contract; document that the existing 28-day
+default is preserved.
+
+=back
+
+CLI surface (env vars / flags) is deliberately B<out of scope> for
+Phase 11 and tracked under L</Phase 9 -- CLI Configuration Loading>.
+Phase 9 will pick up C<IABTCFV2_CMP_LIST_MAX_AGE> /
+C<IABTCFV2_CMP_LIST_ON_STALE> (and GVL counterparts) once Phase 11
+lands.
+
+Open questions (TBD, deferred to whoever picks the work up):
+
+=over 4
+
+=item *
+
+Exact behavior of C<reload()> on failure: croak vs return false vs
+return previous-state-with-warning?
+
+=item *
+
+Loop-prevention semantics for C<reload_on_stale> if upstream is
+persistently unreachable -- minimum back-off interval, max retry
+count, or stateless "try once per validation"?
+
+=item *
+
+Whether C<reload_on_stale> should be a no-op (rather than croak)
+when no C<url> was configured -- file-only setups can never auto-
+reload from the network.
+
+=item *
+
+GVL-side default for C<max_age_days>: GVL updates more frequently
+than the CMP list, so 28 days may be too lax. Pin once Phase 7's
+loading API is finalized.
+
+=back
+
+=head2 Phase 12 -- Modernization
+
+Once all previous functional phases are complete, the library will transition 
+to a modern Perl baseline, dropping support for legacy Perl versions and 
+adopting industry-standard dependencies.
+
+Scope:
+
+=over 4
+
+=item *
+
+B<Phase 12.1 -- Perl 5.36 Baseline.>
+Update C<MIN_PERL_VERSION> to 5.036. Adopt C<use v5.36;> everywhere, 
+enabling subroutine signatures and native booleans. Remove 32-bit/Math::BigInt 
+fallbacks and manual bit-manipulation hacks that target ancient Perls.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/124>
+
+=item *
+
+B<Phase 12.2 -- Modern OO and Dependencies.>
+Replace C<bless>-based hashes with B<Moo> or B<Object::Pad>. Use 
+B<Types::Standard> for attribute validation. Adopt B<JSON::MaybeXS> for 
+transparent performance.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/125>
+
+=item *
+
+B<Phase 12.3 -- Dist::Zilla.>
+Migrate from C<ExtUtils::MakeMaker> to C<Dist::Zilla>. Automate versioning, 
+manifest management, and release workflows.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/126>
+
+=back
+
+=head2 Phase 2 follow-up -- couple Validator C<strict_legal_basis> to strict parse + vendor prefetch, narrow per-call overrides to purpose lists
+
+When C<GDPR::IAB::TCFv2::Validator> is invoked with C<strict_legal_basis>
+and given a raw C<$tc_string>, its internal call to
+C<< GDPR::IAB::TCFv2->Parse >> should pass
+C<< strict => 1, prefetch => $vendor_id >> rather than parsing in
+default (non-strict) mode without prefetch.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/122>
+
+This coupling only works cleanly if C<vendor_id>, C<strict_legal_basis>,
+and C<cmp_validator> are B<fixed at construction> -- per-call overrides
+of those keys make the parse-time decision ambiguous (which vendor do
+you prefetch? which strictness do you parse under?), so this issue
+B<also narrows the C<validate> / C<validate_all> override surface to
+the three purpose-id lists> as a precondition.
+
+Three coupled motivations:
+
+=over 4
+
+=item *
+
+B<Correctness.> C<strict_legal_basis> already asserts the stricter spec
+semantics; pairing it with the parser's C<strict> mode rejects
+malformed or wrong-version TC strings up front instead of letting them
+slip into the legal-basis check. Without strict parse, a v1 string --
+or a v2.3 string missing the Disclosed Vendors segment -- can reach
+the validator and produce a misleading verdict.
+
+=item *
+
+B<Performance.> C<strict_legal_basis> always checks a specific vendor's
+permissions across multiple purposes. For range-encoded TC strings,
+repeated C<vendor_consent> / C<vendor_legitimate_interest> calls walk
+the range list O(N) each. Passing C<< prefetch => $vendor_id >> to
+C<Parse> pre-walks the ranges once and caches answers (see
+F<lib/GDPR/IAB/TCFv2.pm> C<Parse()> and F<lib/GDPR/IAB/TCFv2/RangeSection.pm>).
+
+=item *
+
+B<API coherence.> The current per-call override surface conflates
+"properties of the policy" (vendor identity, strictness, CMP rule,
+policy floor, disclosed-vendors check) with "properties of the check"
+(purpose lists). Allowing the former to vary per call defeats the
+strict+prefetch optimization (the prefetched vendor isn't the one
+being checked) and muddies the API contract.
+
+=back
+
+Scope:
+
+=over 4
+
+=item *
+
+B<Narrow C<validate> / C<validate_all> overrides to the three
+purpose-id lists> (C<consent_purpose_ids>,
+C<legitimate_interest_purpose_ids>, C<flexible_purpose_ids>). Drop
+per-call support for C<vendor_id>, C<strict_legal_basis>,
+C<verify_disclosed_vendors>, C<min_tcf_policy_version>, and
+C<cmp_validator> -- those become constructor-only. Unrecognized keys
+should C<croak> with an explicit message rather than silently no-op,
+so existing callers learn at upgrade time instead of silently losing
+their override.
+
+=item *
+
+In C<validate> / C<validate_all>, when the input is a raw
+C<$tc_string>, parse with
+C<< strict => $self->{strict_legal_basis} ? 1 : 0,
+prefetch => [ $self->{vendor_id} ] >>. Today the call site is
+unconditional:
+C<< GDPR::IAB::TCFv2->Parse($input) >> (see
+F<lib/GDPR/IAB/TCFv2/Validator.pm>, around line 99).
+
+=item *
+
+When C<validate> / C<validate_all> receives a pre-parsed
+C<GDPR::IAB::TCFv2> object, the strict/prefetch decision was already
+made by the caller; the validator cannot retro-apply it. Document the
+caller contract in the POD for both C<strict_legal_basis> and the
+C<$tc_string_or_object> argument, and treat the pre-parsed-object path
+as the documented escape hatch for the "parse once, validate many
+vendors" pattern.
+
+=item *
+
+Tests: extend F<t/06-validator.t> with (a) a regression covering a
+non-strict-rejected TC string (e.g. a C<version != 2> fixture) passed
+with C<strict_legal_basis> true -- expect a parse-time croak, not a
+silent validation pass; (b) a range-encoded fixture to confirm
+prefetch is honored; (c) a regression asserting that
+C<< validate($tc, vendor_id => $other) >> now C<croak>s, replacing the
+existing per-call C<vendor_id> tests (currently at lines 63, 74, 120).
+Same migration applies to the C<strict_legal_basis> per-call test
+(line 260) and the C<cmp_validator> per-call test in
+F<t/14-cmp-validator.t> (line 156).
+
+=item *
+
+Documentation: update the C<strict_legal_basis> POD entry in
+F<lib/GDPR/IAB/TCFv2/Validator.pm> to spell out the coupling, and
+update the C<validate> / C<validate_all> override list in the POD to
+reflect the narrowed surface. Add a short B<MIGRATING> section to the
+C<Changes>/release notes covering the breaking change.
+
+=back
+
+Backwards-compatibility note: this is a B<breaking change> to the
+C<validate> / C<validate_all> contract and ships under a major version
+bump. The "one Validator policy, many vendors" pattern documented
+today (F<t/06-validator.t>:120) becomes "parse the TC string once,
+construct one Validator per vendor, pass the parsed object in" -- both
+documented examples and tests should change in lockstep.
+
+=head2 v0.510 follow-up -- C<< Validator->Validate >> class-method shortcut
+
+Additive (no BC concerns), tiny: ~5 LOC plus one test subtest.
+
+Add a class-method front door C<< Validator->Validate($tc_string, %opts) >>
+that is shorthand for C<< Validator->new(%opts)->validate($tc_string) >>.
+Mirrors the existing C<< GDPR::IAB::TCFv2::Parser->Parse($s, %opts) >>
+shape and prepares the symmetry that the v0.600 Parser/VendorConsent
+refactor will complete.
+
+Scope:
+
+=over 4
+
+=item *
+
+In F<lib/GDPR/IAB/TCFv2/Validator.pm>, add C<sub Validate> that
+detects class vs instance invocation, builds a transient C<$self>
+on class invocation, and calls C<< $self->validate($tc_string) >>.
+
+=item *
+
+Extend F<t/06-validator.t> with a subtest that exercises both
+C<< Validator->new(%opts)->validate($s) >> and
+C<< Validator->Validate($s, %opts) >> against the same fixture and
+asserts identical C<Validator::Result> output.
+
+=item *
+
+Update C<Validator.pm> POD to document both invocation forms and
+note they are equivalent.
+
+=back
+
 =head2 Phase 6 follow-up -- CMPValidator structured failures (non-blocking)
 
 Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
@@ -239,6 +560,7 @@ Round out Phase 6 by migrating C<GDPR::IAB::TCFv2::CMPValidator>
 validator already uses. Today CMP-level failures are stringly-typed
 croaks; this item brings them onto C<Validator::Failure> with stable
 machine-readable codes.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/112>
 
 Scope:
 
@@ -285,6 +607,7 @@ C<.deb> and a C<.rpm> from the released tarball and uploads both as
 assets on the corresponding GitHub Release. Both packages are pure
 Perl (noarch / C<all>), so a single Linux runner per format is
 enough; no build matrix, no cross-arch concerns.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/81>
 
 Suggested toolchain:
 
@@ -320,6 +643,7 @@ or C<dnf install ./perl-GDPR-IAB-TCFv2-VERSION-1.noarch.rpm>.
 Stand up a self-hosted Homebrew tap repository
 (C<peczenyj/homebrew-tap>) with a C<Formula/iabtcfv2.rb> formula that
 installs the CLI from the released CPAN tarball. Users opt in with:
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/88>
 
     brew tap peczenyj/tap
     brew install iabtcfv2
@@ -339,6 +663,7 @@ free.
 Author a C<snapcraft.yaml> that packages C<bin/iabtcfv2> and the Perl
 runtime, and publish to C<snapcraft.io> on every C<v*> tag. Users
 install with:
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/89>
 
     sudo snap install iabtcfv2
 
@@ -356,6 +681,7 @@ short -- C<makepkg> drives a C<perl Makefile.PL && make && make
 install> against the release tarball. Best handled by a community
 co-maintainer rather than this repo's CI; volunteer contributions
 welcome.
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/90>
 
 =head1 ECOSYSTEM -- SISTER DISTRIBUTIONS
 
@@ -371,12 +697,14 @@ C<GDPR::IAB::TCFv2>'s own deps lean.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::LIVR>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/82>
 
 LIVR rule-engine binding for JSON-shaped TC payloads.
 
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::TypeTiny>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/83>
 
 Reusable Type::Tiny constraints (parameterized by purpose / vendor
 sets) for Moo, Moose, or pure-Perl callers that prefer type-level
@@ -385,6 +713,7 @@ enforcement.
 =item *
 
 L<Plack::Middleware::GDPR::TCFv2>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/84>
 
 Plack middleware that decodes a TC string from a request header or
 cookie, attaches the parsed C<GDPR::IAB::TCFv2> object to C<< $env >>,
@@ -399,6 +728,7 @@ and short-circuits the response when consent is missing or invalid.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::Moose>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/85>
 
 Moose attribute traits and role-based validation for projects that
 already use Moose end-to-end.
@@ -406,6 +736,7 @@ already use Moose end-to-end.
 =item *
 
 L<GDPR::IAB::TCFv2::Validator::FormValidator>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/86>
 
 C<Data::FormValidator> profile glue for legacy applications that drive
 business validation through DFV.
@@ -413,6 +744,7 @@ business validation through DFV.
 =item *
 
 L<GDPR::IAB::TCFv1>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/92>
 
 A standalone parser for the legacy IAB TCF v1 / v1.1 consent string
 format (April 2018 -- August 2020, superseded by TCF v2.0). The wire

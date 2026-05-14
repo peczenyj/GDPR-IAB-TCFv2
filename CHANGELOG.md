@@ -1,8 +1,49 @@
+## [0.500] - 2026-05-14
+
+### Documentation
+
+- *(roadmap)* Add Phase 12 Modernization roadmap 
+- *(todo)* Expand Phase 2 follow-up scope -- narrow validate() overrides 
+- *(roadmap)* Add Phase 11 -- registry freshness policy and CMP-list hot-reload 
+- *(todo)* Add Phase 2 follow-up for Validator strict_legal_basis coupling 
+
+### Features
+
+- *(parser)* Make is_v23 time-aware and support reference_time 
+
+### Other
+
+- Update changelog
+- Merge tag 'v0.401' into devel
+
+Tagged for release. v0.401
+
+### Refactor
+
+- Split parser into GDPR::IAB::TCFv2::Parser + add iabtcfv2 short-alias 
+
 ## [0.401] - 2026-05-11
 
 ### Bug Fixes
 
 - Restore PAUSE indexation regressed by #72 (CMPValidator $VERSION) 
+
+### Other
+
+- Merge branch 'release/0.401'
+-   v0.400 -- Phase 5 + Phase 6 (CMP validator + structured failure reporting)
+  Highlights:
+    * Phase 5: CMPValidator + iabtcfv2 CLI integration
+    * Phase 6 (6.1-6.5): structured Validator::Failure objects with
+      machine-readable Reason codes, per-call list overrides
+    * MIN_PERL_VERSION raised to 5.8.9; runtime now Perl 5.8 clean
+    * Performance: vec() + regex optimizations for bitfields
+    * CLI: short-help (-h) and informative unknown-subcommand errors
+    * CMPValidator JSON::PP and Time::Piece are now optional
+      (lazy-required, listed under META `recommends`)
+    * Bug fixes: trailing padding bits in PublisherRestrictions,
+      cleaner CLI error formatting
+  See CHANGELOG.md for the full list.
 
 ## [0.400] - 2026-05-09
 
