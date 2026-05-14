@@ -364,7 +364,7 @@ loading API is finalized.
 
 =back
 
-=head2 Phase 2 follow-up -- couple Validator C<strict_legal_basis> to strict parse + vendor prefetch
+=head2 Phase 2 follow-up -- couple Validator C<strict_legal_basis> to strict parse + vendor prefetch, narrow per-call overrides to purpose lists
 
 When C<GDPR::IAB::TCFv2::Validator> is invoked with C<strict_legal_basis>
 and given a raw C<$tc_string>, its internal call to
@@ -372,7 +372,14 @@ C<< GDPR::IAB::TCFv2->Parse >> should pass
 C<< strict => 1, prefetch => $vendor_id >> rather than parsing in
 default (non-strict) mode without prefetch.
 
-Two coupled motivations:
+This coupling only works cleanly if C<vendor_id>, C<strict_legal_basis>,
+and C<cmp_validator> are B<fixed at construction> -- per-call overrides
+of those keys make the parse-time decision ambiguous (which vendor do
+you prefetch? which strictness do you parse under?), so this issue
+B<also narrows the C<validate> / C<validate_all> override surface to
+the three purpose-id lists> as a precondition.
+
+Three coupled motivations:
 
 =over 4
 
@@ -394,6 +401,15 @@ the range list O(N) each. Passing C<< prefetch => $vendor_id >> to
 C<Parse> pre-walks the ranges once and caches answers (see
 F<lib/GDPR/IAB/TCFv2.pm> C<Parse()> and F<lib/GDPR/IAB/TCFv2/RangeSection.pm>).
 
+=item *
+
+B<API coherence.> The current per-call override surface conflates
+"properties of the policy" (vendor identity, strictness, CMP rule,
+policy floor, disclosed-vendors check) with "properties of the check"
+(purpose lists). Allowing the former to vary per call defeats the
+strict+prefetch optimization (the prefetched vendor isn't the one
+being checked) and muddies the API contract.
+
 =back
 
 Scope:
@@ -402,10 +418,23 @@ Scope:
 
 =item *
 
+B<Narrow C<validate> / C<validate_all> overrides to the three
+purpose-id lists> (C<consent_purpose_ids>,
+C<legitimate_interest_purpose_ids>, C<flexible_purpose_ids>). Drop
+per-call support for C<vendor_id>, C<strict_legal_basis>,
+C<verify_disclosed_vendors>, C<min_tcf_policy_version>, and
+C<cmp_validator> -- those become constructor-only. Unrecognized keys
+should C<croak> with an explicit message rather than silently no-op,
+so existing callers learn at upgrade time instead of silently losing
+their override.
+
+=item *
+
 In C<validate> / C<validate_all>, when the input is a raw
-C<$tc_string> and the effective C<strict_legal_basis> is true, build
-the parsed object with C<< strict => 1, prefetch => $vendor_id >>.
-Today the call site is unconditional:
+C<$tc_string>, parse with
+C<< strict => $self->{strict_legal_basis} ? 1 : 0,
+prefetch => [ $self->{vendor_id} ] >>. Today the call site is
+unconditional:
 C<< GDPR::IAB::TCFv2->Parse($input) >> (see
 F<lib/GDPR/IAB/TCFv2/Validator.pm>, around line 99).
 
@@ -413,26 +442,41 @@ F<lib/GDPR/IAB/TCFv2/Validator.pm>, around line 99).
 
 When C<validate> / C<validate_all> receives a pre-parsed
 C<GDPR::IAB::TCFv2> object, the strict/prefetch decision was already
-made by the caller; the validator cannot retro-apply it. Document this
-in the POD for C<strict_legal_basis> and consider warning (or croaking
-under a future opt-in flag) if the parsed object was built without
-strict / prefetch state.
+made by the caller; the validator cannot retro-apply it. Document the
+caller contract in the POD for both C<strict_legal_basis> and the
+C<$tc_string_or_object> argument, and treat the pre-parsed-object path
+as the documented escape hatch for the "parse once, validate many
+vendors" pattern.
 
 =item *
 
-Tests: extend F<t/06-validator.t> with a regression covering a
+Tests: extend F<t/06-validator.t> with (a) a regression covering a
 non-strict-rejected TC string (e.g. a C<version != 2> fixture) passed
 with C<strict_legal_basis> true -- expect a parse-time croak, not a
-silent validation pass. Add a second subtest using a range-encoded
-fixture to confirm prefetch is honored.
+silent validation pass; (b) a range-encoded fixture to confirm
+prefetch is honored; (c) a regression asserting that
+C<< validate($tc, vendor_id => $other) >> now C<croak>s, replacing the
+existing per-call C<vendor_id> tests (currently at lines 63, 74, 120).
+Same migration applies to the C<strict_legal_basis> per-call test
+(line 260) and the C<cmp_validator> per-call test in
+F<t/14-cmp-validator.t> (line 156).
 
 =item *
 
 Documentation: update the C<strict_legal_basis> POD entry in
-F<lib/GDPR/IAB/TCFv2/Validator.pm> to spell out the coupling, and note
-the caller-owned case for pre-parsed objects.
+F<lib/GDPR/IAB/TCFv2/Validator.pm> to spell out the coupling, and
+update the C<validate> / C<validate_all> override list in the POD to
+reflect the narrowed surface. Add a short B<MIGRATING> section to the
+C<Changes>/release notes covering the breaking change.
 
 =back
+
+Backwards-compatibility note: this is a B<breaking change> to the
+C<validate> / C<validate_all> contract and ships under a major version
+bump. The "one Validator policy, many vendors" pattern documented
+today (F<t/06-validator.t>:120) becomes "parse the TC string once,
+construct one Validator per vendor, pass the parsed object in" -- both
+documented examples and tests should change in lockstep.
 
 =head2 Phase 6 follow-up -- CMPValidator structured failures (non-blocking)
 
