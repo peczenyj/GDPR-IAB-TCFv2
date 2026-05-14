@@ -67,7 +67,7 @@ sub Parse {
 
   my $strict = !!$opts{strict};
 
-  my %options = (json => $opts{json} || {}, strict => $strict,);
+  my %options = (json => $opts{json} || {}, strict => $strict, reference_time => $opts{reference_time},);
 
   $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
   $options{json}->{boolean_values} ||= [_json_false(), _json_true()];
@@ -208,8 +208,22 @@ sub is_v22_plus {
 }
 
 sub is_v23 {
-  my $self = shift;
-  return $self->policy_version >= 5 ? 1 : 0;
+  my $self     = shift;
+  my $deadline = TCF_V23_DEADLINE;
+
+  # If a reference_time was provided and it is BEFORE the deadline,
+  # we skip all v2.3 checks to allow total historical simulation.
+  if (defined $self->{options}->{reference_time} && $self->{options}->{reference_time} < $deadline) {
+    return 0;
+  }
+
+  return 1 if $self->policy_version >= 5;
+
+  # TCF v2.3 became mandatory on 2026-02-28. Strings created on or after
+  # this date are subject to v2.3 rules (e.g. mandatory Disclosed Vendors).
+  return 1 if $self->created >= $deadline;
+
+  return 0;
 }
 
 sub is_service_specific {
