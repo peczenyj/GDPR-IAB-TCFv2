@@ -9,7 +9,7 @@ use GDPR::IAB::TCFv2::Validator;
 use Exporter qw(import);
 
 our @EXPORT  = qw(tcf validator);
-our $VERSION = '0.401';
+our $VERSION = "0.500";
 
 sub tcf       { GDPR::IAB::TCFv2::Parser->Parse(@_) }
 sub validator { GDPR::IAB::TCFv2::Validator->new(@_) }

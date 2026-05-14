@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.500] - 2026-05-14
 
 ### Documentation
 
@@ -13,6 +13,7 @@
 
 ### Other
 
+- Update changelog
 - Merge tag 'v0.401' into devel
 
 Tagged for release. v0.401
