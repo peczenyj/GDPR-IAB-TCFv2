@@ -5,7 +5,7 @@ use warnings;
 
 use GDPR::IAB::TCFv2::Parser;
 
-our $VERSION = "0.401";
+our $VERSION = "0.500";
 
 sub Parse {
   shift;    # discard $klass — force GDPR::IAB::TCFv2::Parser as leaf class
@@ -45,8 +45,8 @@ GDPR::IAB::TCFv2 - TCF v2.3 distribution: parser, validator, CMP-validator, and 
 
 =head1 PROJECT STATUS
 
-C<GDPR::IAB::TCFv2> entered B<maintenance mode> on 2026-05-09 with the
-v0.400 release. The core parser, validator, and CMP-validator surfaces
+C<GDPR::IAB::TCFv2> entered B<maintenance mode> on 2026-05-14 with the
+v0.500 release. The core parser, validator, and CMP-validator surfaces
 are considered feature-complete for the IAB TCF v2.3 specification.
 
 In maintenance mode the maintainer commits to bug fixes, security
