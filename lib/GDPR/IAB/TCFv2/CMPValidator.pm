@@ -1,5 +1,6 @@
 package GDPR::IAB::TCFv2::CMPValidator;
 
+use v5.10;
 use strict;
 use warnings;
 
@@ -154,15 +155,12 @@ sub _check_age {
 
 sub _now {
   my ($self) = @_;
-  return $self->{now} || time();
+  return $self->{now} // time();
 }
 
 sub _load_time_piece {
   return 1 if $INC{'Time/Piece.pm'};
-  eval { require Time::Piece; 1 }
-    or croak "Time::Piece is required to parse the CMP list "
-    . "timestamps. Please install it (it is core in "
-    . "Perl 5.10+).";
+  require Time::Piece;
   return 1;
 }
 

@@ -1,4 +1,6 @@
 package GDPR::IAB::TCFv2::BitUtils;
+use v5.10;
+use v5.10;
 use strict;
 use warnings;
 use integer;
@@ -13,14 +15,6 @@ use base qw<Exporter>;
 use constant ASCII_OFFSET => ord('A');
 
 our $VERSION = "0.500";
-
-our $CAN_PACK_QUADS;
-our $CAN_FORCE_BIG_ENDIAN;
-
-BEGIN {
-  $CAN_PACK_QUADS       = !!eval { my $f = pack 'Q>'; 1 };
-  $CAN_FORCE_BIG_ENDIAN = !!eval { my $f = pack 'S>'; 1 };
-}
 
 our @EXPORT_OK = qw<is_set
   get_uint2
@@ -128,7 +122,8 @@ sub _get_bits {
   elsif ($num_bytes <= 8) {
 
     # Use Math::BigInt for 32-bit Perls or 36-bit values that might overflow IV
-    if ($CAN_PACK_QUADS && $num_bytes <= 8) {
+    state $can_pack_quads = !!eval { my $f = pack 'Q>'; 1 };
+    if ($can_pack_quads && $num_bytes <= 8) {
       my $padding = "\0" x (8 - $num_bytes);
       $val = unpack("Q>", $padding . $raw);
     }

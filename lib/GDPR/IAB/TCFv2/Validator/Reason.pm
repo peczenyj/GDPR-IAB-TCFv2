@@ -1,4 +1,5 @@
 package GDPR::IAB::TCFv2::Validator::Reason;
+use v5.10;
 use strict;
 use warnings;
 

@@ -1,4 +1,5 @@
 package GDPR::IAB::TCFv2::BitField;
+use v5.10;
 use strict;
 use warnings;
 use integer;
@@ -21,7 +22,7 @@ sub Parse {
 
   my $data      = $args{data};
   my $data_size = $args{data_size};
-  my $offset    = $args{offset} || 0;
+  my $offset    = $args{offset} // 0;
   my $max_id    = $args{max_id};
   my $options   = $args{options};
 

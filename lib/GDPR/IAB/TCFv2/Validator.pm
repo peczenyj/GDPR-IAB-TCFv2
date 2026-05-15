@@ -1,5 +1,6 @@
 package GDPR::IAB::TCFv2::Validator;
 
+use v5.10;
 use strict;
 use warnings;
 
@@ -34,7 +35,7 @@ sub new {
     legitimate_interest_purpose_ids => $legitimate_interest,
     flexible_purpose_ids            => $flexible,
     _flexible_set                   => {map { $_ => 1 } @{$flexible}},
-    verify_disclosed_vendors        => $args{verify_disclosed_vendors} || 0,
+    verify_disclosed_vendors        => $args{verify_disclosed_vendors} // 0,
     min_tcf_policy_version          => $args{min_tcf_policy_version},
     cmp_validator                   => $cmp_validator,
     strict_legal_basis              => exists $args{strict_legal_basis} ? $args{strict_legal_basis} : 0,
