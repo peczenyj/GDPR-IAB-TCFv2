@@ -14,7 +14,7 @@ use base qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 our @EXPORT_OK = qw<is_set
   get_uint2

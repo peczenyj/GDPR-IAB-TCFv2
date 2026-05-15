@@ -8,7 +8,7 @@ use Carp qw<croak>;
 use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::PublisherTC;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 sub Parse {
   my ($klass, %args) = @_;

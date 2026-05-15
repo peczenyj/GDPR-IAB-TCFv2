@@ -11,7 +11,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<
   get_uint12
 >;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 use constant ASSUMED_MAX_VENDOR_ID => 0x7FFF;    # 32767 or (1 << 15) -1
 

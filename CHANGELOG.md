@@ -1,3 +1,30 @@
+## [unreleased]
+
+### Other
+
+- Phase 12.1a: Migrate to Perl 5.10 Baseline 
+
+* docs(todo): update Perl migration plan to split 5.10 and 5.12 phases
+
+* feat: migrate to Perl 5.10 baseline
+
+Establish Perl 5.10 as the minimum version.
+- Update MIN_PERL_VERSION to 5.010000.
+- Adopt 'use v5.10;' everywhere.
+- Remove 5.8.9 legacy checks (like eval { pack 'Q>' }).
+- Adopt the defined-or operator (//) and state variables for caching.
+
+Fixes #131
+
+* fix: allow version strings in .perlcriticrc for Phase A
+
+Fixes critic failure on 'use v5.10;' syntax.
+
+* ci: add Test::Version to linux workflow for author tests
+- Merge tag 'v0.500' into devel
+
+Tagged for release. v0.500
+
 ## [0.500] - 2026-05-14
 
 ### Documentation
@@ -13,6 +40,7 @@
 
 ### Other
 
+- Merge branch 'release/0.500'
 - Update changelog
 - Merge tag 'v0.401' into devel
 
