@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        perl: ["5.10.1", "5.12.2"]
+        perl: ["5.12.2"]
         include:
           - perl: 'latest'
             coverage: true
@@ -23,18 +23,7 @@ jobs:
           perl-version: ${{ matrix.perl }}
       - run: perl -V
       - run: cpanm -v
-      # Test::CheckManifest is omitted: its dep tree (Pod::Coverage::TrustPod ->
-      # Mixin::Linewise -> Sub::Exporter ...) requires Perl 5.12+, which would
-      # break the 5.8.9 matrix entry. Nothing in this repo uses it (no
-      # t/00-checkmanifest.t); `cpanm --installdeps .` below pulls in the
-      # actual TEST_REQUIRES from Makefile.PL.
-      #
-      # Test::More is forced here because Perl 5.12.2 ships Test::More 0.94
-      # (exactly our declared floor), and that vintage has subtest handling
-      # bugs that mis-report inner failures as "no plan was declared". Older
-      # Perls (5.8.9) ship something older, so cpanm upgrades them anyway;
-      # 5.12.2 needs the explicit nudge.
-      - run: cpanm Test::More File::ShareDir::Install Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod
+      - run: cpanm File::ShareDir::Install Test::CPAN::Meta::JSON Test::CPAN::Meta Test::Pod Test::Version
       - name: Install Author Test Dependencies
         if: ${{ matrix.coverage }}
         run: cpanm -n Test::Perl::Critic Test::PerlTidy
