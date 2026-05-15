@@ -6,7 +6,7 @@ use warnings;
 require Exporter;
 use base qw<Exporter>;
 
-our $VERSION = "0.510";
+our $VERSION = "0.511";
 
 use constant {
 

@@ -6,7 +6,7 @@ use warnings;
 
 use GDPR::IAB::TCFv2::Parser;
 
-our $VERSION = "0.510";
+our $VERSION = "0.511";
 
 sub Parse {
   shift;    # discard $klass — force GDPR::IAB::TCFv2::Parser as leaf class

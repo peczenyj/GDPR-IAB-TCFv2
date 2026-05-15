@@ -12,7 +12,7 @@ use GDPR::IAB::TCFv2::Validator::Failure;
 use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
-our $VERSION = "0.510";
+our $VERSION = "0.511";
 
 sub new {
   my ($klass, %args) = @_;
