@@ -381,11 +381,20 @@ Scope:
 
 =item *
 
-B<Phase 12.1 -- Perl 5.36 Baseline.>
-Update C<MIN_PERL_VERSION> to 5.036. Adopt C<use v5.36;> everywhere, 
-enabling subroutine signatures and native booleans. Remove 32-bit/Math::BigInt 
+B<Phase 12.1a -- Perl 5.10 Baseline.>
+Update C<MIN_PERL_VERSION> to 5.010000. Adopt C<use v5.10;> everywhere, 
+enabling C<state> variables and the defined-or operator (C<//>). Remove 32-bit/Math::BigInt 
 fallbacks and manual bit-manipulation hacks that target ancient Perls.
-See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/124>
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/131>
+
+=item *
+
+B<Phase 12.1b -- Perl 5.12 Baseline.>
+Update C<MIN_PERL_VERSION> to 5.012000. Adopt C<use v5.12;> everywhere, 
+implicitly enabling C<strict>. Modernize inheritance with C<use parent> 
+instead of C<use base>. Adopt the modern package declaration syntax 
+(C<package Name VERSION;>).
+See: L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues/132>
 
 =item *
 

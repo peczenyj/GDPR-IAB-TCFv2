@@ -9,7 +9,7 @@ WriteMakefile(
   ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
   AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj+cpan@gmail.com>',
   LICENSE          => 'perl_5',
-  MIN_PERL_VERSION => '5.008009',
+  MIN_PERL_VERSION => '5.010000',
   EXE_FILES        => ['bin/iabtcfv2'],
   TEST_REQUIRES    => {
 
@@ -110,10 +110,15 @@ sub _get_provides {
 sub MY::postamble {
   return <<'EOF';
 lint:
-	perlcritic -profile .perlcriticrc lib bin t xt
+	perlcritic -profile .perlcriticrc lib bin
 
 tidy:
 	perltidy -b -pro=.perltidyrc Makefile.PL $$(find lib bin t xt bench -type f \( -name "*.pm" -o -name "*.t" -o -name "*.pl" -o -name "iabtcfv2" \) 2>/dev/null)
+
+check: lint test author-test
+
+author-test:
+	AUTHOR_TESTING=1 prove -lr xt
 EOF
 }
 

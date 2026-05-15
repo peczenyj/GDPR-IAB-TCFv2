@@ -1,4 +1,5 @@
 package GDPR::IAB::TCFv2::BitField;
+use v5.10;
 use strict;
 use warnings;
 use integer;
@@ -7,7 +8,7 @@ use bytes;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set>;
 use Carp                       qw<croak>;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 sub Parse {
   my ($klass, %args) = @_;
@@ -21,7 +22,7 @@ sub Parse {
 
   my $data      = $args{data};
   my $data_size = $args{data_size};
-  my $offset    = $args{offset} || 0;
+  my $offset    = $args{offset} // 0;
   my $max_id    = $args{max_id};
   my $options   = $args{options};
 

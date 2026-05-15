@@ -1,4 +1,5 @@
 package GDPR::IAB::TCFv2::RangeSection;
+use v5.10;
 use strict;
 use warnings;
 use integer;
@@ -7,7 +8,7 @@ use bytes;
 use GDPR::IAB::TCFv2::BitUtils qw<is_set get_uint12 get_uint16>;
 use Carp                       qw<croak>;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 sub Parse {
   my ($klass, %args) = @_;

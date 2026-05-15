@@ -1,11 +1,12 @@
 package GDPR::IAB::TCFv2::Constants::SpecialFeature;
+use v5.10;
 use strict;
 use warnings;
 
 require Exporter;
 use base qw<Exporter>;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 use constant {
 

@@ -40,43 +40,45 @@ while (my $line_json = <$fh>) {
 
   $count++;
 
-  if ($entry->{expect_failure}) {
-    throws_ok { GDPR::IAB::TCFv2->Parse($tc_string); }
-    qr/\Q$entry->{error_match}\E/, "String $count should fail as expected";
-  }
-  else {
+  # Grouping each entry under a subtest collapses ~7 ok-records into 1 at the
+  # outer level and lets Test2 release per-ok history between iterations.
+  # Important for memory-tight smokers (e.g. OmniOS/Solaris on threaded perl).
+  subtest "String $count" => sub {
+    if ($entry->{expect_failure}) {
+      throws_ok { GDPR::IAB::TCFv2->Parse($tc_string); }
+      qr/\Q$entry->{error_match}\E/, "should fail as expected";
+      return;
+    }
+
     my $consent;
     lives_ok {
       $consent = GDPR::IAB::TCFv2->Parse($tc_string, json => {boolean_values => [JSON::PP::false, JSON::PP::true]});
     }
-    "String $count parsed successfully";
+    "parsed successfully";
 
-    next unless $consent;
+    return unless $consent;
 
     my $tests = $entry->{tests};
 
-    # Test JSON representation
-    is_deeply_with_diag($consent->TO_JSON, $tests->{to_json}, "String $count: TO_JSON match");
+    is_deeply_with_diag($consent->TO_JSON, $tests->{to_json}, "TO_JSON match");
 
-    # Test metadata
-    is($consent->version,         $tests->{metadata}->{version},       "String $count: version match");
-    is($consent->cmp_id,          $tests->{metadata}->{cmp_id},        "String $count: cmp_id match");
-    is(scalar($consent->created), $tests->{metadata}->{created_epoch}, "String $count: created match");
+    is($consent->version,         $tests->{metadata}->{version},       "version match");
+    is($consent->cmp_id,          $tests->{metadata}->{cmp_id},        "cmp_id match");
+    is(scalar($consent->created), $tests->{metadata}->{created_epoch}, "created match");
 
-    # Test sampling
     my $sampling = $tests->{sampling};
     foreach my $key (keys %{$sampling}) {
       if ($key eq 'purpose_1_consent') {
-        is(!!$consent->is_purpose_consent_allowed(1), !!$sampling->{$key}, "String $count: $key match");
+        is(!!$consent->is_purpose_consent_allowed(1), !!$sampling->{$key}, "$key match");
       }
       elsif ($key eq 'vendor_284_consent') {
-        is(!!$consent->vendor_consent(284), !!$sampling->{$key}, "String $count: $key match");
+        is(!!$consent->vendor_consent(284), !!$sampling->{$key}, "$key match");
       }
       elsif ($key eq 'vendor_284_purpose_1_allowed' && $consent->can('is_vendor_consent_allowed')) {
-        is(!!$consent->is_vendor_consent_allowed(284, 1), !!$sampling->{$key}, "String $count: $key match");
+        is(!!$consent->is_vendor_consent_allowed(284, 1), !!$sampling->{$key}, "$key match");
       }
     }
-  }
+  };
 }
 
 sub is_deeply_with_diag {

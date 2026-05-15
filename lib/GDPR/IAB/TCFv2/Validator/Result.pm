@@ -1,5 +1,6 @@
 package GDPR::IAB::TCFv2::Validator::Result;
 
+use v5.10;
 use strict;
 use warnings;
 
@@ -14,7 +15,7 @@ use overload
   return join($sep, map { $_->message } @{$self->{failures} || []});
   };
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 sub new {
   my ($klass, %args) = @_;
