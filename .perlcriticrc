@@ -28,6 +28,7 @@ packages = Data::Dumper File::Find FindBin Log::Log4perl Carp
 [-ValuesAndExpressions::ProhibitMagicNumbers]
 [-ValuesAndExpressions::ProhibitMixedBooleanOperators]
 [-ValuesAndExpressions::ProhibitConstantPragma]
+[-ValuesAndExpressions::ProhibitVersionStrings]
 
 # Modules
 [-Modules::ProhibitAutomaticExportation]
