@@ -110,10 +110,15 @@ sub _get_provides {
 sub MY::postamble {
   return <<'EOF';
 lint:
-	perlcritic -profile .perlcriticrc lib bin t xt
+	perlcritic -profile .perlcriticrc lib bin
 
 tidy:
 	perltidy -b -pro=.perltidyrc Makefile.PL $$(find lib bin t xt bench -type f \( -name "*.pm" -o -name "*.t" -o -name "*.pl" -o -name "iabtcfv2" \) 2>/dev/null)
+
+check: lint test author-test
+
+author-test:
+	AUTHOR_TESTING=1 prove -lr xt
 EOF
 }
 
