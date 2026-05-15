@@ -1,4 +1,8 @@
-## [unreleased]
+## [0.512] - 2026-05-15
+
+### Documentation
+
+- Update changelog
 
 ### Other
 
