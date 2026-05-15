@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::Publisher 0.510;
+package GDPR::IAB::TCFv2::Publisher 0.511;
 use v5.12;
 use warnings;
 
@@ -6,7 +6,6 @@ use Carp qw<croak>;
 
 use GDPR::IAB::TCFv2::PublisherRestrictions;
 use GDPR::IAB::TCFv2::PublisherTC;
-
 
 sub Parse {
   my ($klass, %args) = @_;

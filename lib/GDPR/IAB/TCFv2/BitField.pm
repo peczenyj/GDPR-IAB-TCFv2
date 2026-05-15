@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::BitField 0.510;
+package GDPR::IAB::TCFv2::BitField 0.511;
 use v5.12;
 use warnings;
 use integer;
@@ -6,7 +6,6 @@ use bytes;
 
 use GDPR::IAB::TCFv2::BitUtils qw<is_set>;
 use Carp                       qw<croak>;
-
 
 sub Parse {
   my ($klass, %args) = @_;

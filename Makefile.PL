@@ -33,7 +33,7 @@ WriteMakefile(
 
   # META_MERGE is gated on EUMM 6.46 (META v2 support) so installs on
   # ancient toolchains -- notably the EUMM 6.42 that shipped with Perl
-  # 5.8.9, our MIN_PERL_VERSION floor -- still build cleanly. Modern
+  # 5.12.0, our MIN_PERL_VERSION floor -- still build cleanly. Modern
   # CPAN clients see the full meta block.
   (
     eval { ExtUtils::MakeMaker->VERSION(6.46) }
@@ -48,7 +48,7 @@ WriteMakefile(
         no_index => {directory => ['xt', 'bench', 'docs']},
         prereqs  => {
           runtime => {
-            requires   => {perl => '5.008009'},
+            requires   => {perl => '5.012000'},
             recommends => {
 
               # CMPValidator opt-in feature: lazy-required at first

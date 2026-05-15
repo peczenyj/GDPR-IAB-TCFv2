@@ -1,10 +1,9 @@
-package GDPR::IAB::TCFv2::Constants::Purpose 0.510;
+package GDPR::IAB::TCFv2::Constants::Purpose 0.511;
 use v5.12;
 use warnings;
 
 require Exporter;
 use parent qw<Exporter>;
-
 
 use constant {
 

@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::BitUtils 0.510;
+package GDPR::IAB::TCFv2::BitUtils 0.511;
 use v5.12;
 use warnings;
 use integer;
@@ -11,7 +11,6 @@ require Exporter;
 use parent qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
-
 
 our @EXPORT_OK = qw<is_set
   get_uint2

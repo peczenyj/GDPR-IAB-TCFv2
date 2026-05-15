@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::PublisherRestrictions 0.510;
+package GDPR::IAB::TCFv2::PublisherRestrictions 0.511;
 use v5.12;
 use warnings;
 
@@ -9,7 +9,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<
   get_uint6
   get_uint12
 >;
-
 
 use constant ASSUMED_MAX_VENDOR_ID => 0x7FFF;    # 32767 or (1 << 15) -1
 

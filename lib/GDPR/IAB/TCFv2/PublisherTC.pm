@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::PublisherTC 0.510;
+package GDPR::IAB::TCFv2::PublisherTC 0.511;
 use v5.12;
 use warnings;
 
@@ -8,7 +8,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint3
   get_uint6
 >;
-
 
 use constant {
   SEGMENT_TYPE_PUBLISHER_TC => 3,

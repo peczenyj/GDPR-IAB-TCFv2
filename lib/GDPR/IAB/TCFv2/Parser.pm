@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::Parser 0.510;
+package GDPR::IAB::TCFv2::Parser 0.511;
 
 use v5.12;
 use warnings;
@@ -21,7 +21,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
-
 
 use constant {
   CONSENT_STRING_TCF_V2   => {SEPARATOR => quotemeta q<.>, PREFIX => q<C>, MIN_BYTE_SIZE => 29,},

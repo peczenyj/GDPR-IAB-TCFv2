@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::Validator::Result 0.510;
+package GDPR::IAB::TCFv2::Validator::Result 0.511;
 
 use v5.12;
 use warnings;
@@ -13,7 +13,6 @@ use overload
   my $sep = defined($\) ? $\ : "\n";
   return join($sep, map { $_->message } @{$self->{failures} || []});
   };
-
 
 sub new {
   my ($klass, %args) = @_;

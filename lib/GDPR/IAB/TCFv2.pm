@@ -1,10 +1,9 @@
-package GDPR::IAB::TCFv2 0.510;
+package GDPR::IAB::TCFv2 0.511;
 
 use v5.12;
 use warnings;
 
 use GDPR::IAB::TCFv2::Parser;
-
 
 sub Parse {
   shift;    # discard $klass — force GDPR::IAB::TCFv2::Parser as leaf class
