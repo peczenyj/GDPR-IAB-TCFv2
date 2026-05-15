@@ -1,5 +1,6 @@
 package GDPR::IAB::TCFv2;
 
+use v5.10;
 use strict;
 use warnings;
 

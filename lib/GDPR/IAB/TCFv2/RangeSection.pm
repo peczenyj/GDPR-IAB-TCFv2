@@ -1,4 +1,5 @@
 package GDPR::IAB::TCFv2::RangeSection;
+use v5.10;
 use strict;
 use warnings;
 use integer;

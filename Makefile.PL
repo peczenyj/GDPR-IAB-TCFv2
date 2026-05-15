@@ -9,7 +9,7 @@ WriteMakefile(
   ABSTRACT_FROM    => 'lib/GDPR/IAB/TCFv2.pm',
   AUTHOR           => 'Tiago Peczenyj <tiago.peczenyj+cpan@gmail.com>',
   LICENSE          => 'perl_5',
-  MIN_PERL_VERSION => '5.008009',
+  MIN_PERL_VERSION => '5.010000',
   EXE_FILES        => ['bin/iabtcfv2'],
   TEST_REQUIRES    => {
 

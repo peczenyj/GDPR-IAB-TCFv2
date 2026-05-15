@@ -1,5 +1,6 @@
 package GDPR::IAB::TCFv2::Parser;
 
+use v5.10;
 use strict;
 use warnings;
 use integer;
@@ -67,7 +68,7 @@ sub Parse {
 
   my $strict = !!$opts{strict};
 
-  my %options = (json => $opts{json} || {}, strict => $strict, reference_time => $opts{reference_time},);
+  my %options = (json => $opts{json} // {}, strict => $strict, reference_time => $opts{reference_time},);
 
   $options{json}->{date_format}    ||= DATE_FORMAT_ISO_8601;
   $options{json}->{boolean_values} ||= [_json_false(), _json_true()];
@@ -567,7 +568,7 @@ sub TO_JSON {
   my $self = shift;
 
   my %args      = (@_ && ref $_[-1] eq 'HASH') ? %{pop @_} : @_;
-  my $filter_id = $args{vendor_id} || $self->{options}->{json}->{vendor_id};
+  my $filter_id = $args{vendor_id} // $self->{options}->{json}->{vendor_id};
 
   my ($false, $true) = @{$self->{options}->{json}->{boolean_values}};
 
