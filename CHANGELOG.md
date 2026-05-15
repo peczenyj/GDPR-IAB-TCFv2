@@ -1,7 +1,21 @@
+## [unreleased]
+
+### Bug Fixes
+
+- Fix min perl version
+
+### Other
+
+- Merge tag 'v0.510' into devel
+
+Tagged for release. v0.510
+
 ## [0.510] - 2026-05-15
 
 ### Other
 
+- Merge branch 'release/0.510'
+- Update changelog
 - Phase 12.1a: Migrate to Perl 5.10 Baseline 
 
 * docs(todo): update Perl migration plan to split 5.10 and 5.12 phases
