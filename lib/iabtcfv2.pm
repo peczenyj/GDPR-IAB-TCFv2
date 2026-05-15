@@ -26,13 +26,13 @@ iabtcfv2 - Pure-exporter short alias for one-liner and shell use
 
 =head1 SYNOPSIS
 
-    # From the shell:
-    perl -Miabtcfv2 -E 'say tcf(shift)->cmp_id' "CLc..."
-
-    # In a script:
     use iabtcfv2;
+    my $tc_string = 'CLc...';
     my $c = tcf($tc_string);
     my $v = validator(vendor_id => 284);
+
+    # From the shell:
+    # perl -Miabtcfv2 -E 'say tcf(shift)->cmp_id' "CLc..."
 
 =head1 DESCRIPTION
 
