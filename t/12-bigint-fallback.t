@@ -10,8 +10,8 @@ use GDPR::IAB::TCFv2::BitUtils;
 
 # These flags decide whether the BitUtils helpers take the fast
 # pack 'S>' / 'Q>' path or the Math::BigInt fallback.  On modern
-# Perls both flags are true; on Perl < 5.10 (e.g. 5.8.9 on FreeBSD,
-# CPAN Testers report 281cd334-...) the fallback is the only path.
+# Perls both flags are true; on older Perls (before our 5.10.0 baseline)
+# the fallback was the only path.
 #
 # Forcing both flags off here exercises the fallback unconditionally
 # so the regression is testable on any Perl.
