@@ -136,7 +136,6 @@ GDPR::IAB::TCFv2::Validator::Reason - machine-readable validation-failure codes
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
 
     use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;

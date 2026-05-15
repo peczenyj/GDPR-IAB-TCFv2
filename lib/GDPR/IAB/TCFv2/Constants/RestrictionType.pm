@@ -32,7 +32,6 @@ GDPR::IAB::TCFv2::Constants::RestrictionType - TCF v2.3 publisher restriction ty
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
     
     use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;

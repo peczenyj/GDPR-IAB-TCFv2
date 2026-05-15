@@ -43,7 +43,6 @@ GDPR::IAB::TCFv2::Constants::SpecialFeature - TCF v2.3 special features
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
     
     use GDPR::IAB::TCFv2::Constants::SpecialFeature qw<:all>;

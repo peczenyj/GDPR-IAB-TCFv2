@@ -906,7 +906,6 @@ GDPR::IAB::TCFv2::Parser - bit-stream parser for TCF v2.3 consent strings
 
 The purpose of this package is to parse Transparency & Consent String (TC String) as defined by IAB version 2.
 
-    use strict;
     use warnings;
 
     use GDPR::IAB::TCFv2::Parser;
@@ -1354,7 +1353,6 @@ Will serialize the consent object into a hash reference. The objective is to be 
 
 With option C<convert_blessed>, the encoder will call this method.
 
-    use strict;
     use warnings;
     use feature qw<say>;
 

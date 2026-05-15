@@ -91,7 +91,6 @@ GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.3 purposes
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
     
     use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
