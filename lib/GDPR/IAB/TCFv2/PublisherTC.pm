@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::PublisherTC 0.511;
+package GDPR::IAB::TCFv2::PublisherTC 0.512;
 use v5.12;
 use warnings;
 
