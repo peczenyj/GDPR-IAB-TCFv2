@@ -12,7 +12,7 @@
 #     tools/bump-version 0.402
 #
 # Does NOT touch CHANGELOG, run git-cliff, commit, tag, or push.
-# Those steps remain manual per CONTRIBUTING.pod.
+# Those steps remain manual per CONTRIBUTING.
 
 use strict;
 use warnings;

@@ -57,8 +57,8 @@ ideas in L</ECOSYSTEM> -- is now tracked as C<help-wanted> issues on
 GitHub.
 
 Patches and PRs from the community are welcome and will continue to be
-reviewed. See F<TODO.pod> at the repository root for the full
-help-wanted list and F<CONTRIBUTING.pod> for the patching workflow.
+reviewed. See F<TODO> at the repository root for the full
+help-wanted list and F<CONTRIBUTING> for the patching workflow.
 
 =head1 SYNOPSIS
 
@@ -355,7 +355,7 @@ business validation through DFV.
 
 The C<help-wanted> issues on GitHub track each of these ideas; see
 L<https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem>
-and F<TODO.pod> for context.
+and F<TODO> for context.
 
 =head1 SEE ALSO
 

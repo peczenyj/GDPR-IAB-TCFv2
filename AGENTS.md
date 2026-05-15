@@ -61,7 +61,7 @@ The script refuses to downgrade and refuses to run if any `.pm` is missing `$VER
 
 ## Release flow
 
-Documented in `CONTRIBUTING.pod`. Summary: bump `$VERSION` across `lib/**.pm` with `tools/bump-version <new-version>`, run `git cliff -o CHANGELOG.md` (config in `cliff.toml` — uses Conventional Commits), regenerate `README.md` from POD with `pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`. 
+Documented in `CONTRIBUTING`. Summary: bump `$VERSION` across `lib/**.pm` with `tools/bump-version <new-version>`, run `git cliff -o CHANGELOG.md` (config in `cliff.toml` — uses Conventional Commits), regenerate `README.md` from POD with `pod2markdown lib/GDPR/IAB/TCFv2.pm > README.md`. 
 
 The release process is **automated**: once `devel` is merged to `main`, pushing a tag (`v*`) triggers a GitHub Action (`.github/workflows/release.yml`) that builds the distribution, uploads to CPAN (PAUSE), and creates a GitHub Release with the tarball attached.
 
