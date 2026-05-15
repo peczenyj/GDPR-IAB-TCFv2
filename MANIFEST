@@ -3,7 +3,7 @@ bin/iabtcfv2
 CHANGELOG.md
 CITATION.cff
 CODE_OF_CONDUCT.md
-CONTRIBUTING.pod
+CONTRIBUTING
 lib/GDPR/IAB/TCFv2.pm
 lib/GDPR/IAB/TCFv2/BitField.pm
 lib/GDPR/IAB/TCFv2/BitUtils.pm
@@ -51,4 +51,4 @@ t/corpus/gdpr_subset.txt
 t/corpus/golden.jsonl.gz
 t/corpus/validator_scenarios.pl
 t/generate_golden.pl
-TODO.pod
+TODO

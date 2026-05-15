@@ -1,5 +1,5 @@
 # To read this file, run:
-#    perldoc TODO.pod
+#    perldoc ./TODO
 
 =encoding utf8
 
@@ -787,7 +787,7 @@ effort and surfaces any spec questions early.
 
 =item 3.
 
-Follow the patching workflow in F<CONTRIBUTING.pod>: branch from
+Follow the patching workflow in F<CONTRIBUTING>: branch from
 C<devel>, run the full test suite (C<prove -lr t> plus
 C<AUTHOR_TESTING=1 prove -lr xt>), open a PR.
 
@@ -823,7 +823,7 @@ caching is a deployment concern, not a library concern.
 =head1 SEE ALSO
 
 L<GDPR::IAB::TCFv2>, L<GDPR::IAB::TCFv2::Validator>,
-L<GDPR::IAB::TCFv2::CMPValidator>, F<CONTRIBUTING.pod>,
+L<GDPR::IAB::TCFv2::CMPValidator>, F<CONTRIBUTING>,
 F<CHANGELOG.md>.
 
 =cut
