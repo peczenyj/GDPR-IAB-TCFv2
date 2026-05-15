@@ -1,12 +1,10 @@
-package GDPR::IAB::TCFv2::Constants::RestrictionType;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::Constants::RestrictionType 0.510;
+use v5.12;
 use warnings;
 
 require Exporter;
-use base qw<Exporter>;
+use parent qw<Exporter>;
 
-our $VERSION = "0.510";
 
 use constant {NotAllowed => 0, RequireConsent => 1, RequireLegitimateInterest => 2,};
 

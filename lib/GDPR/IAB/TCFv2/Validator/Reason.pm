@@ -1,12 +1,10 @@
-package GDPR::IAB::TCFv2::Validator::Reason;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::Validator::Reason 0.510;
+use v5.12;
 use warnings;
 
 require Exporter;
-use base qw<Exporter>;
+use parent qw<Exporter>;
 
-our $VERSION = "0.510";
 
 use constant {
 

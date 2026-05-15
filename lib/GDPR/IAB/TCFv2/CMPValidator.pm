@@ -1,13 +1,11 @@
-package GDPR::IAB::TCFv2::CMPValidator;
+package GDPR::IAB::TCFv2::CMPValidator 0.510;
 
-use v5.10;
-use strict;
+use v5.12;
 use warnings;
 
 use Carp         qw<croak carp>;
 use Scalar::Util qw<blessed>;
 
-our $VERSION = "0.510";
 
 # JSON::PP and Time::Piece are loaded lazily (see load_from_data and
 # _parse_date). They are listed under META "recommends" rather than

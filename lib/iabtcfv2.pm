@@ -1,7 +1,6 @@
-package iabtcfv2;
+package iabtcfv2 0.510;
 
-use v5.10;
-use strict;
+use v5.12;
 use warnings;
 
 use GDPR::IAB::TCFv2::Parser;
@@ -9,8 +8,7 @@ use GDPR::IAB::TCFv2::Validator;
 
 use Exporter qw(import);
 
-our @EXPORT  = qw(tcf validator);
-our $VERSION = "0.510";
+our @EXPORT = qw(tcf validator);
 
 sub tcf       { GDPR::IAB::TCFv2::Parser->Parse(@_) }
 sub validator { GDPR::IAB::TCFv2::Validator->new(@_) }

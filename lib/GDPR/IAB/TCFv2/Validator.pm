@@ -1,7 +1,6 @@
-package GDPR::IAB::TCFv2::Validator;
+package GDPR::IAB::TCFv2::Validator 0.510;
 
-use v5.10;
-use strict;
+use v5.12;
 use warnings;
 
 use Carp         qw<croak>;
@@ -12,7 +11,6 @@ use GDPR::IAB::TCFv2::Validator::Failure;
 use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
-our $VERSION = "0.510";
 
 sub new {
   my ($klass, %args) = @_;

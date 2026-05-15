@@ -1,7 +1,5 @@
-package GDPR::IAB::TCFv2::BitUtils;
-use v5.10;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::BitUtils 0.510;
+use v5.12;
 use warnings;
 use integer;
 use bytes;
@@ -10,11 +8,10 @@ use Math::BigInt;
 use Carp qw(croak confess);
 
 require Exporter;
-use base qw<Exporter>;
+use parent qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
 
-our $VERSION = "0.510";
 
 our @EXPORT_OK = qw<is_set
   get_uint2

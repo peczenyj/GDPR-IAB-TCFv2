@@ -1,6 +1,5 @@
-package GDPR::IAB::TCFv2::PublisherRestrictions;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::PublisherRestrictions 0.510;
+use v5.12;
 use warnings;
 
 use Carp qw<croak>;
@@ -11,7 +10,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<
   get_uint12
 >;
 
-our $VERSION = "0.510";
 
 use constant ASSUMED_MAX_VENDOR_ID => 0x7FFF;    # 32767 or (1 << 15) -1
 
