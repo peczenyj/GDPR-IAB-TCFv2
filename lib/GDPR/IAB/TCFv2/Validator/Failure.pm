@@ -1,14 +1,11 @@
-package GDPR::IAB::TCFv2::Validator::Failure;
+package GDPR::IAB::TCFv2::Validator::Failure 0.511;
 
-use v5.10;
-use strict;
+use v5.12;
 use warnings;
 
 use overload
   '""'     => sub { $_[0]->{message} },
   fallback => 1;
-
-our $VERSION = "0.511";
 
 sub new {
   my ($klass, %args) = @_;

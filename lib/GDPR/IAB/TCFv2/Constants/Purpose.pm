@@ -1,12 +1,9 @@
-package GDPR::IAB::TCFv2::Constants::Purpose;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::Constants::Purpose 0.511;
+use v5.12;
 use warnings;
 
 require Exporter;
-use base qw<Exporter>;
-
-our $VERSION = "0.511";
+use parent qw<Exporter>;
 
 use constant {
 
@@ -94,7 +91,6 @@ GDPR::IAB::TCFv2::Constants::Purpose - TCF v2.3 purposes
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
     
     use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;

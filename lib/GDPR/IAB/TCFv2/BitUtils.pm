@@ -1,7 +1,5 @@
-package GDPR::IAB::TCFv2::BitUtils;
-use v5.10;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::BitUtils 0.511;
+use v5.12;
 use warnings;
 use integer;
 use bytes;
@@ -10,11 +8,17 @@ use Math::BigInt;
 use Carp qw(croak confess);
 
 require Exporter;
-use base qw<Exporter>;
+use parent qw<Exporter>;
 
 use constant ASCII_OFFSET => ord('A');
 
-our $VERSION = "0.511";
+our $CAN_PACK_QUADS;
+our $CAN_FORCE_BIG_ENDIAN;
+
+BEGIN {
+  $CAN_PACK_QUADS       = !!eval { pack 'Q>', 1 };
+  $CAN_FORCE_BIG_ENDIAN = !!eval { pack 'S>', 1 };
+}
 
 our @EXPORT_OK = qw<is_set
   get_uint2
@@ -107,23 +111,23 @@ sub _get_bits {
 
   # Unpack into a native integer and shift.
   # For up to 36 bits, we might need up to 6 bytes if it spans boundaries.
-  if ($num_bytes == 1) {
-    $val = unpack("C", $raw);
+  if ($CAN_FORCE_BIG_ENDIAN) {
+    if ($num_bytes == 1) {
+      $val = unpack("C", $raw);
+    }
+    elsif ($num_bytes == 2) {
+      $val = unpack("n", $raw);
+    }
+    elsif ($num_bytes == 3) {
+      $val = unpack("N", "\0" . $raw);
+    }
+    elsif ($num_bytes == 4) {
+      $val = unpack("N", $raw);
+    }
   }
-  elsif ($num_bytes == 2) {
-    $val = unpack("n", $raw);
-  }
-  elsif ($num_bytes == 3) {
-    $val = unpack("N", "\0" . $raw);
-  }
-  elsif ($num_bytes == 4) {
-    $val = unpack("N", $raw);
-  }
-  elsif ($num_bytes <= 8) {
 
-    # Use Math::BigInt for 32-bit Perls or 36-bit values that might overflow IV
-    state $can_pack_quads = !!eval { my $f = pack 'Q>'; 1 };
-    if ($can_pack_quads && $num_bytes <= 8) {
+  if (!defined($val) && $num_bytes <= 8) {
+    if ($CAN_PACK_QUADS) {
       my $padding = "\0" x (8 - $num_bytes);
       $val = unpack("Q>", $padding . $raw);
     }

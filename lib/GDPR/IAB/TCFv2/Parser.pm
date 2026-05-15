@@ -1,7 +1,6 @@
-package GDPR::IAB::TCFv2::Parser;
+package GDPR::IAB::TCFv2::Parser 0.511;
 
-use v5.10;
-use strict;
+use v5.12;
 use warnings;
 use integer;
 use bytes;
@@ -22,8 +21,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
 use GDPR::IAB::TCFv2::Publisher;
 use GDPR::IAB::TCFv2::RangeSection;
 use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;
-
-our $VERSION = "0.511";
 
 use constant {
   CONSENT_STRING_TCF_V2   => {SEPARATOR => quotemeta q<.>, PREFIX => q<C>, MIN_BYTE_SIZE => 29,},
@@ -909,7 +906,6 @@ GDPR::IAB::TCFv2::Parser - bit-stream parser for TCF v2.3 consent strings
 
 The purpose of this package is to parse Transparency & Consent String (TC String) as defined by IAB version 2.
 
-    use strict;
     use warnings;
 
     use GDPR::IAB::TCFv2::Parser;
@@ -1357,7 +1353,6 @@ Will serialize the consent object into a hash reference. The objective is to be 
 
 With option C<convert_blessed>, the encoder will call this method.
 
-    use strict;
     use warnings;
     use feature qw<say>;
 

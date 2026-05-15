@@ -1,6 +1,5 @@
-package GDPR::IAB::TCFv2::PublisherTC;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::PublisherTC 0.511;
+use v5.12;
 use warnings;
 
 use Carp qw<croak>;
@@ -9,8 +8,6 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint3
   get_uint6
 >;
-
-our $VERSION = "0.511";
 
 use constant {
   SEGMENT_TYPE_PUBLISHER_TC => 3,
