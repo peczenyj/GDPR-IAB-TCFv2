@@ -1,12 +1,9 @@
-package GDPR::IAB::TCFv2::Constants::RestrictionType;
-use v5.10;
-use strict;
+package GDPR::IAB::TCFv2::Constants::RestrictionType 0.512;
+use v5.12;
 use warnings;
 
 require Exporter;
-use base qw<Exporter>;
-
-our $VERSION = "0.511";
+use parent qw<Exporter>;
 
 use constant {NotAllowed => 0, RequireConsent => 1, RequireLegitimateInterest => 2,};
 
@@ -35,7 +32,6 @@ GDPR::IAB::TCFv2::Constants::RestrictionType - TCF v2.3 publisher restriction ty
 
 =head1 SYNOPSIS
 
-    use strict;
     use warnings;
     
     use GDPR::IAB::TCFv2::Constants::RestrictionType qw<:all>;

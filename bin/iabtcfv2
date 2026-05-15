@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use strict;
+use v5.12;
 use warnings;
 
 use Getopt::Long qw(GetOptionsFromArray :config pass_through require_order bundling);
@@ -175,7 +175,7 @@ sub run_dump {
   }
   else {
     binmode(STDIN, ':encoding(UTF-8)') if -t STDIN;    ## no critic (InputOutput::ProhibitInteractiveTest, InputOutput::RequireEncodingWithUTF8Layer)
-    while (my $line = <STDIN>) {                        ## no critic (InputOutput::ProhibitExplicitStdin)
+    while (my $line = <STDIN>) {                       ## no critic (InputOutput::ProhibitExplicitStdin)
       $state->{line_num}++;
       chomp $line;
       next unless $line =~ /\S/;
@@ -467,7 +467,7 @@ sub run_validate {    ## no critic (Subroutines::ProhibitExcessComplexity)
   }
   else {
     binmode(STDIN, ':encoding(UTF-8)') if -t STDIN;    ## no critic (InputOutput::ProhibitInteractiveTest, InputOutput::RequireEncodingWithUTF8Layer)
-    while (my $line = <STDIN>) {                        ## no critic (InputOutput::ProhibitExplicitStdin)
+    while (my $line = <STDIN>) {                       ## no critic (InputOutput::ProhibitExplicitStdin)
       $state->{line_num}++;
       chomp $line;
       next unless $line =~ /\S/;

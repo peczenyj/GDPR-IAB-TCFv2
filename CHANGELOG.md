@@ -1,3 +1,31 @@
+## [0.512] - 2026-05-15
+
+### Documentation
+
+- Update changelog
+
+### Other
+
+- Phase 12.1b: Migrate to Perl 5.12 Baseline 
+
+* feat: migrate to Perl 5.12 baseline
+
+Establish Perl 5.12 as the minimum version.
+- Update MIN_PERL_VERSION to 5.012000.
+- Adopt 'use v5.12;' (implicitly enabling strict).
+- Modernize inheritance with 'use parent'.
+- Modern package version syntax (package Name VERSION;).
+- Updated tools/bump-version to support new syntax.
+
+Fixes #132
+
+* fix(docs): resolve Test::Synopsis failure in iabtcfv2.pm
+
+* chore: finalize perl 5.12 baseline and restore fallback testing
+- Merge tag 'v0.511' into devel
+
+Tagged for release. v0.511
+
 ## [0.511] - 2026-05-15
 
 ### Bug Fixes
@@ -6,6 +34,7 @@
 
 ### Other
 
+- Merge branch 'release/0.511'
 - Update changelog
 - Merge tag 'v0.510' into devel
 
