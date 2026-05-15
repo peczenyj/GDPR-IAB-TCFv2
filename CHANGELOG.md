@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.511] - 2026-05-15
 
 ### Bug Fixes
 
@@ -6,6 +6,7 @@
 
 ### Other
 
+- Update changelog
 - Merge tag 'v0.510' into devel
 
 Tagged for release. v0.510
