@@ -6,7 +6,7 @@ use warnings;
 require Exporter;
 use base qw<Exporter>;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 use constant {NotAllowed => 0, RequireConsent => 1, RequireLegitimateInterest => 2,};
 

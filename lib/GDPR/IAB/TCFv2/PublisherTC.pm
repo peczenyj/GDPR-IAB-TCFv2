@@ -10,7 +10,7 @@ use GDPR::IAB::TCFv2::BitUtils qw<is_set
   get_uint6
 >;
 
-our $VERSION = "0.500";
+our $VERSION = "0.510";
 
 use constant {
   SEGMENT_TYPE_PUBLISHER_TC => 3,

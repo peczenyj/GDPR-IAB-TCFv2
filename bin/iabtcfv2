@@ -174,8 +174,8 @@ sub run_dump {
     }
   }
   else {
-    binmode(STDIN, ':utf8') if -t STDIN;
-    while (my $line = <STDIN>) {
+    binmode(STDIN, ':encoding(UTF-8)') if -t STDIN;    ## no critic (InputOutput::ProhibitInteractiveTest, InputOutput::RequireEncodingWithUTF8Layer)
+    while (my $line = <STDIN>) {                        ## no critic (InputOutput::ProhibitExplicitStdin)
       $state->{line_num}++;
       chomp $line;
       next unless $line =~ /\S/;
@@ -260,18 +260,18 @@ sub _show_short_help {
 }
 
 sub _show_subcommand_short_help {
-  my $name  = shift;
-  my $entry = $SUBCOMMANDS{$name};
+  my $name      = shift;
+  my $sub_entry = $SUBCOMMANDS{$name};
 
-  print {*STDERR} "iabtcfv2 $name - $entry->{summary}\n\n";
-  print {*STDERR} "Usage:\n    $entry->{synopsis}\n\n";
+  print {*STDERR} "iabtcfv2 $name - $sub_entry->{summary}\n\n";
+  print {*STDERR} "Usage:\n    $sub_entry->{synopsis}\n\n";
   print {*STDERR} "Options:\n";
 
   # `-h` / `--help` are appended as if they were registry rows so they
   # share the two-pass alignment below and do not require hardcoded
   # column widths.
   my @rows
-    = (@{$entry->{common}}, ['-h', '', '', 'Show this short help'], ['', '--help', '', 'Show full documentation'],);
+    = (@{$sub_entry->{common}}, ['-h', '', '', 'Show this short help'], ['', '--help', '', 'Show full documentation'],);
 
   # Two-pass formatting so the description column is left-aligned across
   # rows regardless of long-option / value-placeholder width.
@@ -279,19 +279,19 @@ sub _show_subcommand_short_help {
   my $left_width = 0;
   for my $row (@rows) {
     my ($s, $l, $v, $desc) = @{$row};
-    my $left;
+    my $left_col;
     if (length $l) {
 
       # `-x, --long-name [<VAL>]` — comma only when both forms exist.
       my $short_col = length($s) ? "$s," : '   ';
-      $left = sprintf "    %-3s %s%s", $short_col, $l, length($v) ? " $v" : '';
+      $left_col = sprintf "    %-3s %s%s", $short_col, $l, length($v) ? " $v" : '';
     }
     else {
       # Short-only row (e.g. the `-h` line in the appended help block).
-      $left = sprintf "    %s", $s;
+      $left_col = sprintf "    %s", $s;
     }
-    $left_width = length($left) if length($left) > $left_width;
-    push @lines, [$left, $desc];
+    $left_width = length($left_col) if length($left_col) > $left_width;
+    push @lines, [$left_col, $desc];
   }
 
   for my $r (@lines) {
@@ -321,7 +321,7 @@ sub _parse_id_list {
   return [map { 0 + $_ } grep { length $_ } split /\s*,\s*/, $s];
 }
 
-sub run_validate {
+sub run_validate {    ## no critic (Subroutines::ProhibitExcessComplexity)
   my @args = @_;
   my %opts = (
     pretty                         => 0,
@@ -427,7 +427,7 @@ sub run_validate {
       local $SIG{__WARN__} = sub {
         my $msg = defined($_[0]) ? $_[0] : '';
         return if $msg =~ /CMP list is older than 28 days/;
-        warn @_;
+        warn @_;    ## no critic (ErrorHandling::RequireCarping)
         }
         if !$opts{'enable-warnings'};
 
@@ -466,8 +466,8 @@ sub run_validate {
     }
   }
   else {
-    binmode(STDIN, ':utf8') if -t STDIN;
-    while (my $line = <STDIN>) {
+    binmode(STDIN, ':encoding(UTF-8)') if -t STDIN;    ## no critic (InputOutput::ProhibitInteractiveTest, InputOutput::RequireEncodingWithUTF8Layer)
+    while (my $line = <STDIN>) {                        ## no critic (InputOutput::ProhibitExplicitStdin)
       $state->{line_num}++;
       chomp $line;
       next unless $line =~ /\S/;

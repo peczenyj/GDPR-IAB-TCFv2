@@ -36,8 +36,9 @@ Author tests live in `xt/` and are NOT run by `make test`. Run them explicitly:
 
 ```sh
 prove -lr xt                   # critic + tidy
-make lint                      # perlcritic -profile .perlcriticrc lib bin t xt
+make lint                      # perlcritic -profile .perlcriticrc lib bin
 make tidy                      # perltidy -b on lib/ bin/ t/ xt/
+make check                     # lint + test + author tests (full check)
 ```
 
 `make tidy` writes `.bak` files next to every reformatted source file (perltidy `-b`). The repo currently contains many such `.bak` files — they are excluded from the dist via `MANIFEST.SKIP` and from author tests via `xt/tidy.t`, but **never edit, commit, or treat them as source**. If you tidy a file and want to discard the backup, delete the `.bak`; do not check it in.
