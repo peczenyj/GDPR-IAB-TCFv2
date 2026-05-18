@@ -1,5 +1,5 @@
 # To read this file, run:
-#    perldoc CONTRIBUTING.pod
+#    perldoc ./CONTRIBUTING
 
 =encoding utf8
 
@@ -19,7 +19,7 @@ The documentation is written using the
 L<POD|http://perldoc.perl.org/perlpod.html> format. Use the C<perldoc> tool
 to render it in a terminal:
 
-    perldoc CONTRIBUTING.pod
+    perldoc ./CONTRIBUTING
 
 =head1 PROJECT STATUS
 
@@ -32,7 +32,7 @@ as B<help-wanted> issues on GitHub.
 
 If you are looking for a place to contribute, the
 L<help-wanted issues|https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=is%3Aopen+label%3Ahelp-wanted>
-are the curated entry point. F<TODO.pod> at the repository root has
+are the curated entry point. F<TODO> at the repository root has
 the full ecosystem and roadmap context, including suggested API
 sketches and test scopes for each item.
 

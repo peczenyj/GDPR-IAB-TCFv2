@@ -46,8 +46,8 @@ ideas in ["ECOSYSTEM"](#ecosystem) -- is now tracked as `help-wanted` issues on
 GitHub.
 
 Patches and PRs from the community are welcome and will continue to be
-reviewed. See `TODO.pod` at the repository root for the full
-help-wanted list and `CONTRIBUTING.pod` for the patching workflow.
+reviewed. See `TODO` at the repository root for the full
+help-wanted list and `CONTRIBUTING` for the patching workflow.
 
 # SYNOPSIS
 
@@ -330,7 +330,7 @@ distributions rather than features of `GDPR::IAB::TCFv2` itself.
 
 The `help-wanted` issues on GitHub track each of these ideas; see
 [https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem](https://github.com/peczenyj/GDPR-IAB-TCFv2/issues?q=label%3Aecosystem)
-and `TODO.pod` for context.
+and `TODO` for context.
 
 # SEE ALSO
 
