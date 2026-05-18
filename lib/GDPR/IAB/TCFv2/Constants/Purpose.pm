@@ -1,4 +1,4 @@
-package GDPR::IAB::TCFv2::Constants::Purpose 0.512;
+package GDPR::IAB::TCFv2::Constants::Purpose 0.520;
 use v5.12;
 use warnings;
 

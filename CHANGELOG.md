@@ -1,11 +1,29 @@
+## [0.520] - 2026-05-18
+
+### Bug Fixes
+
+- Stop EUMM installing CONTRIBUTING and TODO as modules 
+
+### Other
+
+- Bump version
+- Remove extra test, not needed
+- Update changelog
+- SLSA Build L1 — provenance for CPAN tarball and Docker image 
+- Merge tag 'v0.512' into devel
+
+Tagged for release. v0.512
+
 ## [0.512] - 2026-05-15
 
 ### Documentation
 
+- Update disclaimer about maintenance mode
 - Update changelog
 
 ### Other
 
+- Release v0.512
 - Phase 12.1b: Migrate to Perl 5.12 Baseline 
 
 * feat: migrate to Perl 5.12 baseline
