@@ -1,4 +1,4 @@
-## [unreleased]
+## [0.520] - 2026-05-18
 
 ### Bug Fixes
 
@@ -6,6 +6,9 @@
 
 ### Other
 
+- Bump version
+- Remove extra test, not needed
+- Update changelog
 - SLSA Build L1 — provenance for CPAN tarball and Docker image 
 - Merge tag 'v0.512' into devel
 
