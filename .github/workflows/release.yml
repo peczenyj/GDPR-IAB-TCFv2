@@ -6,11 +6,13 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  cpan:
     name: Build, CPAN and GitHub Release
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +32,11 @@ jobs:
           make manifest
           make dist
 
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'GDPR-IAB-TCFv2-*.tar.gz'
+
       - name: Upload to CPAN
         if: env.PAUSE_USER != ''
         env:
@@ -47,3 +54,49 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  docker:
+    name: Build and Push Docker Image
+    needs: cpan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    env:
+      REGISTRY: docker.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=match,pattern=v(.*),group=1
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
