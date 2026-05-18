@@ -27,7 +27,7 @@
 </div>
 
 <div>
-    <a href="https://slsa.dev"><img src="https://img.shields.io/badge/SLSA-Build_L2-green.svg" alt='SLSA Build Level 2'/></a>
+    <a href="https://github.com/peczenyj/GDPR-IAB-TCFv2/attestations"><img src="https://img.shields.io/badge/SLSA-Build_L2-green.svg" alt='SLSA Build Level 2'/></a>
 </div>
 
 # NAME
