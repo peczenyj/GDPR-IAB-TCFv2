@@ -131,6 +131,21 @@ sub is_valid {
   return 1;
 }
 
+sub state {
+  my ($self, $cmp_id, $now) = @_;
+
+  my $cmp = $self->{cmps}->{$cmp_id};
+  return 'unknown' unless $cmp;
+
+  if ($cmp->{deletedDate}) {
+    my $deleted = $self->_parse_date($cmp->{deletedDate});
+    my $ref = defined $now ? $now : $self->_now();
+    return 'deleted' if $deleted && $deleted <= $ref;
+  }
+
+  return 'active';
+}
+
 sub last_updated_epoch {
   my ($self) = @_;
   return unless $self->{last_updated};
