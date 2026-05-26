@@ -239,7 +239,7 @@ subtest 'Validator::Result: RequireLegitimateInterest restriction on consent bas
   is($failures[0]->vendor_id,        2, 'vendor_id is 2');
 };
 
-subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
+subtest 'Validator::Result: unknown CMP carries ReasonCMPUnknown' => sub {
   require GDPR::IAB::TCFv2::CMPValidator;
 
   my $cmp_file = File::Spec->catfile($FindBin::Bin, 'corpus', 'cmp-list.json');
@@ -256,8 +256,24 @@ subtest 'Validator::Result: invalid CMP carries ReasonInvalidCMP' => sub {
   my @failures = $result->failures;
   is(scalar @failures, 1, 'fail-fast yields exactly one failure');
 
-  is($failures[0]->code,   ReasonInvalidCMP, 'code is ReasonInvalidCMP');
+  is($failures[0]->code,   ReasonCMPUnknown, 'code is ReasonCMPUnknown');
   is($failures[0]->cmp_id, 888,              'cmp_id is set to the CMP from the consent string');
+};
+
+subtest 'Validator::Result: deleted CMP carries ReasonCMPDeleted' => sub {
+  require GDPR::IAB::TCFv2::CMPValidator;
+
+  # Baseline string carries CMP 21; mark it deleted in an inline registry.
+  my $validator = GDPR::IAB::TCFv2::Validator->new(
+    vendor_id     => 32,
+    cmp_validator => {
+      now  => 1776254400,
+      data => '{"cmps":{"21":{"id":21,"deletedDate":"2020-01-01T00:00:00Z"}}}',
+    },
+  );
+  my @failures = $validator->validate_all($tc_string)->failures;
+
+  ok((grep { $_->code == ReasonCMPDeleted } @failures), 'deleted CMP => ReasonCMPDeleted');
 };
 
 done_testing;

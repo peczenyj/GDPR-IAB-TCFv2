@@ -159,6 +159,27 @@ sub _check_cmp_validator {
   return unless defined $cmp_validator;
 
   my $cmp_id = $tc->cmp_id;
+
+  # Prefer the lifecycle-aware state() when the provider exposes it; fall back
+  # to the boolean is_valid for older/custom providers.
+  if ($cmp_validator->can('state')) {
+    my $state = $cmp_validator->state($cmp_id);
+    return if $state eq 'active';
+
+    my $code
+      = $state eq 'deleted' ? ReasonCMPDeleted
+      : $state eq 'unknown' ? ReasonCMPUnknown
+      :                       ReasonInvalidCMP;
+
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code    => $code,
+      message => "CMP $cmp_id is not valid/disclosed ($state)",
+      cmp_id  => $cmp_id,
+      );
+    return;
+  }
+
   unless ($cmp_validator->is_valid($cmp_id)) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
