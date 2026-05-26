@@ -11,6 +11,11 @@ use GDPR::IAB::TCFv2::Validator::Failure;
 use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
+# TCF v2.3 became mandatory on 2026-02-28T00:00:00Z. Strings created on or
+# after this instant must use policy version >= 5 and carry a disclosed-vendors
+# segment. Mirrors the parser's TCF_V23_DEADLINE.
+use constant TCF_V23_DEADLINE => 1772236800;
+
 
 sub new {
   my ($klass, %args) = @_;
@@ -134,6 +139,9 @@ sub _run_validation {
   $self->_check_min_tcf_policy_version($tc, $min_tcf_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
+  $self->_check_v23_deadline($tc, \@failures);
+  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
+
   $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
@@ -188,6 +196,36 @@ sub _check_cmp_validator {
       cmp_id  => $cmp_id,
       );
   }
+  return;
+}
+
+sub _check_v23_deadline {
+  my ($self, $tc, $failures) = @_;
+
+  # A TC string created on/after the TCF v2.3 deadline must use policy version
+  # >= 5 and carry a disclosed-vendors segment, regardless of explicit
+  # configuration. The gate is date-based (not policy-based): a policy-5 string
+  # created before the deadline is a valid legacy string and is not forced to
+  # carry a disclosed-vendors segment here (the min-policy/verify-disclosed
+  # rules still apply to it separately).
+  return unless $tc->created >= TCF_V23_DEADLINE;
+
+  if ($tc->policy_version < 5) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code    => ReasonPolicyVersionTooLow,
+      message => "post-deadline string requires policy version >= 5",
+      );
+  }
+
+  unless ($tc->has_vendor_disclosure) {
+    push @{$failures},
+      GDPR::IAB::TCFv2::Validator::Failure->new(
+      code    => ReasonMissingDisclosedVendors,
+      message => "post-deadline string requires disclosed vendors segment",
+      );
+  }
+
   return;
 }
 

@@ -4,6 +4,8 @@ use warnings;
 use Test::More;
 use Test::Exception;
 use GDPR::IAB::TCFv2;
+use GDPR::IAB::TCFv2::Validator;
+use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use MIME::Base64 qw(decode_base64 encode_base64);
 
 # TCF_V23_DEADLINE is 1772236800 (2026-02-28)
@@ -106,6 +108,38 @@ subtest "Mandatory Disclosed Vendors segment (v2.3 logic)" => sub {
   );
   ok !$c_sim->is_v23, "Reference time < Deadline disables v2.3 logic even for Policy 5 (historical simulation)";
   ok defined $c_sim,  "Parsed successfully in strict mode because v2.3 check was bypassed";
+};
+
+subtest "validator auto-enforces v2.3 after the deadline (date-based)" => sub {
+
+  # No bit-exact post-deadline TC string exists in the fixtures, so drive the
+  # deadline rule directly with a lightweight stub exposing the three accessors
+  # it consults. This keeps the date-based gate deterministic.
+  {
+
+    package TCStub;
+    sub new                   { my ($c, %a) = @_; return bless {%a}, $c }
+    sub created               { return $_[0]->{created} }
+    sub policy_version        { return $_[0]->{policy_version} }
+    sub has_vendor_disclosure { return $_[0]->{has_dv} }
+  }
+
+  my $deadline = 1772236800;    # 2026-02-28T00:00:00Z
+  my $v        = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1);
+
+  # Post-deadline, policy 2, no DV => both failures.
+  my @f;
+  $v->_check_v23_deadline(
+    TCStub->new(created => $deadline, policy_version => 2, has_dv => 0), \@f);
+  my %c = map { $_->code => 1 } @f;
+  ok $c{ReasonPolicyVersionTooLow()},     "post-deadline policy<5 => PolicyVersionTooLow";
+  ok $c{ReasonMissingDisclosedVendors()}, "post-deadline no DV => MissingDisclosedVendors";
+
+  # Pre-deadline, policy 5, no DV => date-based rule does NOT fire.
+  @f = ();
+  $v->_check_v23_deadline(
+    TCStub->new(created => $deadline - 1, policy_version => 5, has_dv => 0), \@f);
+  is scalar(@f), 0, "pre-deadline string is not subject to date-based v2.3 enforcement";
 };
 
 done_testing;
