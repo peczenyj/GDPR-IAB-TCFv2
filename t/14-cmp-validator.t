@@ -133,7 +133,7 @@ subtest "Validator integration: cmp_validator object" => sub {
 
   my $bad = $validator->validate($tc_unknown);
   ok !$bad->is_valid, "validation fails when CMP is unknown";
-  is(($bad->reasons)[0], "CMP 888 is not valid/disclosed", "reason names the bad CMP");
+  is(($bad->reasons)[0], "CMP 888 is not valid/disclosed (unknown)", "reason names the bad CMP");
 };
 
 subtest "Validator integration: cmp_validator hashref auto-instantiates" => sub {

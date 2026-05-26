@@ -148,6 +148,14 @@ sub _run_validation {
   $self->_check_disclosed($tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
+  # Global vendor gate: a vendor with neither consent nor legitimate interest
+  # at the vendor level can never satisfy any per-purpose check, so fail with
+  # ReasonVendorNotAllowed and short-circuit (in both fail-fast and exhaustive
+  # modes) before walking the purpose lists.
+  if ($self->_check_vendor_gate($tc, $vendor_id, \@failures)) {
+    return $self->_make_result(0, \@failures);
+  }
+
   $self->_check_consent_purposes($tc, $vendor_id, $strict_legal_basis, \@failures, $stop_on_first, $consent_ids,
     $flexible_set,);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
@@ -159,6 +167,22 @@ sub _run_validation {
   }
 
   return $self->_make_result(1, []);
+}
+
+sub _check_vendor_gate {
+  my ($self, $tc, $vendor_id, $failures) = @_;
+
+  return 0 if $tc->vendor_consent($vendor_id);
+  return 0 if $tc->vendor_legitimate_interest($vendor_id);
+
+  push @{$failures},
+    GDPR::IAB::TCFv2::Validator::Failure->new(
+    code      => ReasonVendorNotAllowed,
+    message   => "vendor $vendor_id not allowed (no consent or legitimate interest)",
+    vendor_id => $vendor_id,
+    );
+
+  return 1;
 }
 
 sub _check_cmp_validator {
