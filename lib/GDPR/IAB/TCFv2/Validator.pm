@@ -102,71 +102,84 @@ sub _run_validation {
 
   my $tc = ref($input) eq 'GDPR::IAB::TCFv2' ? $input : GDPR::IAB::TCFv2->Parse($input);
 
-  my $vendor_id = exists $overrides{vendor_id} ? $overrides{vendor_id} : $self->{vendor_id};
-  my $strict_legal_basis
-    = exists $overrides{strict_legal_basis} ? $overrides{strict_legal_basis} : $self->{strict_legal_basis};
-  my $verify_disclosed
-    = exists $overrides{verify_disclosed_vendors}
-    ? $overrides{verify_disclosed_vendors}
-    : $self->{verify_disclosed_vendors};
-  my $min_tcf_policy_version
-    = exists $overrides{min_tcf_policy_version} ? $overrides{min_tcf_policy_version} : $self->{min_tcf_policy_version};
-  my $cmp_validator
-    = exists $overrides{cmp_validator} ? _coerce_cmp_validator($overrides{cmp_validator}) : $self->{cmp_validator};
+  my $opt = $self->_resolve_options(%overrides);
 
-  # Per-call list overrides. Coherence is not re-validated here:
-  # orphan flexible purposes (a pid in flexible_purpose_ids that
-  # isn't also in consent_purpose_ids or legitimate_interest_purpose_ids)
-  # are silently dropped because the rule loops only iterate over the
-  # consent/LI lists, so the flex flag for an orphan is unreachable.
-  # This keeps per-call overrides forgiving while the constructor
-  # remains strict for the static policy.
-  my $consent_ids
-    = exists $overrides{consent_purpose_ids} ? $overrides{consent_purpose_ids} : $self->{consent_purpose_ids};
-  my $li_ids
-    = exists $overrides{legitimate_interest_purpose_ids}
-    ? $overrides{legitimate_interest_purpose_ids}
-    : $self->{legitimate_interest_purpose_ids};
-  my $flexible_set
-    = exists $overrides{flexible_purpose_ids}
-    ? {map { $_ => 1 } @{$overrides{flexible_purpose_ids}}}
-    : $self->{_flexible_set};
-
-  croak "missing vendor_id" unless defined $vendor_id;
+  croak "missing vendor_id" unless defined $opt->{vendor_id};
 
   my @failures;
 
-  $self->_check_min_tcf_policy_version($tc, $min_tcf_policy_version, \@failures);
+  $self->_check_min_tcf_policy_version($tc, $opt->{min_tcf_policy_version}, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   $self->_check_v23_deadline($tc, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_cmp_validator($tc, $cmp_validator, \@failures);
+  $self->_check_cmp_validator($tc, $opt->{cmp_validator}, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_disclosed($tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, \@failures);
+  $self->_check_disclosed($tc, $opt->{vendor_id}, $opt->{verify_disclosed}, $opt->{min_tcf_policy_version}, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   # Global vendor gate: a vendor with neither consent nor legitimate interest
   # at the vendor level can never satisfy any per-purpose check, so fail with
   # ReasonVendorNotAllowed and short-circuit (in both fail-fast and exhaustive
   # modes) before walking the purpose lists.
-  if ($self->_check_vendor_gate($tc, $vendor_id, \@failures)) {
+  if ($self->_check_vendor_gate($tc, $opt->{vendor_id}, \@failures)) {
     return $self->_make_result(0, \@failures);
   }
 
-  $self->_check_consent_purposes($tc, $vendor_id, $strict_legal_basis, \@failures, $stop_on_first, $consent_ids,
-    $flexible_set,);
+  $self->_check_consent_purposes($tc, $opt->{vendor_id}, $opt->{strict_legal_basis},
+    \@failures, $stop_on_first, $opt->{consent_ids}, $opt->{flexible_set},);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
-  $self->_check_li_purposes($tc, $vendor_id, $strict_legal_basis, \@failures, $stop_on_first, $li_ids, $flexible_set,);
+  $self->_check_li_purposes($tc, $opt->{vendor_id}, $opt->{strict_legal_basis},
+    \@failures, $stop_on_first, $opt->{li_ids}, $opt->{flexible_set},);
 
   if (@failures) {
     return $self->_make_result(0, \@failures);
   }
 
   return $self->_make_result(1, []);
+}
+
+# Resolve each tunable from the per-call %overrides, falling back to the
+# constructor value. Returns a hashref consumed by _run_validation.
+#
+# Per-call list overrides do NOT re-validate coherence: orphan flexible
+# purposes (a pid in flexible_purpose_ids that isn't also in
+# consent_purpose_ids or legitimate_interest_purpose_ids) are silently
+# dropped because the rule loops only iterate over the consent/LI lists,
+# so the flex flag for an orphan is unreachable. This keeps per-call
+# overrides forgiving while the constructor remains strict for the static
+# policy.
+sub _resolve_options {
+  my ($self, %overrides) = @_;
+
+  my %opt;
+
+  $opt{vendor_id} = exists $overrides{vendor_id} ? $overrides{vendor_id} : $self->{vendor_id};
+  $opt{strict_legal_basis}
+    = exists $overrides{strict_legal_basis} ? $overrides{strict_legal_basis} : $self->{strict_legal_basis};
+  $opt{verify_disclosed}
+    = exists $overrides{verify_disclosed_vendors}
+    ? $overrides{verify_disclosed_vendors}
+    : $self->{verify_disclosed_vendors};
+  $opt{min_tcf_policy_version}
+    = exists $overrides{min_tcf_policy_version} ? $overrides{min_tcf_policy_version} : $self->{min_tcf_policy_version};
+  $opt{cmp_validator}
+    = exists $overrides{cmp_validator} ? _coerce_cmp_validator($overrides{cmp_validator}) : $self->{cmp_validator};
+  $opt{consent_ids}
+    = exists $overrides{consent_purpose_ids} ? $overrides{consent_purpose_ids} : $self->{consent_purpose_ids};
+  $opt{li_ids}
+    = exists $overrides{legitimate_interest_purpose_ids}
+    ? $overrides{legitimate_interest_purpose_ids}
+    : $self->{legitimate_interest_purpose_ids};
+  $opt{flexible_set}
+    = exists $overrides{flexible_purpose_ids}
+    ? {map { $_ => 1 } @{$overrides{flexible_purpose_ids}}}
+    : $self->{_flexible_set};
+
+  return \%opt;
 }
 
 sub _check_vendor_gate {
@@ -198,10 +211,7 @@ sub _check_cmp_validator {
     my $state = $cmp_validator->state($cmp_id);
     return if $state eq 'active';
 
-    my $code
-      = $state eq 'deleted' ? ReasonCMPDeleted
-      : $state eq 'unknown' ? ReasonCMPUnknown
-      :                       ReasonInvalidCMP;
+    my $code = $state eq 'deleted' ? ReasonCMPDeleted : $state eq 'unknown' ? ReasonCMPUnknown : ReasonInvalidCMP;
 
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
@@ -232,7 +242,7 @@ sub _check_v23_deadline {
   # created before the deadline is a valid legacy string and is not forced to
   # carry a disclosed-vendors segment here (the min-policy/verify-disclosed
   # rules still apply to it separately).
-  return unless $tc->created >= TCF_V23_DEADLINE;
+  return if $tc->created < TCF_V23_DEADLINE;
 
   if ($tc->policy_version < 5) {
     push @{$failures},

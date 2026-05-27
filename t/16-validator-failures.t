@@ -191,10 +191,10 @@ subtest 'Validator::Result: NotAllowed publisher restriction emits ReasonPublish
   my $failure   = $validator->_publisher_restriction_failure(PRStubNotAllowed->new, 7, 1, 0);
 
   ok($failure, 'a publisher-restriction failure is returned');
-  is($failure->code, ReasonPublisherRestrictionNotAllowed, 'code is ReasonPublisherRestrictionNotAllowed');
-  is($failure->restriction_type, 0, 'restriction_type is 0 (NotAllowed)');
-  is($failure->purpose_id,       1, 'purpose_id is 1');
-  is($failure->vendor_id,        7, 'vendor_id is 7');
+  is($failure->code,             ReasonPublisherRestrictionNotAllowed, 'code is ReasonPublisherRestrictionNotAllowed');
+  is($failure->restriction_type, 0,                                    'restriction_type is 0 (NotAllowed)');
+  is($failure->purpose_id,       1,                                    'purpose_id is 1');
+  is($failure->vendor_id,        7,                                    'vendor_id is 7');
   like($failure->message, qr/purpose 1 not allowed/, 'message names the restriction');
 };
 
@@ -252,16 +252,12 @@ subtest 'global vendor gate short-circuits per-purpose checks' => sub {
 
   # A vendor with neither consent nor LI at the vendor level must fail with
   # ReasonVendorNotAllowed and stop before per-purpose checks.
-  my $v = GDPR::IAB::TCFv2::Validator->new(
-    vendor_id           => 9999,
-    consent_purpose_ids => [1, 3],
-  );
+  my $v     = GDPR::IAB::TCFv2::Validator->new(vendor_id => 9999, consent_purpose_ids => [1, 3],);
   my @codes = $v->validate_all($tc_string)->reason_codes;
   my %seen  = map { $_ => 1 } @codes;
 
-  ok $seen{ReasonVendorNotAllowed()}, "absent vendor => ReasonVendorNotAllowed";
-  ok !$seen{ReasonVendorNotAllowedConsent()},
-    "per-purpose consent check is short-circuited";
+  ok $seen{ReasonVendorNotAllowed()},         "absent vendor => ReasonVendorNotAllowed";
+  ok !$seen{ReasonVendorNotAllowedConsent()}, "per-purpose consent check is short-circuited";
 };
 
 subtest 'Validator::Result: unknown CMP carries ReasonCMPUnknown' => sub {
@@ -291,10 +287,7 @@ subtest 'Validator::Result: deleted CMP carries ReasonCMPDeleted' => sub {
   # Baseline string carries CMP 21; mark it deleted in an inline registry.
   my $validator = GDPR::IAB::TCFv2::Validator->new(
     vendor_id     => 32,
-    cmp_validator => {
-      now  => 1776254400,
-      data => '{"cmps":{"21":{"id":21,"deletedDate":"2020-01-01T00:00:00Z"}}}',
-    },
+    cmp_validator => {now => 1776254400, data => '{"cmps":{"21":{"id":21,"deletedDate":"2020-01-01T00:00:00Z"}}}',},
   );
   my @failures = $validator->validate_all($tc_string)->failures;
 

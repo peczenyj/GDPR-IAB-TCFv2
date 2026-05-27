@@ -139,7 +139,7 @@ sub state {
 
   if ($cmp->{deletedDate}) {
     my $deleted = $self->_parse_date($cmp->{deletedDate});
-    my $ref = defined $now ? $now : $self->_now();
+    my $ref     = defined $now ? $now : $self->_now();
     return 'deleted' if $deleted && $deleted <= $ref;
   }
 

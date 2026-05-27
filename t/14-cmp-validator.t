@@ -305,13 +305,12 @@ subtest "CMPValidator: env_proxy is honored on the default client" => sub {
 };
 
 subtest 'lifecycle state: active / deleted / unknown' => sub {
-  my $now = 1776254400;    # 2026-04-15
+  my $now = 1776254400;                            # 2026-04-15
   my $v   = GDPR::IAB::TCFv2::CMPValidator->new(
     now  => $now,
     data => '{"lastUpdated":"2026-04-10T00:00:00Z","cmps":{'
       . '"21":{"id":21},'
-      . '"22":{"id":22,"deletedDate":"2020-01-01T00:00:00Z"}'
-      . '}}',
+      . '"22":{"id":22,"deletedDate":"2020-01-01T00:00:00Z"}' . '}}',
   );
 
   is($v->state(21, $now), 'active',  'present, no deletedDate => active');

@@ -270,7 +270,7 @@ subtest 'validate subcommand' => sub {
   my @text_lines = split /\n/, $text_all;
   cmp_ok(scalar @text_lines, '>=', 2, '--text --all spans multiple lines');
   like($text_lines[0], qr/^FAIL\s+\S+\s+vendor 21:$/, '--text --all first line ends with colon');
-  like($text_lines[1], qr/^\s+-\s/,                      '--text --all subsequent lines are indented bullets');
+  like($text_lines[1], qr/^\s+-\s/,                   '--text --all subsequent lines are indented bullets');
 
   # --quiet preserves exit code, suppresses stdout.
   my $quiet_ok = `$perl -Ilib $bin validate -qv 21 $tc_string`;
