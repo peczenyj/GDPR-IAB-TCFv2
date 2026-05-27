@@ -7,6 +7,7 @@ use Test::Warn;
 
 use GDPR::IAB::TCFv2;
 use GDPR::IAB::TCFv2::Validator;
+use GDPR::IAB::TCFv2::Validator::Reason  qw<:all>;
 use GDPR::IAB::TCFv2::Constants::Purpose qw<:all>;
 
 subtest "Validator basic usage" => sub {
@@ -94,12 +95,20 @@ subtest "Validator with Disclosed Vendors" => sub {
       = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_tcf_policy_version => 2,);
     ok $v2->validate($tc_v20), 'missing segment passes when min_tcf_policy_version < 5';
 
-    # 3. min_tcf_policy_version >= 5 -> Failure
+    # 3. min_tcf_policy_version >= 5 against a policy-2 string -> Failure.
+    # Per Go alignment, the policy-based "missing disclosed vendors" rule only
+    # fires when the STRING's own policy version is >= 5 (Go branch b). This
+    # fixture is policy 2, so it fails the policy floor instead -- a real
+    # policy-5 string lacking the segment is covered in t/18-go-parity.t.
     my $v3
       = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1, verify_disclosed_vendors => 1, min_tcf_policy_version => 5,);
     my $r3 = $v3->validate_all($tc_v20);
-    ok !$r3, 'missing segment fails when min_tcf_policy_version >= 5';
-    like "$r3", qr/missing disclosed vendors segment/, 'correct failure reason';
+    ok !$r3, 'policy-2 string fails when min_tcf_policy_version >= 5';
+    like "$r3", qr/policy version 2 is below required minimum 5/, 'fails the policy floor (string policy < 5)';
+
+    my %codes = map { $_ => 1 } $r3->reason_codes;
+    ok !$codes{ReasonMissingDisclosedVendors()},
+      'policy-2 string does not trigger the policy-based MissingDisclosedVendors';
   };
 };
 

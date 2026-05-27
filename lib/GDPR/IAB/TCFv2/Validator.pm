@@ -32,14 +32,20 @@ sub new {
   # pair instead.
   my $cmp_validator = _coerce_cmp_validator($args{cmp_validator});
 
+  # A policy floor of v2.3+ (>= 5) makes the disclosed-vendors segment
+  # mandatory, so verifying it is implied. Mirrors the Go validator's
+  # `verifyDisclosedVendors = cfg.VerifyDisclosedVendors || cfg.MinTcfPolicyVersion >= 5`.
+  my $min              = $args{min_tcf_policy_version};
+  my $verify_disclosed = ($args{verify_disclosed_vendors} // 0) || (defined $min && $min >= 5 ? 1 : 0);
+
   my $self = {
     vendor_id                       => $args{vendor_id},
     consent_purpose_ids             => $consent,
     legitimate_interest_purpose_ids => $legitimate_interest,
     flexible_purpose_ids            => $flexible,
     _flexible_set                   => {map { $_ => 1 } @{$flexible}},
-    verify_disclosed_vendors        => $args{verify_disclosed_vendors} // 0,
-    min_tcf_policy_version          => $args{min_tcf_policy_version},
+    verify_disclosed_vendors        => $verify_disclosed,
+    min_tcf_policy_version          => $min,
     cmp_validator                   => $cmp_validator,
     strict_legal_basis              => exists $args{strict_legal_basis} ? $args{strict_legal_basis} : 0,
   };
@@ -108,10 +114,7 @@ sub _run_validation {
 
   my @failures;
 
-  $self->_check_min_tcf_policy_version($tc, $opt->{min_tcf_policy_version}, \@failures);
-  return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
-
-  $self->_check_v23_deadline($tc, \@failures);
+  $self->_check_policy_version($tc, $opt->{min_tcf_policy_version}, \@failures);
   return $self->_make_result(0, \@failures) if $stop_on_first && @failures;
 
   $self->_check_cmp_validator($tc, $opt->{cmp_validator}, \@failures);
@@ -233,43 +236,26 @@ sub _check_cmp_validator {
   return;
 }
 
-sub _check_v23_deadline {
-  my ($self, $tc, $failures) = @_;
+# Single policy-version gate mirroring the Go validator's
+# yieldPolicyVersionFailure: the date-based v2.3 rule takes precedence, then
+# the explicit floor. At most one ReasonPolicyVersionTooLow is emitted.
+sub _check_policy_version {
+  my ($self, $tc, $min_tcf_policy_version, $failures) = @_;
+
+  my $actual = $tc->policy_version;
 
   # A TC string created on/after the TCF v2.3 deadline must use policy version
-  # >= 5 and carry a disclosed-vendors segment, regardless of explicit
-  # configuration. The gate is date-based (not policy-based): a policy-5 string
-  # created before the deadline is a valid legacy string and is not forced to
-  # carry a disclosed-vendors segment here (the min-policy/verify-disclosed
-  # rules still apply to it separately).
-  return if $tc->created < TCF_V23_DEADLINE;
-
-  if ($tc->policy_version < 5) {
+  # >= 5, regardless of explicit configuration.
+  if ($tc->created >= TCF_V23_DEADLINE && $actual < 5) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonPolicyVersionTooLow,
       message => "post-deadline string requires policy version >= 5",
       );
+    return;
   }
 
-  unless ($tc->has_vendor_disclosure) {
-    push @{$failures},
-      GDPR::IAB::TCFv2::Validator::Failure->new(
-      code    => ReasonMissingDisclosedVendors,
-      message => "post-deadline string requires disclosed vendors segment",
-      );
-  }
-
-  return;
-}
-
-sub _check_min_tcf_policy_version {
-  my ($self, $tc, $min_tcf_policy_version, $failures) = @_;
-
-  return unless defined $min_tcf_policy_version;
-
-  my $actual = $tc->policy_version;
-  if ($actual < $min_tcf_policy_version) {
+  if (defined $min_tcf_policy_version && $actual < $min_tcf_policy_version) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonPolicyVersionTooLow,
@@ -282,23 +268,41 @@ sub _check_min_tcf_policy_version {
 sub _check_disclosed {
   my ($self, $tc, $vendor_id, $verify_disclosed, $min_tcf_policy_version, $failures) = @_;
 
-  return unless $verify_disclosed;
+  my $has_disclosure = $tc->has_vendor_disclosure;
 
-  if ($tc->has_vendor_disclosure) {
-    unless ($tc->disclosed_vendor($vendor_id)) {
+  # Mandatory disclosed-vendors segment. Mirrors the Go validator's
+  # yieldMandatoryDisclosedVendors: it runs regardless of verify_disclosed and
+  # may fire on either ground (both, when they overlap):
+  #   (a) any string created on/after the v2.3 deadline;
+  #   (b) a policy>=5 string under a policy>=5 floor.
+  unless ($has_disclosure) {
+    if ($tc->created >= TCF_V23_DEADLINE) {
       push @{$failures},
         GDPR::IAB::TCFv2::Validator::Failure->new(
-        code      => ReasonVendorNotDisclosed,
-        message   => "vendor $vendor_id not disclosed",
+        code    => ReasonMissingDisclosedVendors,
+        message => "post-deadline string requires disclosed vendors segment",
+        );
+    }
+
+    if ($tc->policy_version >= 5 && defined $min_tcf_policy_version && $min_tcf_policy_version >= 5) {
+      push @{$failures},
+        GDPR::IAB::TCFv2::Validator::Failure->new(
+        code      => ReasonMissingDisclosedVendors,
+        message   => "missing disclosed vendors segment",
         vendor_id => $vendor_id,
         );
     }
   }
-  elsif (defined $min_tcf_policy_version && $min_tcf_policy_version >= 5) {
+
+  # When the segment is present and verification is on, the vendor must appear
+  # in it. An absent segment is handled by the mandatory check above, never
+  # here (matching Go: verifyDisclosedVendors passes when DisclosedVendors is
+  # nil).
+  if ($verify_disclosed && $has_disclosure && !$tc->disclosed_vendor($vendor_id)) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
-      code      => ReasonMissingDisclosedVendors,
-      message   => "missing disclosed vendors segment",
+      code      => ReasonVendorNotDisclosed,
+      message   => "vendor $vendor_id not disclosed",
       vendor_id => $vendor_id,
       );
   }
@@ -334,11 +338,8 @@ sub _check_consent_purposes {
 
     unless ($is_allowed) {
       push @{$failures},
-        GDPR::IAB::TCFv2::Validator::Failure->new(
-        code       => ReasonVendorNotAllowedConsent,
-        message    => "vendor $vendor_id not allowed for purpose $pid (consent)",
-        purpose_id => $pid,
-        vendor_id  => $vendor_id,
+        $self->_purpose_not_allowed_failure($tc, $vendor_id, $pid, $is_flexible, ReasonVendorNotAllowedConsent,
+        "vendor $vendor_id not allowed for purpose $pid (consent)",
         );
       return if $stop_on_first;
     }
@@ -394,16 +395,42 @@ sub _check_li_purposes {
 
     unless ($is_allowed) {
       push @{$failures},
-        GDPR::IAB::TCFv2::Validator::Failure->new(
-        code       => ReasonVendorNotAllowedLegitimateInterest,
-        message    => "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
-        purpose_id => $pid,
-        vendor_id  => $vendor_id,
+        $self->_purpose_not_allowed_failure(
+        $tc, $vendor_id, $pid, $is_flexible,
+        ReasonVendorNotAllowedLegitimateInterest,
+        "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
         );
       return if $stop_on_first;
     }
   }
   return;
+}
+
+# Build the failure for a purpose the parser rejected. For a flexible purpose,
+# a NotAllowed publisher restriction surfaces as the dedicated reason (mirroring
+# the Go validator's runFlexibleCheck); any other rejection keeps the generic
+# per-basis reason. Non-flexible purposes have their restriction-driven reasons
+# resolved earlier by _publisher_restriction_failure, so they always take the
+# generic branch here.
+sub _purpose_not_allowed_failure {
+  my ($self, $tc, $vendor_id, $pid, $is_flexible, $code, $message) = @_;
+
+  if ($is_flexible && $tc->check_publisher_restriction($pid, NotAllowed, $vendor_id)) {
+    return GDPR::IAB::TCFv2::Validator::Failure->new(
+      code             => ReasonPublisherRestrictionNotAllowed,
+      message          => "publisher restriction: purpose $pid not allowed (vendor $vendor_id)",
+      purpose_id       => $pid,
+      vendor_id        => $vendor_id,
+      restriction_type => NotAllowed,
+    );
+  }
+
+  return GDPR::IAB::TCFv2::Validator::Failure->new(
+    code       => $code,
+    message    => $message,
+    purpose_id => $pid,
+    vendor_id  => $vendor_id,
+  );
 }
 
 sub _li_carve_out_applies {
@@ -579,28 +606,38 @@ L<GDPR::IAB::TCFv2/is_vendor_allowed_for_flexible_purpose>.
 =item *
 
 C<verify_disclosed_vendors> — boolean. When true, the validator inspects
-the TC string's Disclosed Vendors segment.
+the TC string's Disclosed Vendors segment: if the segment is B<present>,
+the vendor must appear there or the rule fails with C<"vendor N not
+disclosed"> (ReasonVendorNotDisclosed). An B<absent> segment is never a
+C<verify_disclosed_vendors> failure on its own — that case is owned by the
+mandatory-segment rules below.
 
-If the segment is present, the vendor must appear there or the rule
-fails with C<"vendor N not disclosed"> (ReasonVendorNotDisclosed).
+Setting C<min_tcf_policy_version> to B<5 or higher> implies
+C<verify_disclosed_vendors> (it is auto-enabled), mirroring the Go
+C<lib-gdpr> validator.
 
-If the segment is B<absent>, the behavior depends on the
-C<min_tcf_policy_version> floor:
+Independently of C<verify_disclosed_vendors>, an absent Disclosed Vendors
+segment is B<mandatory> (failing with ReasonMissingDisclosedVendors) when
+either:
 
 =over 8
 
 =item *
 
-When C<min_tcf_policy_version> is set to B<5 or higher> (TCF v2.3+), the
-segment is mandatory; absence causes a failure
-(ReasonMissingDisclosedVendors).
+the TC string was created on/after the TCF v2.3 deadline (date-based,
+C<2026-02-28>); or
 
 =item *
 
-Otherwise (if C<min_tcf_policy_version> is below 5 or unset), absence is
-B<silently ignored> (matches legacy behavior).
+the TC string's B<own> policy version is C<E<gt>= 5> B<and>
+C<min_tcf_policy_version> is C<E<gt>= 5>. A policy-2/4 string under a
+policy-5 floor fails the floor (ReasonPolicyVersionTooLow) rather than the
+missing-segment rule.
 
 =back
+
+Otherwise an absent segment is B<silently ignored> (matches legacy
+behavior).
 
 =item *
 

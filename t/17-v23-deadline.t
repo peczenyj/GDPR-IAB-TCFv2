@@ -127,16 +127,22 @@ subtest "validator auto-enforces v2.3 after the deadline (date-based)" => sub {
   my $deadline = 1772236800;                                         # 2026-02-28T00:00:00Z
   my $v        = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1);
 
-  # Post-deadline, policy 2, no DV => both failures.
+  # Post-deadline, policy 2, no DV => both gates fire. The date-based rule is
+  # split across the two Go-aligned gates: the policy gate emits
+  # PolicyVersionTooLow, the disclosed gate emits MissingDisclosedVendors.
   my @f;
-  $v->_check_v23_deadline(TCStub->new(created => $deadline, policy_version => 2, has_dv => 0), \@f);
+  my $post = TCStub->new(created => $deadline, policy_version => 2, has_dv => 0);
+  $v->_check_policy_version($post, undef, \@f);
+  $v->_check_disclosed($post, 1, 0, undef, \@f);
   my %c = map { $_->code => 1 } @f;
   ok $c{ReasonPolicyVersionTooLow()},     "post-deadline policy<5 => PolicyVersionTooLow";
   ok $c{ReasonMissingDisclosedVendors()}, "post-deadline no DV => MissingDisclosedVendors";
 
-  # Pre-deadline, policy 5, no DV => date-based rule does NOT fire.
+  # Pre-deadline, policy 5, no DV, no floor => date-based rule does NOT fire.
   @f = ();
-  $v->_check_v23_deadline(TCStub->new(created => $deadline - 1, policy_version => 5, has_dv => 0), \@f);
+  my $pre = TCStub->new(created => $deadline - 1, policy_version => 5, has_dv => 0);
+  $v->_check_policy_version($pre, undef, \@f);
+  $v->_check_disclosed($pre, 1, 0, undef, \@f);
   is scalar(@f), 0, "pre-deadline string is not subject to date-based v2.3 enforcement";
 };
 
