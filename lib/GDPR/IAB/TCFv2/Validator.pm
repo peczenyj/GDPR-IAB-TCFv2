@@ -11,9 +11,11 @@ use GDPR::IAB::TCFv2::Validator::Failure;
 use GDPR::IAB::TCFv2::Validator::Reason qw<:all>;
 use GDPR::IAB::TCFv2::Validator::Result;
 
-# TCF v2.3 became mandatory on 2026-02-28T00:00:00Z. Strings created on or
+# TCF v2.3 became mandatory on 2026-02-28T00:00:00Z. Strings created strictly
 # after this instant must use policy version >= 5 and carry a disclosed-vendors
-# segment. Mirrors the parser's TCF_V23_DEADLINE.
+# segment. The strictly-after comparison mirrors the Go validator's
+# created.After(v23Deadline) (note: the parser's is_v23 uses >= for its own
+# strict-parse gate; the Validator deliberately matches Go here).
 use constant TCF_V23_DEADLINE => 1772236800;
 
 
@@ -244,9 +246,10 @@ sub _check_policy_version {
 
   my $actual = $tc->policy_version;
 
-  # A TC string created on/after the TCF v2.3 deadline must use policy version
-  # >= 5, regardless of explicit configuration.
-  if ($tc->created >= TCF_V23_DEADLINE && $actual < 5) {
+  # A TC string created strictly after the TCF v2.3 deadline must use policy
+  # version >= 5, regardless of explicit configuration. Strictly-after mirrors
+  # the Go validator's created.After(v23Deadline).
+  if ($tc->created > TCF_V23_DEADLINE && $actual < 5) {
     push @{$failures},
       GDPR::IAB::TCFv2::Validator::Failure->new(
       code    => ReasonPolicyVersionTooLow,
@@ -276,7 +279,7 @@ sub _check_disclosed {
   #   (a) any string created on/after the v2.3 deadline;
   #   (b) a policy>=5 string under a policy>=5 floor.
   unless ($has_disclosure) {
-    if ($tc->created >= TCF_V23_DEADLINE) {
+    if ($tc->created > TCF_V23_DEADLINE) {
       push @{$failures},
         GDPR::IAB::TCFv2::Validator::Failure->new(
         code    => ReasonMissingDisclosedVendors,
@@ -338,8 +341,11 @@ sub _check_consent_purposes {
 
     unless ($is_allowed) {
       push @{$failures},
-        $self->_purpose_not_allowed_failure($tc, $vendor_id, $pid, $is_flexible, ReasonVendorNotAllowedConsent,
-        "vendor $vendor_id not allowed for purpose $pid (consent)",
+        $is_flexible ? $self->_flexible_failure($tc, $vendor_id, $pid, 0) : GDPR::IAB::TCFv2::Validator::Failure->new(
+        code       => ReasonVendorNotAllowedConsent,
+        message    => "vendor $vendor_id not allowed for purpose $pid (consent)",
+        purpose_id => $pid,
+        vendor_id  => $vendor_id,
         );
       return if $stop_on_first;
     }
@@ -395,10 +401,11 @@ sub _check_li_purposes {
 
     unless ($is_allowed) {
       push @{$failures},
-        $self->_purpose_not_allowed_failure(
-        $tc, $vendor_id, $pid, $is_flexible,
-        ReasonVendorNotAllowedLegitimateInterest,
-        "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
+        $is_flexible ? $self->_flexible_failure($tc, $vendor_id, $pid, 1) : GDPR::IAB::TCFv2::Validator::Failure->new(
+        code       => ReasonVendorNotAllowedLegitimateInterest,
+        message    => "vendor $vendor_id not allowed for purpose $pid (legitimate interest)",
+        purpose_id => $pid,
+        vendor_id  => $vendor_id,
         );
       return if $stop_on_first;
     }
@@ -406,16 +413,16 @@ sub _check_li_purposes {
   return;
 }
 
-# Build the failure for a purpose the parser rejected. For a flexible purpose,
-# a NotAllowed publisher restriction surfaces as the dedicated reason (mirroring
-# the Go validator's runFlexibleCheck); any other rejection keeps the generic
-# per-basis reason. Non-flexible purposes have their restriction-driven reasons
-# resolved earlier by _publisher_restriction_failure, so they always take the
-# generic branch here.
-sub _purpose_not_allowed_failure {
-  my ($self, $tc, $vendor_id, $pid, $is_flexible, $code, $message) = @_;
+# Build the failure for a flexible purpose the parser rejected, mirroring the
+# Go validator's runFlexibleCheck reason selection. NotAllowed wins outright;
+# otherwise the effective legal basis decides the generic reason -- a spec
+# carve-out forces consent, then a Require* publisher restriction overrides
+# (RequireConsent => consent, RequireLI => LI). On the LI basis the carve-out
+# still outranks the generic LI failure.
+sub _flexible_failure {
+  my ($self, $tc, $vendor_id, $pid, $default_is_li) = @_;
 
-  if ($is_flexible && $tc->check_publisher_restriction($pid, NotAllowed, $vendor_id)) {
+  if ($tc->check_publisher_restriction($pid, NotAllowed, $vendor_id)) {
     return GDPR::IAB::TCFv2::Validator::Failure->new(
       code             => ReasonPublisherRestrictionNotAllowed,
       message          => "publisher restriction: purpose $pid not allowed (vendor $vendor_id)",
@@ -425,9 +432,26 @@ sub _purpose_not_allowed_failure {
     );
   }
 
+  my $is_li = $default_is_li;
+  $is_li = 0 if _li_carve_out_applies($pid, $tc->policy_version);
+
+  if    ($tc->check_publisher_restriction($pid, RequireConsent, $vendor_id))            { $is_li = 0 }
+  elsif ($tc->check_publisher_restriction($pid, RequireLegitimateInterest, $vendor_id)) { $is_li = 1 }
+
+  if ($is_li && _li_carve_out_applies($pid, $tc->policy_version)) {
+    return GDPR::IAB::TCFv2::Validator::Failure->new(
+      code       => ReasonLegitimateInterestNotPermittedForPurpose,
+      message    => "legitimate interest not permitted for purpose $pid",
+      purpose_id => $pid,
+      vendor_id  => $vendor_id,
+    );
+  }
+
   return GDPR::IAB::TCFv2::Validator::Failure->new(
-    code       => $code,
-    message    => $message,
+    code    => $is_li ? ReasonVendorNotAllowedLegitimateInterest : ReasonVendorNotAllowedConsent,
+    message => $is_li
+    ? "vendor $vendor_id not allowed for purpose $pid (legitimate interest)"
+    : "vendor $vendor_id not allowed for purpose $pid (consent)",
     purpose_id => $pid,
     vendor_id  => $vendor_id,
   );

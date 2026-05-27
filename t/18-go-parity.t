@@ -80,7 +80,7 @@ subtest '#5 single PolicyVersionTooLow even when both the v2.3 and floor rules a
   # Post-deadline, policy 2, floor 5: Go's combined policy gate yields exactly
   # one ReasonPolicyVersionTooLow (v2.3 rule wins, then returns).
   my @f;
-  my $tc = TCStub->new(created => DEADLINE, pv => 2, dv => 1);
+  my $tc = TCStub->new(created => DEADLINE + 1, pv => 2, dv => 1);
   $v->_check_policy_version($tc, 5, \@f);
 
   my @pv = grep { $_->code == ReasonPolicyVersionTooLow } @f;
@@ -132,6 +132,86 @@ subtest '#3 flexible purpose + NotAllowed on LI basis => ReasonPublisherRestrict
   is scalar(@f), 1, 'one failure for the flexible LI purpose';
   is $f[0]->code, ReasonPublisherRestrictionNotAllowed,
     'flexible NotAllowed (LI default) => PublisherRestrictionNotAllowed';
+};
+
+subtest '#4 v2.3 deadline boundary is strictly-after (Go .After())' => sub {
+  my $v = GDPR::IAB::TCFv2::Validator->new(vendor_id => 10);
+
+  # created == deadline: the date-based v2.3 rules must NOT fire (Go uses
+  # strictly-after). policy 2, no DV, no floor => no failures.
+  my @at;
+  my $at = TCStub->new(created => DEADLINE, pv => 2, dv => 0);
+  $v->_check_policy_version($at, undef, \@at);
+  $v->_check_disclosed($at, 10, 0, undef, \@at);
+  is scalar(@at), 0, 'created == deadline is not subject to date-based v2.3 enforcement';
+
+  # created == deadline + 1: both date-based rules fire.
+  my @after;
+  my $after = TCStub->new(created => DEADLINE + 1, pv => 2, dv => 0);
+  $v->_check_policy_version($after, undef, \@after);
+  $v->_check_disclosed($after, 10, 0, undef, \@after);
+  my %c = map { $_->code => 1 } @after;
+  ok $c{ReasonPolicyVersionTooLow()},     'created > deadline + policy<5 => PolicyVersionTooLow';
+  ok $c{ReasonMissingDisclosedVendors()}, 'created > deadline + no DV => MissingDisclosedVendors';
+};
+
+# A configurable flexible-purpose stub: always rejects the allow-decision and
+# reports at most one publisher restriction type, so the Validator's
+# Go-aligned effective-basis reason mapping can be exercised in isolation.
+{
+
+  package FlexStub;
+  sub new                                    { my ($c, %a) = @_; return bless {%a}, $c }
+  sub policy_version                         { return $_[0]->{pv} // 2 }
+  sub is_vendor_allowed_for_flexible_purpose { return 0 }
+
+  sub check_publisher_restriction {
+    my ($self, undef, $type) = @_;
+    return defined $self->{restriction} && $self->{restriction} == $type ? 1 : 0;
+  }
+}
+
+subtest '#2 flexible carve-out (P1) in LI list flips basis to consent (Go runFlexibleCheck)' => sub {
+  my $v = GDPR::IAB::TCFv2::Validator->new(vendor_id => 7);
+
+  # P1 is a permanent LI carve-out, so a flexible P1 in the LI list defaults to
+  # consent; a rejection reports the consent reason, not the LI reason.
+  my @f;
+  $v->_check_li_purposes(FlexStub->new(pv => 2), 7, 0, \@f, 0, [1], {1 => 1});
+
+  is scalar(@f),  1,                             'one failure';
+  is $f[0]->code, ReasonVendorNotAllowedConsent, 'flexible carve-out P1 (LI list) => consent reason';
+};
+
+subtest '#2 flexible LI-list purpose with RequireConsent restriction => consent reason' => sub {
+  my $v = GDPR::IAB::TCFv2::Validator->new(vendor_id => 7);
+
+  # RequireConsent (type 1) flips the effective basis to consent.
+  my @f;
+  $v->_check_li_purposes(FlexStub->new(pv => 2, restriction => 1), 7, 0, \@f, 0, [7], {7 => 1});
+
+  is $f[0]->code, ReasonVendorNotAllowedConsent, 'flexible LI purpose + RequireConsent => consent reason';
+};
+
+subtest '#2 flexible consent-list purpose with RequireLI restriction => LI reason' => sub {
+  my $v = GDPR::IAB::TCFv2::Validator->new(vendor_id => 7);
+
+  # RequireLegitimateInterest (type 2) flips the effective basis to LI.
+  my @f;
+  $v->_check_consent_purposes(FlexStub->new(pv => 2, restriction => 2), 7, 0, \@f, 0, [7], {7 => 1});
+
+  is $f[0]->code, ReasonVendorNotAllowedLegitimateInterest, 'flexible consent purpose + RequireLI => LI reason';
+};
+
+subtest '#2 flexible carve-out P1 + RequireLI restriction => carve-out reason' => sub {
+  my $v = GDPR::IAB::TCFv2::Validator->new(vendor_id => 7);
+
+  # RequireLI forces the LI basis, but the spec carve-out outranks it.
+  my @f;
+  $v->_check_li_purposes(FlexStub->new(pv => 2, restriction => 2), 7, 0, \@f, 0, [1], {1 => 1});
+
+  is $f[0]->code, ReasonLegitimateInterestNotPermittedForPurpose,
+    'flexible carve-out P1 + RequireLI => LegitimateInterestNotPermittedForPurpose';
 };
 
 done_testing;

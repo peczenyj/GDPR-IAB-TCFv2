@@ -127,11 +127,12 @@ subtest "validator auto-enforces v2.3 after the deadline (date-based)" => sub {
   my $deadline = 1772236800;                                         # 2026-02-28T00:00:00Z
   my $v        = GDPR::IAB::TCFv2::Validator->new(vendor_id => 1);
 
-  # Post-deadline, policy 2, no DV => both gates fire. The date-based rule is
-  # split across the two Go-aligned gates: the policy gate emits
-  # PolicyVersionTooLow, the disclosed gate emits MissingDisclosedVendors.
+  # Post-deadline (strictly after, matching Go .After()), policy 2, no DV =>
+  # both gates fire. The date-based rule is split across the two Go-aligned
+  # gates: the policy gate emits PolicyVersionTooLow, the disclosed gate emits
+  # MissingDisclosedVendors.
   my @f;
-  my $post = TCStub->new(created => $deadline, policy_version => 2, has_dv => 0);
+  my $post = TCStub->new(created => $deadline + 1, policy_version => 2, has_dv => 0);
   $v->_check_policy_version($post, undef, \@f);
   $v->_check_disclosed($post, 1, 0, undef, \@f);
   my %c = map { $_->code => 1 } @f;
