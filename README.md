@@ -15,7 +15,7 @@
 </div>
 
 <div>
-    <a href="https://coveralls.io/github/peczenyj/GDPR-IAB-TCFv2?branch=main"><img src="https://coveralls.io/repos/github/peczenyj/GDPR-IAB-TCFv2/badge.svg?branch=main" alt='Coverage Status' /></a>
+    <a href="https://codecov.io/gh/peczenyj/GDPR-IAB-TCFv2"><img src="https://codecov.io/gh/peczenyj/GDPR-IAB-TCFv2/branch/main/graph/badge.svg" alt='Coverage Status' /></a>
 </div>
 
 <div>

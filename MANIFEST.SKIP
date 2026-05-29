@@ -5,6 +5,7 @@
 blib/
 \.bs$
 cliff.toml
+codecov.yml
 Dockerfile
 ex/
 \.git
