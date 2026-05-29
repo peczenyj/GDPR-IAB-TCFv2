@@ -40,10 +40,14 @@ jobs:
           prove --merge --formatter TAP::Formatter::GitHubActions -l t
       - name: Run tests (with coverage)
         if: ${{ matrix.coverage }}
-        env:
-          GITHUB_ACTIONS: true
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
-          cpanm -n Devel::Cover::Report::Coveralls
-          cover -test -report Coveralls
+          cpanm -n Devel::Cover::Report::Cobertura
+          cover -test -report cobertura
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./cover_db/cobertura.xml
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
