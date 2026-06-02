@@ -33,7 +33,7 @@ jobs:
           make dist
 
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'GDPR-IAB-TCFv2-*.tar.gz'
 
@@ -95,7 +95,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Attest image provenance
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
