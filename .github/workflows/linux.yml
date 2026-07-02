@@ -45,7 +45,7 @@ jobs:
           cover -test -report cobertura
       - name: Upload coverage to Codecov
         if: ${{ matrix.coverage }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
         with:
           files: ./cover_db/cobertura.xml
           fail_ci_if_error: false
